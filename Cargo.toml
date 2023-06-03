@@ -1,0 +1,16 @@
+[workspace]
+resolver = "2"
+
+members = [
+]
+
+[workspace.dependencies]
+
+[profile.release]
+panic = "unwind"
+
+[profile.production]
+inherits = "release"
+
+lto = "fat"
+codegen-units = 1
