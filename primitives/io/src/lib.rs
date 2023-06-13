@@ -1,0 +1,35 @@
+// This file is part of Noir.
+
+// Copyright (C) 2023 Haderech Pte. Ltd.
+// SPDX-License-Identifier: Apache-2.0
+
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+// 	http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+//! I/O host interface for Horizon runtime.
+
+#![warn(missing_docs)]
+#![cfg_attr(not(feature = "std"), no_std)]
+
+use ripemd::{Digest, Ripemd160};
+use sp_runtime_interface::runtime_interface;
+
+/// Interfaces for working with crypto related types from within the runtime.
+#[runtime_interface]
+pub trait Crypto {
+	/// Hash with ripemd160.
+	fn ripemd160(msg: &[u8]) -> [u8; 20] {
+		let mut h = Ripemd160::new();
+		h.update(msg);
+		h.finalize().into()
+	}
+}
