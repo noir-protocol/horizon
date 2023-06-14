@@ -2,7 +2,7 @@
 resolver = "2"
 
 members = [
-  "primitives/io",
+	"primitives/io",
 ]
 
 [workspace.dependencies]
