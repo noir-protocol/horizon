@@ -1,0 +1,17 @@
+[package]
+name = "hp-io"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/noir-protocol/horizon/"
+
+[dependencies]
+ripemd = { workspace = true }
+sp-runtime-interface = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"ripemd/std",
+	"sp-runtime-interface/std",
+]
