@@ -28,8 +28,24 @@ use sp_runtime_interface::runtime_interface;
 pub trait Crypto {
 	/// Hash with ripemd160.
 	fn ripemd160(msg: &[u8]) -> [u8; 20] {
-		let mut h = Ripemd160::new();
-		h.update(msg);
-		h.finalize().into()
+		Ripemd160::digest(msg).into()
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+
+	#[test]
+	fn test_ripemd160() {
+		let msg = b"hello world";
+		let hash = crypto::ripemd160(msg);
+		assert_eq!(
+			hash,
+			[
+				0x98, 0xc6, 0x15, 0x78, 0x4c, 0xcb, 0x5f, 0xe5, 0x93, 0x6f, 0xbc, 0x0c, 0xbe, 0x9d,
+				0xfd, 0xb4, 0x08, 0xd9, 0x2f, 0x0f,
+			]
+		);
 	}
 }
