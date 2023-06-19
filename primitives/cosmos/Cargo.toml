@@ -1,0 +1,23 @@
+[package]
+name = "hp-cosmos"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/noir-protocol/horizon/"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true, features = [
+	"derive"
+], optional = true }
+cosmrs = { workspace = true, optional = true }
+scale-info = { workspace = true, features = ["derive"], optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+
+[features]
+default = ["std"]
+std = ["cosmrs", "codec/std", "scale-info/std", "serde/std"]
+with-codec = ["codec", "scale-info"]
+with-serde = ["serde"]

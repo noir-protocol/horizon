@@ -15,7 +15,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use hp_rpc::CosmosRuntimeRPCApi;
+use fc_rpc::internal_err;
+use futures::future::TryFutureExt;
+use hp_cosmos;
+use hp_rpc::{self, ConvertTransactionRuntimeApi};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
@@ -25,7 +28,10 @@ use primitive_types::H256;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_runtime::{app_crypto::sp_core::hashing::sha2_256, traits::Block as BlockT};
+use sp_runtime::{
+	app_crypto::sp_core::hashing::sha2_256, generic::BlockId, traits::Block as BlockT,
+	transaction_validity::TransactionSource,
+};
 use std::{marker::PhantomData, sync::Arc};
 
 #[rpc(server)]
@@ -69,7 +75,7 @@ where
 	C: Send + Sync + 'static,
 	C: ProvideRuntimeApi<B>,
 	C: HeaderBackend<B> + 'static,
-	C::Api: CosmosRuntimeRPCApi<B>,
+	C::Api: hp_rpc::ConvertTransactionRuntimeApi<B>,
 	P: TransactionPool<Block = B> + 'static,
 {
 	async fn broadcast_tx(&self, tx_bytes: Vec<u8>) -> RpcResult<H256> {
@@ -80,15 +86,23 @@ where
 				Some(e.to_string()),
 			))
 		})?;
-		println!("{:?}", tx);
-		let tx_hash = sha2_256(&tx_bytes[..]);
-		Ok(tx_hash.into())
+		let tx: hp_cosmos::Tx = tx.into();
+		let block_hash = self.client.info().best_hash;
+		let extrinsic = match self.client.runtime_api().convert_transaction(block_hash, tx) {
+			Ok(extrinsic) => extrinsic,
+			Err(_) => return Err(internal_err("Cannot access runtime api.")),
+		};
+		let transaction_hash = sha2_256(&tx_bytes[..]).into();
+		self.pool
+			.submit_one(&BlockId::Hash(block_hash), TransactionSource::Local, extrinsic)
+			.map_ok(move |_| transaction_hash)
+			.map_err(|err| internal_err(err.to_string()))
+			.await
 	}
 }
 
 #[cfg(test)]
 mod tests {
-	use super::*;
 	use base64::{engine::general_purpose, Engine};
 	use cosmrs::tx::MessageExt;
 

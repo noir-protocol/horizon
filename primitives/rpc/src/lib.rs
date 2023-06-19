@@ -19,11 +19,14 @@
 #![allow(clippy::too_many_arguments)]
 #![deny(unused_crate_dependencies)]
 
-use sp_core::H256;
+use sp_runtime::traits::Block as BlockT;
 
 sp_api::decl_runtime_apis! {
-	/// API necessary for Cosmos-compatibility layer.
-	pub trait CosmosRuntimeRPCApi {
-		fn broadcast_tx(tx_bytes: Vec<u8>) -> H256;
+	pub trait ConvertTransactionRuntimeApi {
+		fn convert_transaction(transaction: hp_cosmos::Tx) -> <Block as BlockT>::Extrinsic;
 	}
+}
+
+pub trait ConvertTransaction<E> {
+	fn convert_transaction(&self, transaction: hp_cosmos::Tx) -> E;
 }
