@@ -19,11 +19,11 @@
 #![allow(clippy::too_many_arguments)]
 #![deny(unused_crate_dependencies)]
 
-use sp_core::U256;
+use sp_core::H256;
 
 sp_api::decl_runtime_apis! {
 	/// API necessary for Cosmos-compatibility layer.
 	pub trait CosmosRuntimeRPCApi {
-		fn broadcast_tx(tx_bytes: Vec<u8>) -> U256;
+		fn broadcast_tx(tx_bytes: Vec<u8>) -> H256;
 	}
 }

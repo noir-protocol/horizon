@@ -12,10 +12,13 @@ targets = ["x86_64-unknown-linux-gnu"]
 cosmrs = { workspace = true }
 jsonrpsee = { workspace = true, features = ["server", "macros"] }
 primitive-types = { workspace = true, features = ["serde"] }
-serde = { workspace = true }
 
+sc-transaction-pool-api = { workspace = true }
 sp-api = { workspace = true }
 sp-blockchain = { workspace = true }
 sp-runtime = { workspace = true }
 
 hp-rpc = { workspace = true }
+
+[dev-dependencies]
+base64 = { workspace = true }
