@@ -1,11 +1,19 @@
 [workspace]
 resolver = "2"
-members = ["client/rpc", "primitives/cosmos", "primitives/io", "primitives/rpc"]
+members = [
+	"client/rpc",
+	"frame/cosmos",
+	"primitives/cosmos",
+	"primitives/io",
+	"primitives/rpc"
+]
 
 [workspace.dependencies]
 base64 = "0.21.2"
 codec = { package = "parity-scale-codec", version = "3.2.0", default-features = false }
 cosmrs = "0.14.0"
+frame-support = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
+frame-system = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 futures = "0.3.25"
 jsonrpsee = "0.16.2"
 primitive-types = "0.12.1"
