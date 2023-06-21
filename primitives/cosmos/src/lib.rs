@@ -207,3 +207,11 @@ impl From<cosmrs::tx::Fee> for Fee {
 		Self { amount, gas_limit: fee.gas_limit }
 	}
 }
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Account {
+	pub sequence: SequenceNumber,
+	pub amount: u128,
+}

@@ -27,17 +27,18 @@ use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
 	pallet_prelude::DispatchResult,
 	scale_info::TypeInfo,
-	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement},
+	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement, Get},
 	weights::Weight,
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
+use hp_cosmos::Account;
 use primitive_types::{H160, U128};
 use sp_runtime::{
-	traits::{DispatchInfoOf, Dispatchable},
+	traits::{DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	RuntimeDebug,
+	RuntimeDebug, DispatchError,
 };
 use sp_std::marker::PhantomData;
 
@@ -63,11 +64,11 @@ where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 {
 	pub fn is_self_contained(&self) -> bool {
-		matches!(self, Call::transact { .. })
+		matches!(self, Call::broadcast_tx { .. })
 	}
 
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
-		if let Call::transact { tx } = self {
+		if let Call::broadcast_tx { tx } = self {
 			let check = || {
 				let origin = Pallet::<T>::verify(tx).ok_or(
 					// TODO: Define error code
@@ -89,7 +90,7 @@ where
 		dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
 		len: usize,
 	) -> Option<Result<(), TransactionValidityError>> {
-		if let Call::transact { tx } = self {
+		if let Call::broadcast_tx { tx } = self {
 			if let Err(e) = CheckWeight::<T>::do_pre_dispatch(dispatch_info, len) {
 				return Some(Err(e))
 			}
@@ -106,7 +107,7 @@ where
 		dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
 		len: usize,
 	) -> Option<TransactionValidity> {
-		if let Call::transact { tx } = self {
+		if let Call::broadcast_tx { tx } = self {
 			if let Err(e) = CheckWeight::<T>::do_validate(dispatch_info, len) {
 				return Some(Err(e))
 			}
@@ -134,8 +135,10 @@ pub mod pallet {
 	pub enum Error<T> {
 		/// Not enough balance to perform action
 		BalanceLow,
-		/// Invalid amount type
-		InvalidAmount,
+		/// Invalid type
+		InvalidType,
+		/// Unauthorized access
+		UnauthorizedAccess,
 	}
 
 	#[pallet::pallet]
@@ -161,7 +164,7 @@ pub mod pallet {
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
 		#[pallet::weight({ tx.auth_info.fee.gas_limit })]
-		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResult {
+		pub fn broadcast_tx(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResult {
 			let source = ensure_cosmos_transaction(origin)?;
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -193,7 +196,10 @@ impl<T: Config> Pallet<T> {
 		origin: H160,
 		tx: &hp_cosmos::Tx,
 	) -> Result<(), TransactionValidityError> {
-		// TODO: Check nonce and fee
+		let (who, _) = Self::account(&origin);
+		if who.sequence != tx.auth_info.signer_infos[0].sequence {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
+		}
 		Ok(())
 	}
 
@@ -201,33 +207,55 @@ impl<T: Config> Pallet<T> {
 	// The controls common with the State Transition Function (STF) are in
 	// the function `validate_transaction_common`.
 	fn validate_transaction_in_pool(origin: H160, tx: &hp_cosmos::Tx) -> TransactionValidity {
-		// TODO: Check nonce and fee
-		// TODO: Build transaction with priority and nonce
+		let (who, _) = Self::account(&origin);
+		if who.sequence != tx.auth_info.signer_infos[0].sequence {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
+		}
 
-		// let mut builder = ValidTransactionBuilder::default()
-		// 	.and_provides((origin, transaction_nonce))
-		// 	.priority(priority);
+		let transaction_nonce = tx.auth_info.signer_infos[0].sequence;
+		let mut builder =
+			ValidTransactionBuilder::default().and_provides((origin, transaction_nonce));
 
 		// In the context of the pool, a transaction with
 		// too high a nonce is still considered valid
-		// if transaction_nonce > who.nonce {
-		// 	if let Some(prev_nonce) = transaction_nonce.checked_sub(1.into()) {
-		// 		builder = builder.and_requires((origin, prev_nonce))
-		// 	}
-		// }
+		if transaction_nonce > who.sequence {
+			if let Some(prev_nonce) = transaction_nonce.checked_sub(1) {
+				builder = builder.and_requires((origin, prev_nonce))
+			}
+		}
 
-		// builder.build()
-		ValidTransactionBuilder::default().into()
+		builder.build()
 	}
 
 	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResult {
 		match tx.body.messages[0].clone() {
 			hp_cosmos::Message::MsgSend { from_address, to_address, amount } => {
+				if source != from_address {
+					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess));
+				}
 				T::Runner::msg_send(from_address, to_address, amount[0].amount.into())
 					.map_err(|_| Error::<T>::BalanceLow)?;
 			},
 		};
 		Ok(())
+	}
+
+	/// Get the base account info.
+	pub fn account(address: &H160) -> (Account, frame_support::weights::Weight) {
+		let account_id = T::AddressMapping::into_account_id(*address);
+
+		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
+		// keepalive `true` takes into account ExistentialDeposit as part of what's considered
+		// liquid balance.
+		let balance = T::Currency::reducible_balance(&account_id, true);
+
+		(
+			Account {
+				sequence: UniqueSaturatedInto::<u64>::unique_saturated_into(nonce),
+				amount: UniqueSaturatedInto::<u128>::unique_saturated_into(balance),
+			},
+			T::DbWeight::get().reads(2),
+		)
 	}
 }
 
@@ -254,10 +282,12 @@ where
 		let source = T::AddressMapping::into_account_id(from_address);
 		let target = T::AddressMapping::into_account_id(to_address);
 		let value = amount.try_into().map_err(|_| RunnerError {
-			error: Self::Error::InvalidAmount,
+			error: Self::Error::InvalidType,
 			weight: Weight::default(),
 		})?;
-		T::Currency::transfer(&source, &target, value, ExistenceRequirement::AllowDeath);
+		T::Currency::transfer(&source, &target, value, ExistenceRequirement::AllowDeath).map_err(
+			|_| RunnerError { error: Self::Error::BalanceLow, weight: Weight::default() },
+		)?;
 		Ok(())
 	}
 }
