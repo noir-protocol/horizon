@@ -86,16 +86,16 @@ where
 				Some(e.to_string()),
 			))
 		})?;
-		let tx: hp_cosmos::Tx = tx.into();
+		let tx_hash: [u8; 32] = sha2_256(&tx_bytes[..]);
+		let tx: hp_cosmos::Tx = hp_cosmos::Tx::new(tx, tx_hash.clone());
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = match self.client.runtime_api().convert_transaction(block_hash, tx) {
 			Ok(extrinsic) => extrinsic,
 			Err(_) => return Err(internal_err("Cannot access runtime api.")),
 		};
-		let transaction_hash = sha2_256(&tx_bytes[..]).into();
 		self.pool
 			.submit_one(&BlockId::Hash(block_hash), TransactionSource::Local, extrinsic)
-			.map_ok(move |_| transaction_hash)
+			.map_ok(move |_| tx_hash.into())
 			.map_err(|err| internal_err(err.to_string()))
 			.await
 	}

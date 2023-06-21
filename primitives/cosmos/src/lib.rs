@@ -18,6 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use cosmrs::{self, tx::MessageExt};
+use primitive_types::H160;
 
 pub type SequenceNumber = u64;
 pub type SignatureBytes = Vec<u8>;
@@ -30,12 +31,13 @@ pub struct Tx {
 	pub body: Body,
 	pub auth_info: AuthInfo,
 	pub signatures: Vec<SignatureBytes>,
+	pub hash: [u8; 32],
 }
 
-impl From<cosmrs::tx::Tx> for Tx {
-	fn from(tx: cosmrs::tx::Tx) -> Self {
+impl Tx {
+	pub fn new(tx: cosmrs::tx::Tx, hash: [u8; 32]) -> Self {
 		let signatures = tx.signatures.iter().map(|s| s.clone()).collect::<Vec<SignatureBytes>>();
-		Self { body: tx.body.into(), auth_info: tx.auth_info.into(), signatures }
+		Self { body: tx.body.into(), auth_info: tx.auth_info.into(), signatures, hash }
 	}
 }
 
@@ -58,7 +60,7 @@ impl From<cosmrs::tx::Body> for Body {
 #[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Message {
-	MsgSend { from_address: String, to_address: String, amount: Vec<Coin> },
+	MsgSend { from_address: H160, to_address: H160, amount: Vec<Coin> },
 }
 
 impl From<cosmrs::Any> for Message {
@@ -67,13 +69,18 @@ impl From<cosmrs::Any> for Message {
 			let type_msg = cosmrs::proto::cosmos::bank::v1beta1::MsgSend::from_any(&any).unwrap();
 			let type_msg = cosmrs::bank::MsgSend::try_from(type_msg).unwrap();
 			let amount = type_msg.amount.iter().map(|a| a.clone().into()).collect::<Vec<Coin>>();
+			let mut from_address: [u8; 20] = [0u8; 20];
+			from_address.copy_from_slice(&type_msg.from_address.to_bytes()[..]);
+			let mut to_address: [u8; 20] = [0u8; 20];
+			to_address.copy_from_slice(&type_msg.to_address.to_bytes()[..]);
+
 			Message::MsgSend {
-				from_address: type_msg.from_address.into(),
-				to_address: type_msg.to_address.into(),
+				from_address: from_address.into(),
+				to_address: to_address.into(),
 				amount,
 			}
 		} else {
-			// TODO
+			// TODO: Handling error when decoding failed
 			panic!();
 		}
 	}
@@ -83,8 +90,8 @@ impl From<cosmrs::Any> for Message {
 #[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Coin {
-	denum: String,
-	amount: u128,
+	pub denum: String,
+	pub amount: u128,
 }
 
 impl From<cosmrs::Coin> for Coin {
@@ -116,13 +123,74 @@ impl From<cosmrs::tx::AuthInfo> for AuthInfo {
 #[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SignerInfo {
+	pub public_key: Option<SignerPublicKey>,
 	pub sequence: SequenceNumber,
 }
 
 impl From<cosmrs::tx::SignerInfo> for SignerInfo {
 	fn from(signer_info: cosmrs::tx::SignerInfo) -> Self {
-		Self { sequence: signer_info.sequence }
+		let public_key = match signer_info.public_key {
+			Some(pubkey) => match pubkey {
+				cosmrs::tx::SignerPublicKey::Single(p) => match p.type_url() {
+					cosmrs::crypto::PublicKey::ED25519_TYPE_URL => {
+						let mut raw_bytes: [u8; 32] = [0u8; 32];
+						raw_bytes.copy_from_slice(&p.to_bytes()[..]);
+						Some(SignerPublicKey::Single(PublicKey::ED25519(raw_bytes)))
+					},
+					cosmrs::crypto::PublicKey::SECP256K1_TYPE_URL => {
+						let mut raw_bytes: [u8; 33] = [0u8; 33];
+						raw_bytes.copy_from_slice(&p.to_bytes()[..]);
+						Some(SignerPublicKey::Single(PublicKey::SECP256K1(raw_bytes)))
+					},
+					_ => None,
+				},
+				_ => None,
+			},
+			None => None,
+		};
+		Self { public_key, sequence: signer_info.sequence }
 	}
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum SignerPublicKey {
+	/// Single singer.
+	Single(PublicKey),
+
+	/// Legacy Amino multisig.
+	LegacyAminoMultisig(LegacyAminoMultisig),
+
+	/// Other key types beyond the ones provided above.
+	Any(Any),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct LegacyAminoMultisig {
+	/// Multisig threshold.
+	pub threshold: u32,
+
+	/// Public keys which comprise the multisig key.
+	pub public_keys: Vec<PublicKey>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum PublicKey {
+	ED25519([u8; 32]),
+	SECP256K1([u8; 33]),
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Any {
+	pub type_url: String,
+	pub value: Vec<u8>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

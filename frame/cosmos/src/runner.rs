@@ -1,8 +1,8 @@
-// This file is part of Horizon.
-
-// Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: Apache-2.0
-
+// This file is part of Frontier.
+//
+// Copyright (c) 2020-2022 Parity Technologies (UK) Ltd.
+//
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
@@ -15,18 +15,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::too_many_arguments)]
-#![deny(unused_crate_dependencies)]
+use crate::Config;
+use primitive_types::{H160, U128};
 
-use sp_runtime::traits::Block as BlockT;
-
-sp_api::decl_runtime_apis! {
-	pub trait ConvertTransactionRuntimeApi {
-		fn convert_transaction(tx: hp_cosmos::Tx) -> <Block as BlockT>::Extrinsic;
-	}
+#[derive(Debug)]
+pub struct RunnerError<E: Into<sp_runtime::DispatchError>> {
+	pub error: E,
+	pub weight: frame_support::weights::Weight,
 }
 
-pub trait ConvertTransaction<E> {
-	fn convert_transaction(&self, tx: hp_cosmos::Tx) -> E;
+pub trait Runner<T: Config> {
+	type Error: Into<sp_runtime::DispatchError>;
+
+	fn msg_send(
+		from_address: H160,
+		to_address: H160,
+		amount: U128,
+	) -> Result<(), RunnerError<Self::Error>>;
 }
