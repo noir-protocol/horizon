@@ -17,6 +17,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+#[cfg(feature = "std")]
 use cosmrs::{self, tx::MessageExt};
 use primitive_types::H160;
 
@@ -34,6 +35,7 @@ pub struct Tx {
 	pub hash: [u8; 32],
 }
 
+#[cfg(feature = "std")]
 impl Tx {
 	pub fn new(tx: cosmrs::tx::Tx, hash: [u8; 32]) -> Self {
 		let signatures = tx.signatures.iter().map(|s| s.clone()).collect::<Vec<SignatureBytes>>();
@@ -49,6 +51,7 @@ pub struct Body {
 	pub memo: String,
 }
 
+#[cfg(feature = "std")]
 impl From<cosmrs::tx::Body> for Body {
 	fn from(body: cosmrs::tx::Body) -> Self {
 		let messages = body.messages.iter().map(|m| m.clone().into()).collect::<Vec<Message>>();
@@ -63,6 +66,7 @@ pub enum Message {
 	MsgSend { from_address: H160, to_address: H160, amount: Vec<Coin> },
 }
 
+#[cfg(feature = "std")]
 impl From<cosmrs::Any> for Message {
 	fn from(any: cosmrs::Any) -> Self {
 		if any.type_url == "/cosmos.bank.v1beta1.MsgSend" {
@@ -94,6 +98,7 @@ pub struct Coin {
 	pub amount: u128,
 }
 
+#[cfg(feature = "std")]
 impl From<cosmrs::Coin> for Coin {
 	fn from(coin: cosmrs::Coin) -> Self {
 		Self { denum: coin.denom.to_string(), amount: coin.amount }
@@ -108,6 +113,7 @@ pub struct AuthInfo {
 	pub fee: Fee,
 }
 
+#[cfg(feature = "std")]
 impl From<cosmrs::tx::AuthInfo> for AuthInfo {
 	fn from(auth_info: cosmrs::tx::AuthInfo) -> Self {
 		let signer_infos = auth_info
@@ -127,6 +133,7 @@ pub struct SignerInfo {
 	pub sequence: SequenceNumber,
 }
 
+#[cfg(feature = "std")]
 impl From<cosmrs::tx::SignerInfo> for SignerInfo {
 	fn from(signer_info: cosmrs::tx::SignerInfo) -> Self {
 		let public_key = match signer_info.public_key {
@@ -201,6 +208,7 @@ pub struct Fee {
 	pub gas_limit: Gas,
 }
 
+#[cfg(feature = "std")]
 impl From<cosmrs::tx::Fee> for Fee {
 	fn from(fee: cosmrs::tx::Fee) -> Self {
 		let amount = fee.amount.iter().map(|a| a.clone().into()).collect::<Vec<Coin>>();
