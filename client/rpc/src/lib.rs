@@ -17,4 +17,4 @@
 
 #![deny(unused_crate_dependencies)]
 
-mod cosm;
+pub mod cosm;
