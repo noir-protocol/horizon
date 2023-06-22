@@ -34,7 +34,7 @@ use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::Account;
 use primitive_types::{H160, U128};
 use sp_runtime::{
-	traits::{DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
+	traits::{BadOrigin, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
@@ -123,6 +123,25 @@ pub use self::pallet::*;
 
 pub trait AddressMapping<A> {
 	fn into_account_id(address: H160) -> A;
+}
+
+pub trait EnsureAddressOrigin<OuterOrigin> {
+	/// Success return type.
+	type Success;
+
+	/// Perform the origin check.
+	fn ensure_address_origin(
+		address: &H160,
+		origin: OuterOrigin,
+	) -> Result<Self::Success, BadOrigin> {
+		Self::try_address_origin(address, origin).map_err(|_| BadOrigin)
+	}
+
+	/// Try with origin.
+	fn try_address_origin(
+		address: &H160,
+		origin: OuterOrigin,
+	) -> Result<Self::Success, OuterOrigin>;
 }
 
 #[frame_support::pallet]
