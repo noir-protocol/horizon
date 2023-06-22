@@ -32,9 +32,9 @@ sp-io = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0
 sp-runtime = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
-hp-cosmos = { version = "0.1.0", path = "primitives/cosmos" }
-hp-io = { version = "0.1.0", path = "primitives/io" }
-hp-rpc = { version = "0.1.0", path = "primitives/rpc" }
+hp-cosmos = { version = "0.1.0", path = "primitives/cosmos", default-features = false }
+hp-io = { version = "0.1.0", path = "primitives/io", default-features = false }
+hp-rpc = { version = "0.1.0", path = "primitives/rpc", default-features = false }
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 
 [profile.release]
