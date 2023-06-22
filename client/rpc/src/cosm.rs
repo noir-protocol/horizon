@@ -18,7 +18,6 @@
 use fc_rpc::internal_err;
 use futures::future::TryFutureExt;
 use hp_cosmos;
-use hp_rpc::{self, ConvertTransactionRuntimeApi};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
@@ -78,6 +77,8 @@ where
 	P: TransactionPool<Block = B> + 'static,
 {
 	async fn broadcast_tx(&self, tx_bytes: Vec<u8>) -> RpcResult<H256> {
+		use hp_rpc::ConvertTransactionRuntimeApi;
+
 		let tx = cosmrs::Tx::from_bytes(&tx_bytes[..]).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
