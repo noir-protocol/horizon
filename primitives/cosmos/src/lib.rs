@@ -20,6 +20,7 @@
 #[cfg(feature = "std")]
 use cosmrs::{self, tx::MessageExt};
 use primitive_types::H160;
+use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;
 pub type SignatureBytes = Vec<u8>;
@@ -48,14 +49,13 @@ impl Tx {
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Body {
 	pub messages: Vec<Message>,
-	pub memo: String,
 }
 
 #[cfg(feature = "std")]
 impl From<cosmrs::tx::Body> for Body {
 	fn from(body: cosmrs::tx::Body) -> Self {
 		let messages = body.messages.iter().map(|m| m.clone().into()).collect::<Vec<Message>>();
-		Self { messages, memo: body.memo.into() }
+		Self { messages }
 	}
 }
 
@@ -63,7 +63,7 @@ impl From<cosmrs::tx::Body> for Body {
 #[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Message {
-	MsgSend { from_address: H160, to_address: H160, amount: Vec<Coin> },
+	MsgSend { from_address: H160, to_address: H160, amount: u128 },
 }
 
 #[cfg(feature = "std")]
@@ -72,7 +72,7 @@ impl From<cosmrs::Any> for Message {
 		if any.type_url == "/cosmos.bank.v1beta1.MsgSend" {
 			let type_msg = cosmrs::proto::cosmos::bank::v1beta1::MsgSend::from_any(&any).unwrap();
 			let type_msg = cosmrs::bank::MsgSend::try_from(type_msg).unwrap();
-			let amount = type_msg.amount.iter().map(|a| a.clone().into()).collect::<Vec<Coin>>();
+			let amount = type_msg.amount[0].amount;
 			let mut from_address: [u8; 20] = [0u8; 20];
 			from_address.copy_from_slice(&type_msg.from_address.to_bytes()[..]);
 			let mut to_address: [u8; 20] = [0u8; 20];
@@ -87,21 +87,6 @@ impl From<cosmrs::Any> for Message {
 			// TODO: Handling error when decoding failed
 			panic!();
 		}
-	}
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Coin {
-	pub denum: String,
-	pub amount: u128,
-}
-
-#[cfg(feature = "std")]
-impl From<cosmrs::Coin> for Coin {
-	fn from(coin: cosmrs::Coin) -> Self {
-		Self { denum: coin.denom.to_string(), amount: coin.amount }
 	}
 }
 
@@ -165,12 +150,6 @@ impl From<cosmrs::tx::SignerInfo> for SignerInfo {
 pub enum SignerPublicKey {
 	/// Single singer.
 	Single(PublicKey),
-
-	/// Legacy Amino multisig.
-	LegacyAminoMultisig(LegacyAminoMultisig),
-
-	/// Other key types beyond the ones provided above.
-	Any(Any),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -195,24 +174,15 @@ pub enum PublicKey {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Any {
-	pub type_url: String,
-	pub value: Vec<u8>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fee {
-	pub amount: Vec<Coin>,
+	pub amount: u128,
 	pub gas_limit: Gas,
 }
 
 #[cfg(feature = "std")]
 impl From<cosmrs::tx::Fee> for Fee {
 	fn from(fee: cosmrs::tx::Fee) -> Self {
-		let amount = fee.amount.iter().map(|a| a.clone().into()).collect::<Vec<Coin>>();
-		Self { amount, gas_limit: fee.gas_limit }
+		Self { amount: fee.amount[0].amount, gas_limit: fee.gas_limit }
 	}
 }
 

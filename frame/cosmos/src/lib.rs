@@ -252,7 +252,7 @@ impl<T: Config> Pallet<T> {
 				if source != from_address {
 					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
 				}
-				T::Runner::msg_send(from_address, to_address, amount[0].amount.into())
+				T::Runner::msg_send(from_address, to_address, amount.into())
 					.map_err(|_| Error::<T>::BalanceLow)?;
 			},
 		};
