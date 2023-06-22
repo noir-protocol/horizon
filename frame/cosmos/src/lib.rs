@@ -32,7 +32,7 @@ use frame_support::{
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::Account;
-use primitive_types::{H160, U128};
+use sp_core::H160;
 use sp_runtime::{
 	traits::{BadOrigin, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
@@ -289,14 +289,14 @@ pub type BalanceOf<T> =
 
 impl<T: Config> RunnerT<T> for Runner<T>
 where
-	BalanceOf<T>: TryFrom<U128> + Into<U128>,
+	BalanceOf<T>: TryFrom<u128> + Into<u128>,
 {
 	type Error = Error<T>;
 
 	fn msg_send(
 		from_address: H160,
 		to_address: H160,
-		amount: U128,
+		amount: u128,
 	) -> Result<(), RunnerError<Self::Error>> {
 		let source = T::AddressMapping::into_account_id(from_address);
 		let target = T::AddressMapping::into_account_id(to_address);

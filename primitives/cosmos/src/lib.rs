@@ -19,7 +19,7 @@
 
 #[cfg(feature = "std")]
 use cosmrs::{self, tx::MessageExt};
-use primitive_types::H160;
+use sp_core::H160;
 use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;

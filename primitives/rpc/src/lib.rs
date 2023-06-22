@@ -19,7 +19,7 @@
 #![allow(clippy::too_many_arguments)]
 #![deny(unused_crate_dependencies)]
 
-use primitive_types::H256;
+use sp_core::H256;
 use sp_runtime::traits::Block as BlockT;
 
 sp_api::decl_runtime_apis! {

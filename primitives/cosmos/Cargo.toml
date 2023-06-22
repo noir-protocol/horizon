@@ -9,25 +9,23 @@ repository = "https://github.com/noir-protocol/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-bech32 = { workspace = true, optional = true }
 codec = { package = "parity-scale-codec", workspace = true, features = [
 	"derive"
 ], optional = true }
 cosmrs = { workspace = true, optional = true }
-primitive-types = { workspace = true, optional = true }
 scale-info = { workspace = true, features = ["derive"], optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
+sp-core = { workspace = true }
 sp-std = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-	"bech32/std",
 	"cosmrs",
 	"codec/std",
-	"primitive-types/std",
 	"scale-info/std",
 	"serde/std",
+	"sp-core/std",
 	"sp-std/std",
 ]
 with-codec = ["codec", "scale-info"]

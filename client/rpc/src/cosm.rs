@@ -24,10 +24,10 @@ use jsonrpsee::{
 	proc_macros::rpc,
 	types::{error::CallError, ErrorObject},
 };
-use primitive_types::H256;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
+use sp_core::H256;
 use sp_runtime::{
 	app_crypto::sp_core::hashing::sha2_256, generic::BlockId, traits::Block as BlockT,
 	transaction_validity::TransactionSource,

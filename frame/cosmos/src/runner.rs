@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use crate::Config;
-use primitive_types::{H160, U128};
+use sp_core::H160;
 
 #[derive(Debug)]
 pub struct RunnerError<E: Into<sp_runtime::DispatchError>> {
@@ -30,6 +30,6 @@ pub trait Runner<T: Config> {
 	fn msg_send(
 		from_address: H160,
 		to_address: H160,
-		amount: U128,
+		amount: u128,
 	) -> Result<(), RunnerError<Self::Error>>;
 }
