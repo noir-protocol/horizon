@@ -37,7 +37,6 @@ use std::{marker::PhantomData, sync::Arc};
 #[rpc(server)]
 #[async_trait]
 pub trait CosmApi {
-	/// Returns account.
 	#[method(name = "cosm_broadcast_tx")]
 	async fn broadcast_tx(&self, tx_bytes: Vec<u8>) -> RpcResult<H256>;
 }

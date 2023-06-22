@@ -38,7 +38,7 @@ use sp_runtime::{
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	RuntimeDebug, DispatchError,
+	DispatchError, RuntimeDebug,
 };
 use sp_std::marker::PhantomData;
 
@@ -231,7 +231,7 @@ impl<T: Config> Pallet<T> {
 		match tx.body.messages[0].clone() {
 			hp_cosmos::Message::MsgSend { from_address, to_address, amount } => {
 				if source != from_address {
-					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess));
+					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
 				}
 				T::Runner::msg_send(from_address, to_address, amount[0].amount.into())
 					.map_err(|_| Error::<T>::BalanceLow)?;

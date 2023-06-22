@@ -17,4 +17,6 @@
 
 #![deny(unused_crate_dependencies)]
 
-pub mod cosm;
+mod cosm;
+
+pub use self::cosm::{Cosm, CosmApiServer};
