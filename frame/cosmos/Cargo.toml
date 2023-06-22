@@ -14,7 +14,7 @@ scale-info = { workspace = true }
 frame-support = { workspace = true }
 frame-system = { workspace = true }
 hp-io = { workspace = true }
-hp-cosmos = { workspace = true }
+hp-cosmos = { workspace = true, features = ["with-codec"] }
 sp-core = { workspace = true }
 sp-io = { workspace = true }
 sp-runtime = { workspace = true }
