@@ -19,9 +19,14 @@
 #![allow(clippy::too_many_arguments)]
 #![deny(unused_crate_dependencies)]
 
+use primitive_types::H256;
 use sp_runtime::traits::Block as BlockT;
 
 sp_api::decl_runtime_apis! {
+	pub trait CosmosRuntimeRPCApi {
+		fn broadcast_tx(tx: hp_cosmos::Tx) -> H256;
+	}
+
 	pub trait ConvertTransactionRuntimeApi {
 		fn convert_transaction(tx: hp_cosmos::Tx) -> <Block as BlockT>::Extrinsic;
 	}
