@@ -19,7 +19,7 @@
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 #![deny(unused_crate_dependencies)]
 
-mod runner;
+pub mod runner;
 
 use crate::runner::{Runner as RunnerT, RunnerError};
 use frame_support::{
