@@ -26,7 +26,7 @@ use jsonrpsee::{
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_core::H256;
+use sp_core::{Bytes, H256};
 use sp_runtime::{
 	app_crypto::sp_core::hashing::sha2_256, generic::BlockId, traits::Block as BlockT,
 	transaction_validity::TransactionSource,
@@ -37,7 +37,7 @@ use std::{marker::PhantomData, sync::Arc};
 #[async_trait]
 pub trait CosmApi {
 	#[method(name = "cosm_broadcast_tx")]
-	async fn broadcast_tx(&self, tx_bytes: Vec<u8>) -> RpcResult<H256>;
+	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256>;
 }
 
 pub struct Cosm<P, B: BlockT, C> {
@@ -76,7 +76,7 @@ where
 	C::Api: hp_rpc::ConvertTxRuntimeApi<B>,
 	P: TransactionPool<Block = B> + 'static,
 {
-	async fn broadcast_tx(&self, tx_bytes: Vec<u8>) -> RpcResult<H256> {
+	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256> {
 		use hp_rpc::ConvertTxRuntimeApi;
 
 		let tx = cosmrs::Tx::from_bytes(&tx_bytes[..]).map_err(|e| {
