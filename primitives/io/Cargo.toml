@@ -9,11 +9,12 @@ repository = "https://github.com/noir-protocol/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-k256 = { workspace = true, features = ["ecdsa"] }
-signature = { workspace = true }
 ripemd = { workspace = true }
 sp-runtime-interface = { workspace = true }
 
 [features]
 default = ["std"]
-std = ["k256/std", "signature/std", "ripemd/std", "sp-runtime-interface/std"]
+std = [
+	"ripemd/std",
+	"sp-runtime-interface/std",
+]

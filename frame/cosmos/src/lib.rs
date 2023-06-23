@@ -32,7 +32,7 @@ use frame_support::{
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::Account;
-use sp_core::H160;
+use sp_core::{ecdsa, H160};
 use sp_runtime::{
 	traits::{BadOrigin, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
@@ -197,12 +197,15 @@ impl<T: Config> Pallet<T> {
 	fn verify(tx: &hp_cosmos::Tx) -> Option<H160> {
 		if let Some(public_key) = &tx.auth_info.signer_infos[0].public_key {
 			match public_key {
-				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::SECP256K1(pk)) =>
-					if hp_io::crypto::secp256k1_ecdsa_verify(&pk, &tx.hash, &tx.signatures[0][..]) {
-						Some(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(pk)).into())
+				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::Secp256k1(pk)) => {
+					let pk = ecdsa::Public::from_raw(*pk);
+					let sig = ecdsa::Signature::from_slice(&tx.signatures[0][..])?;
+					if sp_io::crypto::ecdsa_verify_prehashed(&sig, &tx.hash, &pk) {
+						Some(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(&pk.0[..])).into())
 					} else {
 						None
-					},
+					}
+				},
 				_ => None,
 			}
 		} else {
