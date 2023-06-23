@@ -165,6 +165,9 @@ pub mod pallet {
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
+	#[pallet::origin]
+	pub type Origin = RawOrigin;
+
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_timestamp::Config {
 		/// Mapping from address to account id.
