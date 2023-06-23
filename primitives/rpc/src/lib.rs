@@ -27,11 +27,7 @@ sp_api::decl_runtime_apis! {
 		fn broadcast_tx(tx: hp_cosmos::Tx) -> H256;
 	}
 
-	pub trait ConvertTransactionRuntimeApi {
-		fn convert_transaction(tx: hp_cosmos::Tx) -> <Block as BlockT>::Extrinsic;
+	pub trait ConvertTxRuntimeApi {
+		fn convert_tx(tx: hp_cosmos::Tx) -> <Block as BlockT>::Extrinsic;
 	}
-}
-
-pub trait ConvertTransaction<E> {
-	fn convert_transaction(&self, tx: hp_cosmos::Tx) -> E;
 }

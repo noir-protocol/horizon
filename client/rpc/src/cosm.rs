@@ -73,11 +73,11 @@ where
 	C: Send + Sync + 'static,
 	C: ProvideRuntimeApi<B>,
 	C: HeaderBackend<B> + 'static,
-	C::Api: hp_rpc::ConvertTransactionRuntimeApi<B>,
+	C::Api: hp_rpc::ConvertTxRuntimeApi<B>,
 	P: TransactionPool<Block = B> + 'static,
 {
 	async fn broadcast_tx(&self, tx_bytes: Vec<u8>) -> RpcResult<H256> {
-		use hp_rpc::ConvertTransactionRuntimeApi;
+		use hp_rpc::ConvertTxRuntimeApi;
 
 		let tx = cosmrs::Tx::from_bytes(&tx_bytes[..]).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
@@ -89,7 +89,7 @@ where
 		let tx_hash: [u8; 32] = sha2_256(&tx_bytes[..]);
 		let tx: hp_cosmos::Tx = hp_cosmos::Tx::new(tx, tx_hash.clone());
 		let block_hash = self.client.info().best_hash;
-		let extrinsic = match self.client.runtime_api().convert_transaction(block_hash, tx) {
+		let extrinsic = match self.client.runtime_api().convert_tx(block_hash, tx) {
 			Ok(extrinsic) => extrinsic,
 			Err(_) => return Err(internal_err("Cannot access runtime api.")),
 		};

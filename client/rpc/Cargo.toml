@@ -19,7 +19,7 @@ sp-blockchain = { workspace = true }
 sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 hp-cosmos = { workspace = true }
-hp-rpc = { workspace = true }
+hp-rpc = { workspace = true, features = ["default"] }
 
 [dev-dependencies]
 base64 = { workspace = true }
