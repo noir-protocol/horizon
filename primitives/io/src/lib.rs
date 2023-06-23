@@ -58,4 +58,9 @@ mod tests {
 			]
 		);
 	}
+
+	#[test]
+	fn test_secp256k1_ecdsa_verify() {
+
+	}
 }
