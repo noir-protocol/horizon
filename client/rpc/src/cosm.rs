@@ -31,7 +31,7 @@ use sp_runtime::{
 	app_crypto::sp_core::hashing::sha2_256, generic::BlockId, traits::Block as BlockT,
 	transaction_validity::TransactionSource,
 };
-use std::{marker::PhantomData, sync::Arc};
+use std::{marker::PhantomData, str::FromStr, sync::Arc};
 
 #[rpc(server)]
 #[async_trait]
@@ -86,7 +86,14 @@ where
 				Some(e.to_string()),
 			))
 		})?;
-		let tx_hash: [u8; 32] = sha2_256(&tx_bytes[..]);
+		let account_number = tx.auth_info.signer_infos[0].sequence;
+		let chain_id = tendermint::chain::Id::from_str("noir").unwrap();
+		let sign_doc =
+			match cosmrs::tx::SignDoc::new(&tx.body, &tx.auth_info, &chain_id, account_number) {
+				Ok(sign_doc) => sign_doc,
+				Err(_) => return Err(internal_err("Invalid transaction.")),
+			};
+		let tx_hash: [u8; 32] = sha2_256(&sign_doc.into_bytes().unwrap()[..]);
 		let tx: hp_cosmos::Tx = hp_cosmos::Tx::new(tx, tx_hash.clone());
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = match self.client.runtime_api().convert_tx(block_hash, tx) {
