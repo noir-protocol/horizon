@@ -20,9 +20,6 @@
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use k256::ecdsa::Signature;
-use ripemd::{Digest, Ripemd160};
-use signature::Verifier;
 use sp_runtime_interface::runtime_interface;
 
 /// Interfaces for working with crypto related types from within the runtime.
@@ -30,15 +27,12 @@ use sp_runtime_interface::runtime_interface;
 pub trait Crypto {
 	/// Hash with ripemd160.
 	fn ripemd160(msg: &[u8]) -> [u8; 20] {
-		Ripemd160::digest(msg).into()
+		hp_crypto::ripemd160(msg)
 	}
 
 	/// Verify with secp256k1.
 	fn secp256k1_ecdsa_verify(pk: &[u8; 33], msg: &[u8], sig: &[u8]) -> bool {
-		match (k256::ecdsa::VerifyingKey::from_sec1_bytes(pk), Signature::from_slice(sig)) {
-			(Ok(verifying_key), Ok(signature)) => verifying_key.verify(msg, &signature).is_ok(),
-			_ => false,
-		}
+		hp_crypto::secp256k1_ecdsa_verify(pk, msg, sig)
 	}
 }
 
@@ -57,10 +51,5 @@ mod tests {
 				0xfd, 0xb4, 0x08, 0xd9, 0x2f, 0x0f,
 			]
 		);
-	}
-
-	#[test]
-	fn test_secp256k1_ecdsa_verify() {
-
 	}
 }
