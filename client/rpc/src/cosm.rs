@@ -86,10 +86,9 @@ where
 				Some(e.to_string()),
 			))
 		})?;
-		let account_number = tx.auth_info.signer_infos[0].sequence;
 		let chain_id = tendermint::chain::Id::from_str("noir").unwrap();
 		let sign_doc =
-			match cosmrs::tx::SignDoc::new(&tx.body, &tx.auth_info, &chain_id, account_number) {
+			match cosmrs::tx::SignDoc::new(&tx.body, &tx.auth_info, &chain_id, 0u64) {
 				Ok(sign_doc) => sign_doc,
 				Err(_) => return Err(internal_err("Invalid transaction.")),
 			};
