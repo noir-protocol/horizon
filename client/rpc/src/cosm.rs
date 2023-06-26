@@ -79,7 +79,7 @@ where
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256> {
 		use hp_rpc::ConvertTxRuntimeApi;
 
-		let tx = cosmrs::Tx::from_bytes(&tx_bytes[..]).map_err(|e| {
+		let tx = cosmrs::Tx::from_bytes(&tx_bytes).map_err(|e| {
 			CallError::Custom(ErrorObject::owned(
 				Error::RuntimeError.into(),
 				"Unable to decode tx.",
@@ -87,12 +87,11 @@ where
 			))
 		})?;
 		let chain_id = tendermint::chain::Id::from_str("noir").unwrap();
-		let sign_doc =
-			match cosmrs::tx::SignDoc::new(&tx.body, &tx.auth_info, &chain_id, 0u64) {
-				Ok(sign_doc) => sign_doc,
-				Err(_) => return Err(internal_err("Invalid transaction.")),
-			};
-		let tx_hash: [u8; 32] = sha2_256(&sign_doc.into_bytes().unwrap()[..]);
+		let sign_doc = match cosmrs::tx::SignDoc::new(&tx.body, &tx.auth_info, &chain_id, 0u64) {
+			Ok(sign_doc) => sign_doc,
+			Err(_) => return Err(internal_err("Invalid transaction.")),
+		};
+		let tx_hash: [u8; 32] = sha2_256(&sign_doc.into_bytes().unwrap());
 		let tx: hp_cosmos::Tx = hp_cosmos::Tx::new(tx, tx_hash.clone());
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = match self.client.runtime_api().convert_tx(block_hash, tx) {
@@ -117,7 +116,7 @@ mod tests {
 		let tx_bytes =
 			"CpcBCpIBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEnIKLWNvc21vczFodzRkNGRzeHgyc2xoMzlxdzVoY3JxbjUya2FzNW5sNTYzbmVkcBItY29zbW9zMXhtZ2d4Y3duZ2Nta3JscmM2cnhrZHU2ZGpzczc4dTV2ZTR2dmc5GhIKBGNjZHQSCjEwMDAwMDAwMDASABJlClEKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiED0Ttls626xrRUN1BnwRYPKGsFMtIWWUFEojTiWQf6j80SBAoCCH8YngMSEAoKCgRjY2R0EgIyNRCgjQYaQMuNWIlLtLg2pEUPDeqNv7vmvBU0HWGPndjjj1/fHGY5BGUjvnWN1wgRGcl92adj3k3WxuZqXN2PEmM4krsedPE=";
 		let tx_bytes = general_purpose::STANDARD.decode(tx_bytes).unwrap();
-		let tx = cosmrs::Tx::from_bytes(&tx_bytes[..]).unwrap();
+		let tx = cosmrs::Tx::from_bytes(&tx_bytes).unwrap();
 		let message =
 			cosmrs::proto::cosmos::bank::v1beta1::MsgSend::from_any(&tx.body.messages[0]).unwrap();
 		assert_eq!(message.from_address, "cosmos1hw4d4dsxx2slh39qw5hcrqn52kas5nl563nedp");

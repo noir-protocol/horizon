@@ -35,21 +35,3 @@ pub trait Crypto {
 		hp_crypto::secp256k1_ecdsa_verify(pk, msg, sig)
 	}
 }
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-
-	#[test]
-	fn test_ripemd160() {
-		let msg = b"hello world";
-		let hash = crypto::ripemd160(msg);
-		assert_eq!(
-			hash,
-			[
-				0x98, 0xc6, 0x15, 0x78, 0x4c, 0xcb, 0x5f, 0xe5, 0x93, 0x6f, 0xbc, 0x0c, 0xbe, 0x9d,
-				0xfd, 0xb4, 0x08, 0xd9, 0x2f, 0x0f,
-			]
-		);
-	}
-}

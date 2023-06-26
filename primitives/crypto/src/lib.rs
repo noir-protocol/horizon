@@ -17,8 +17,8 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod secp256k1;
 mod ripmd160;
+mod secp256k1;
 
-pub use secp256k1::secp256k1_ecdsa_verify;
 pub use ripmd160::ripemd160;
+pub use secp256k1::secp256k1_ecdsa_verify;

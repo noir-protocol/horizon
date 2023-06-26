@@ -196,7 +196,7 @@ impl<T: Config> Pallet<T> {
 		if let Some(public_key) = &tx.auth_info.signer_infos[0].public_key {
 			match public_key {
 				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::SECP256K1(pk)) =>
-					if hp_io::crypto::secp256k1_ecdsa_verify(&pk, &tx.hash, &tx.signatures[0][..]) {
+					if hp_io::crypto::secp256k1_ecdsa_verify(&pk, &tx.hash, &tx.signatures[0]) {
 						Some(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(pk)).into())
 					} else {
 						None
