@@ -15,12 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use signature::Verifier;
+use signature::hazmat::PrehashVerifier;
 
 /// Verify with secp256k1.
 pub fn secp256k1_ecdsa_verify(pk: &[u8; 33], msg: &[u8], sig: &[u8]) -> bool {
 	match (k256::ecdsa::VerifyingKey::from_sec1_bytes(pk), k256::ecdsa::Signature::from_slice(sig)) {
-		(Ok(verifying_key), Ok(signature)) => verifying_key.verify(msg, &signature).is_ok(),
+		(Ok(verifying_key), Ok(signature)) => verifying_key.verify_prehash(msg, &signature).is_ok(),
 		_ => false,
 	}
 }
