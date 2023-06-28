@@ -50,20 +50,6 @@ impl<P, B: BlockT, C> Cosm<P, B, C> {
 	}
 }
 
-/// Error type of this RPC api.
-pub enum Error {
-	/// The call to runtime failed.
-	RuntimeError,
-}
-
-impl From<Error> for i32 {
-	fn from(e: Error) -> i32 {
-		match e {
-			Error::RuntimeError => 1,
-		}
-	}
-}
-
 #[async_trait]
 impl<P, B, C> CosmApiServer for Cosm<P, B, C>
 where
@@ -91,7 +77,7 @@ where
 		self.pool
 			.submit_one(&BlockId::Hash(block_hash), TransactionSource::Local, extrinsic)
 			.map_ok(move |_| tx.hash.into())
-			.map_err(|err| internal_err(err.to_string()))
+			.map_err(|e| internal_err(e.to_string()))
 			.await
 	}
 }

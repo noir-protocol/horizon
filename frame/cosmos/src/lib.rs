@@ -64,11 +64,11 @@ where
 	T::RuntimeCall: Dispatchable<Info = DispatchInfo, PostInfo = PostDispatchInfo>,
 {
 	pub fn is_self_contained(&self) -> bool {
-		matches!(self, Call::broadcast_tx { .. })
+		matches!(self, Call::transact { .. })
 	}
 
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
-		if let Call::broadcast_tx { tx } = self {
+		if let Call::transact { tx } = self {
 			let check = || {
 				let origin = Pallet::<T>::verify(tx).ok_or(
 					// TODO: Define error code
@@ -90,9 +90,9 @@ where
 		dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
 		len: usize,
 	) -> Option<Result<(), TransactionValidityError>> {
-		if let Call::broadcast_tx { tx } = self {
+		if let Call::transact { tx } = self {
 			if let Err(e) = CheckWeight::<T>::do_pre_dispatch(dispatch_info, len) {
-				return Some(Err(e))
+				return Some(Err(e));
 			}
 
 			Some(Pallet::<T>::validate_transaction_in_block(*origin, tx))
@@ -107,9 +107,9 @@ where
 		dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
 		len: usize,
 	) -> Option<TransactionValidity> {
-		if let Call::broadcast_tx { tx } = self {
+		if let Call::transact { tx } = self {
 			if let Err(e) = CheckWeight::<T>::do_validate(dispatch_info, len) {
-				return Some(Err(e))
+				return Some(Err(e));
 			}
 
 			Some(Pallet::<T>::validate_transaction_in_pool(*origin, tx))
@@ -184,7 +184,7 @@ pub mod pallet {
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
 		#[pallet::weight({ tx.auth_info.fee.gas_limit })]
-		pub fn broadcast_tx(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResult {
+		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResult {
 			let source = ensure_cosmos_transaction(origin)?;
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -195,12 +195,13 @@ impl<T: Config> Pallet<T> {
 	fn verify(tx: &hp_cosmos::Tx) -> Option<H160> {
 		if let Some(public_key) = &tx.auth_info.signer_infos[0].public_key {
 			match public_key {
-				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::SECP256K1(pk)) =>
+				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::SECP256K1(pk)) => {
 					if hp_io::crypto::secp256k1_ecdsa_verify(&pk, &tx.hash, &tx.signatures[0]) {
 						Some(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(pk)).into())
 					} else {
 						None
-					},
+					}
+				},
 				_ => None,
 			}
 		} else {
@@ -218,7 +219,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<(), TransactionValidityError> {
 		let (who, _) = Self::account(&origin);
 		if who.sequence != tx.auth_info.signer_infos[0].sequence {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 		}
 		Ok(())
 	}
@@ -229,7 +230,7 @@ impl<T: Config> Pallet<T> {
 	fn validate_transaction_in_pool(origin: H160, tx: &hp_cosmos::Tx) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
 		if who.sequence != tx.auth_info.signer_infos[0].sequence {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 		}
 
 		let transaction_nonce = tx.auth_info.signer_infos[0].sequence;
@@ -251,7 +252,7 @@ impl<T: Config> Pallet<T> {
 		match tx.body.messages[0].clone() {
 			hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
 				if source != from_address {
-					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
+					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess));
 				}
 				T::Runner::msg_send(from_address, to_address, amount.into())
 					.map_err(|_| Error::<T>::BalanceLow)?;
