@@ -37,6 +37,8 @@ hp-rpc = { version = "0.1.0", path = "primitives/rpc", default-features = false 
 pallet-timestamp = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 hp-crypto = { version = "0.1.0", path = "primitives/crypto", default-features = false }
 tendermint = "0.32.0"
+serde_json = { version = "1.0.99", default-features = false }
+hex = { version = "0.4.3" }
 
 [profile.release]
 panic = "unwind"

@@ -21,17 +21,15 @@ use hp_cosmos;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
-	types::{error::CallError, ErrorObject},
 };
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::{Bytes, H256};
 use sp_runtime::{
-	app_crypto::sp_core::hashing::sha2_256, generic::BlockId, traits::Block as BlockT,
-	transaction_validity::TransactionSource,
+	generic::BlockId, traits::Block as BlockT, transaction_validity::TransactionSource,
 };
-use std::{marker::PhantomData, str::FromStr, sync::Arc};
+use std::{marker::PhantomData, sync::Arc};
 
 #[rpc(server)]
 #[async_trait]
@@ -79,28 +77,20 @@ where
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256> {
 		use hp_rpc::ConvertTxRuntimeApi;
 
-		let tx = cosmrs::Tx::from_bytes(&tx_bytes).map_err(|e| {
-			CallError::Custom(ErrorObject::owned(
-				Error::RuntimeError.into(),
-				"Unable to decode tx.",
-				Some(e.to_string()),
-			))
-		})?;
-		let chain_id = tendermint::chain::Id::from_str("noir").unwrap();
-		let sign_doc = match cosmrs::tx::SignDoc::new(&tx.body, &tx.auth_info, &chain_id, 0u64) {
-			Ok(sign_doc) => sign_doc,
-			Err(_) => return Err(internal_err("Invalid transaction.")),
-		};
-		let tx_hash: [u8; 32] = sha2_256(&sign_doc.into_bytes().unwrap());
-		let tx: hp_cosmos::Tx = hp_cosmos::Tx::new(tx, tx_hash.clone());
+		let tx = cosmrs::Tx::from_bytes(&tx_bytes)
+			.map_err(|e| internal_err(format!("Invalid transaction. error={}", e)))?;
+		let tx: hp_cosmos::Tx = tx
+			.try_into()
+			.map_err(|e| internal_err(format!("Invalid transaction. error={}", e)))?;
 		let block_hash = self.client.info().best_hash;
-		let extrinsic = match self.client.runtime_api().convert_tx(block_hash, tx) {
-			Ok(extrinsic) => extrinsic,
-			Err(_) => return Err(internal_err("Cannot access runtime api.")),
-		};
+		let extrinsic = self
+			.client
+			.runtime_api()
+			.convert_tx(block_hash, tx.clone())
+			.map_err(|_| internal_err("Cannot access runtime api."))?;
 		self.pool
 			.submit_one(&BlockId::Hash(block_hash), TransactionSource::Local, extrinsic)
-			.map_ok(move |_| tx_hash.into())
+			.map_ok(move |_| tx.hash.into())
 			.map_err(|err| internal_err(err.to_string()))
 			.await
 	}
