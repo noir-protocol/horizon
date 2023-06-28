@@ -33,7 +33,6 @@ use error::DecodeTxError;
 #[cfg(feature = "std")]
 use legacy::SignAminoDoc;
 use sp_core::{hashing::sha2_256, H160};
-#[cfg(feature = "std")]
 use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;
