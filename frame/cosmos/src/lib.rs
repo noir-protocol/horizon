@@ -31,8 +31,8 @@ use frame_support::{
 	weights::Weight,
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use hp_cosmos::Account;
-use sp_core::H160;
+use hp_cosmos::{error::TransactionValidationError, Account, AuthInfo, Msg};
+use sp_core::{H160, H256};
 use sp_runtime::{
 	traits::{BadOrigin, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
@@ -70,10 +70,9 @@ where
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx } = self {
 			let check = || {
-				let origin = Pallet::<T>::verify(tx).ok_or(
-					// TODO: Define error code
-					InvalidTransaction::Custom(0u8),
-				)?;
+				let origin = Pallet::<T>::verify(tx).ok_or(InvalidTransaction::Custom(
+					TransactionValidationError::InvalidSignature as u8,
+				))?;
 
 				Ok(origin)
 			};
@@ -92,7 +91,7 @@ where
 	) -> Option<Result<(), TransactionValidityError>> {
 		if let Call::transact { tx } = self {
 			if let Err(e) = CheckWeight::<T>::do_pre_dispatch(dispatch_info, len) {
-				return Some(Err(e));
+				return Some(Err(e))
 			}
 
 			Some(Pallet::<T>::validate_transaction_in_block(*origin, tx))
@@ -109,7 +108,7 @@ where
 	) -> Option<TransactionValidity> {
 		if let Call::transact { tx } = self {
 			if let Err(e) = CheckWeight::<T>::do_validate(dispatch_info, len) {
-				return Some(Err(e));
+				return Some(Err(e))
 			}
 
 			Some(Pallet::<T>::validate_transaction_in_pool(*origin, tx))
@@ -147,6 +146,7 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use frame_support::pallet_prelude::*;
 
 	#[pallet::error]
 	pub enum Error<T> {
@@ -172,8 +172,16 @@ pub mod pallet {
 		type AddressMapping: AddressMapping<Self::AccountId>;
 		/// Currency type for withdraw and balance storage.
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
+		/// The overarching event type.
+		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Cosmos execution runner.
 		type Runner: RunnerT<Self>;
+	}
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event {
+		Executed { tx_hash: H256, auth_info: AuthInfo, messages: Vec<Msg> },
 	}
 
 	#[pallet::call]
@@ -195,13 +203,16 @@ impl<T: Config> Pallet<T> {
 	fn verify(tx: &hp_cosmos::Tx) -> Option<H160> {
 		if let Some(public_key) = &tx.auth_info.signer_infos[0].public_key {
 			match public_key {
-				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::SECP256K1(pk)) => {
-					if hp_io::crypto::secp256k1_ecdsa_verify(&pk, &tx.hash, &tx.signatures[0]) {
+				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::SECP256K1(pk)) =>
+					if hp_io::crypto::secp256k1_ecdsa_verify(
+						&pk,
+						tx.hash.as_bytes(),
+						&tx.signatures[0],
+					) {
 						Some(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(pk)).into())
 					} else {
 						None
-					}
-				},
+					},
 				_ => None,
 			}
 		} else {
@@ -219,7 +230,7 @@ impl<T: Config> Pallet<T> {
 	) -> Result<(), TransactionValidityError> {
 		let (who, _) = Self::account(&origin);
 		if who.sequence != tx.auth_info.signer_infos[0].sequence {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
 		}
 		Ok(())
 	}
@@ -230,7 +241,7 @@ impl<T: Config> Pallet<T> {
 	fn validate_transaction_in_pool(origin: H160, tx: &hp_cosmos::Tx) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
 		if who.sequence != tx.auth_info.signer_infos[0].sequence {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
 		}
 
 		let transaction_nonce = tx.auth_info.signer_infos[0].sequence;
@@ -252,12 +263,17 @@ impl<T: Config> Pallet<T> {
 		match tx.body.messages[0].clone() {
 			hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
 				if source != from_address {
-					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess));
+					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
 				}
 				T::Runner::msg_send(from_address, to_address, amount.into())
 					.map_err(|_| Error::<T>::BalanceLow)?;
 			},
 		};
+		Self::deposit_event(Event::Executed {
+			tx_hash: tx.hash.into(),
+			auth_info: tx.auth_info.clone(),
+			messages: tx.body.messages.clone(),
+		});
 		Ok(())
 	}
 
@@ -309,6 +325,7 @@ where
 		T::Currency::transfer(&source, &target, value, ExistenceRequirement::AllowDeath).map_err(
 			|_| RunnerError { error: Self::Error::BalanceLow, weight: Weight::default() },
 		)?;
+		frame_system::Pallet::<T>::inc_account_nonce(&source);
 		Ok(())
 	}
 }

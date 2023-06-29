@@ -20,7 +20,9 @@ use core::fmt::Display;
 #[derive(Debug)]
 pub enum DecodeTxError {
 	InvalidTxData,
-	UnsupportedSigner,
+	EmptySigners,
+	UnsupportedSignerType,
+	UnsupportedSignMode,
 	InvalidMsgData,
 	UnsupportedMsgType,
 	InvalidSignDoc,
@@ -30,10 +32,21 @@ impl Display for DecodeTxError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		match self {
 			DecodeTxError::InvalidTxData => write!(f, "{}", "INVALID_TX_DATA"),
-			DecodeTxError::UnsupportedSigner => write!(f, "{}", "UNSUPPORTED_SIGNER"),
+			DecodeTxError::EmptySigners => write!(f, "{}", "EMPTY_SIGNERS"),
+			DecodeTxError::UnsupportedSignerType => write!(f, "{}", "UNSUPPORTED_SIGNER_TYPE"),
+			DecodeTxError::UnsupportedSignMode => write!(f, "{}", "UNSUPPORTED_SIGN_MODE"),
 			DecodeTxError::InvalidMsgData => write!(f, "{}", "INVALID_MSG_DATA"),
 			DecodeTxError::UnsupportedMsgType => write!(f, "{}", "UNSUPPORTED_MSG_TYPE"),
 			DecodeTxError::InvalidSignDoc => write!(f, "{}", "INVALID_SIGN_DOC"),
 		}
 	}
+}
+
+#[repr(u8)]
+#[derive(num_enum::FromPrimitive, num_enum::IntoPrimitive)]
+pub enum TransactionValidationError {
+	#[allow(dead_code)]
+	#[num_enum(default)]
+	UnknownError,
+	InvalidSignature,
 }

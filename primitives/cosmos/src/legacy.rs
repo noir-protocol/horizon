@@ -119,8 +119,8 @@ impl TryFrom<&cosmrs::Tx> for SignAminoDoc {
 	type Error = DecodeTxError;
 
 	fn try_from(tx: &cosmrs::Tx) -> Result<Self, Self::Error> {
-		if tx.auth_info.signer_infos.len() > 1 {
-			return Err(DecodeTxError::UnsupportedSigner)
+		if tx.auth_info.signer_infos.is_empty() {
+			return Err(DecodeTxError::EmptySigners)
 		}
 		if let cosmrs::tx::ModeInfo::Single(_) = &tx.auth_info.signer_infos[0].mode_info {
 			let mut msgs: Vec<Msg> = Vec::new();
@@ -138,7 +138,7 @@ impl TryFrom<&cosmrs::Tx> for SignAminoDoc {
 				sequence: tx.auth_info.signer_infos[0].sequence.to_string(),
 			})
 		} else {
-			return Err(DecodeTxError::UnsupportedSigner)
+			return Err(DecodeTxError::UnsupportedSignMode)
 		}
 	}
 }

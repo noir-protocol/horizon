@@ -17,6 +17,6 @@ signature = { workspace = true }
 default = ["std"]
 std = [
     "k256/std",
+    "ripemd/std",
     "signature/std",
-    "ripemd/std", 
 ]

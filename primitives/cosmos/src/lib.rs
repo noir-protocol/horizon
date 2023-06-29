@@ -17,7 +17,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-mod error;
+pub mod error;
 #[cfg(feature = "std")]
 mod legacy;
 
@@ -34,7 +34,7 @@ use error::DecodeTxError;
 use legacy::SignAminoDoc;
 #[cfg(feature = "std")]
 use sp_core::hashing::sha2_256;
-use sp_core::H160;
+use sp_core::{H160, H256};
 use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;
@@ -48,7 +48,7 @@ pub struct Tx {
 	pub body: Body,
 	pub auth_info: AuthInfo,
 	pub signatures: Vec<SignatureBytes>,
-	pub hash: [u8; 32],
+	pub hash: H256,
 }
 
 #[cfg(feature = "std")]
@@ -67,15 +67,15 @@ impl TryFrom<cosmrs::tx::Tx> for Tx {
 					sign_doc.into_bytes().map_err(|_| DecodeTxError::InvalidSignDoc)?
 				},
 				SignMode::LegacyAminoJson => SignAminoDoc::try_from(&tx)?.to_bytes()?,
-				_ => return Err(DecodeTxError::UnsupportedSigner),
+				_ => return Err(DecodeTxError::UnsupportedSignMode),
 			},
-			_ => return Err(DecodeTxError::UnsupportedSigner),
+			_ => return Err(DecodeTxError::UnsupportedSignMode),
 		};
 		Ok(Self {
 			body: tx.body.try_into()?,
-			auth_info: tx.auth_info.into(),
+			auth_info: tx.auth_info.try_into()?,
 			signatures,
-			hash: sha2_256(&sign_doc),
+			hash: sha2_256(&sign_doc).into(),
 		})
 	}
 }
@@ -152,14 +152,15 @@ pub struct AuthInfo {
 }
 
 #[cfg(feature = "std")]
-impl From<cosmrs::tx::AuthInfo> for AuthInfo {
-	fn from(auth_info: cosmrs::tx::AuthInfo) -> Self {
-		let signer_infos = auth_info
-			.signer_infos
-			.iter()
-			.map(|s| s.clone().into())
-			.collect::<Vec<SignerInfo>>();
-		Self { signer_infos, fee: auth_info.fee.into() }
+impl TryFrom<cosmrs::tx::AuthInfo> for AuthInfo {
+	type Error = DecodeTxError;
+
+	fn try_from(auth_info: cosmrs::tx::AuthInfo) -> Result<Self, Self::Error> {
+		let mut signer_infos: Vec<SignerInfo> = Vec::new();
+		for signer_info in auth_info.signer_infos {
+			signer_infos.push(signer_info.try_into()?);
+		}
+		Ok(Self { signer_infos, fee: auth_info.fee.into() })
 	}
 }
 
@@ -172,8 +173,10 @@ pub struct SignerInfo {
 }
 
 #[cfg(feature = "std")]
-impl From<cosmrs::tx::SignerInfo> for SignerInfo {
-	fn from(signer_info: cosmrs::tx::SignerInfo) -> Self {
+impl TryFrom<cosmrs::tx::SignerInfo> for SignerInfo {
+	type Error = DecodeTxError;
+
+	fn try_from(signer_info: cosmrs::tx::SignerInfo) -> Result<Self, Self::Error> {
 		let public_key = match signer_info.public_key {
 			Some(pubkey) => match pubkey {
 				cosmrs::tx::SignerPublicKey::Single(p) => match p.type_url() {
@@ -187,13 +190,13 @@ impl From<cosmrs::tx::SignerInfo> for SignerInfo {
 						raw_bytes.copy_from_slice(&p.to_bytes()[..]);
 						Some(SignerPublicKey::Single(PublicKey::SECP256K1(raw_bytes)))
 					},
-					_ => None,
+					_ => return Err(DecodeTxError::UnsupportedSignerType),
 				},
-				_ => None,
+				_ => return Err(DecodeTxError::UnsupportedSignerType),
 			},
 			None => None,
 		};
-		Self { public_key, sequence: signer_info.sequence }
+		Ok(Self { public_key, sequence: signer_info.sequence })
 	}
 }
 

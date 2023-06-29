@@ -9,14 +9,15 @@ repository = "https://github.com/noir-protocol/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-hp-cosmos = { workspace = true, features = ["with-codec"] }
 sp-api = { workspace = true }
 sp-runtime = { workspace = true }
+
+hp-cosmos = { workspace = true, features = ["with-codec"] }
 
 [features]
 default = ["std"]
 std = [
-	"hp-cosmos/std",
 	"sp-api/std",
 	"sp-runtime/std",
+	"hp-cosmos/std",
 ]
