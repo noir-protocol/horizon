@@ -25,8 +25,8 @@ pub trait WeightInfo {
 }
 
 /// Weights for pallet_cosmos using the Horizon node and recommended hardware.
-pub struct CosmosWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for CosmosWeight<T> {
+pub struct HorizonWeight<T>(PhantomData<T>);
+impl<T: frame_system::Config> WeightInfo for HorizonWeight<T> {
 	fn transact(tx: &hp_cosmos::Tx) -> Weight {
 		match tx.body.messages[0] {
 			hp_cosmos::Msg::MsgSend { .. } => {
