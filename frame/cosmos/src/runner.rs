@@ -31,5 +31,6 @@ pub trait Runner<T: Config> {
 		from_address: H160,
 		to_address: H160,
 		amount: u128,
+		fee: u128,
 	) -> Result<(), RunnerError<Self::Error>>;
 }

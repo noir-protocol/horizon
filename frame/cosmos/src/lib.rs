@@ -31,7 +31,7 @@ use frame_support::{
 	dispatch::{DispatchInfo, PostDispatchInfo},
 	pallet_prelude::DispatchResult,
 	scale_info::TypeInfo,
-	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement, Get},
+	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement, Get, WithdrawReasons},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::{Account, AuthInfo, Msg};
@@ -269,8 +269,13 @@ impl<T: Config> Pallet<T> {
 				if source != from_address {
 					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
 				}
-				T::Runner::msg_send(from_address, to_address, amount.into())
-					.map_err(|_| Error::<T>::BalanceLow)?;
+				T::Runner::msg_send(
+					from_address,
+					to_address,
+					amount.into(),
+					tx.auth_info.fee.amount,
+				)
+				.map_err(|_| Error::<T>::BalanceLow)?;
 			},
 		};
 		Self::deposit_event(Event::Executed {
@@ -319,14 +324,24 @@ where
 		from_address: H160,
 		to_address: H160,
 		amount: u128,
+		fee: u128,
 	) -> Result<(), RunnerError<Self::Error>> {
 		let source = T::AddressMapping::into_account_id(from_address);
 		let target = T::AddressMapping::into_account_id(to_address);
-		let value = amount.try_into().map_err(|_| RunnerError {
+		let amount = amount.try_into().map_err(|_| RunnerError {
 			error: Self::Error::InvalidType,
 			weight: T::DbWeight::get().reads(2u64),
 		})?;
-		T::Currency::transfer(&source, &target, value, ExistenceRequirement::AllowDeath).map_err(
+		let fee = fee.try_into().map_err(|_| RunnerError {
+			error: Self::Error::InvalidType,
+			weight: T::DbWeight::get().reads(2u64),
+		})?;
+		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
+			.map_err(|_| RunnerError {
+				error: Self::Error::BalanceLow,
+				weight: T::DbWeight::get().reads(2u64),
+			})?;
+		T::Currency::transfer(&source, &target, amount, ExistenceRequirement::AllowDeath).map_err(
 			|_| RunnerError {
 				error: Self::Error::BalanceLow,
 				weight: T::DbWeight::get().reads(2u64),
