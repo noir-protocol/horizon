@@ -20,18 +20,22 @@
 #![deny(unused_crate_dependencies)]
 
 pub mod runner;
+pub mod weights;
 
-use crate::runner::{Runner as RunnerT, RunnerError};
+use crate::{
+	runner::{Runner as RunnerT, RunnerError},
+	weights::WeightInfo,
+};
 use frame_support::{
 	codec::{Decode, Encode, MaxEncodedLen},
 	dispatch::{DispatchInfo, PostDispatchInfo},
 	pallet_prelude::DispatchResult,
 	scale_info::TypeInfo,
 	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement, Get},
-	weights::Weight,
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::{Account, AuthInfo, Msg};
+pub use pallet::*;
 use sp_core::{H160, H256};
 use sp_runtime::{
 	traits::{BadOrigin, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
@@ -118,8 +122,6 @@ where
 	}
 }
 
-pub use self::pallet::*;
-
 pub trait AddressMapping<A> {
 	fn into_account_id(address: H160) -> A;
 }
@@ -176,6 +178,8 @@ pub mod pallet {
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Cosmos execution runner.
 		type Runner: RunnerT<Self>;
+		/// Weight information for extrinsics in this pallet.
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -191,7 +195,7 @@ pub mod pallet {
 	{
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
-		#[pallet::weight({ tx.auth_info.fee.gas_limit })]
+		#[pallet::weight(<T as pallet::Config>::WeightInfo::transact(&tx))]
 		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResult {
 			let source = ensure_cosmos_transaction(origin)?;
 			Self::apply_validated_transaction(source, tx)
@@ -320,10 +324,13 @@ where
 		let target = T::AddressMapping::into_account_id(to_address);
 		let value = amount.try_into().map_err(|_| RunnerError {
 			error: Self::Error::InvalidType,
-			weight: Weight::default(),
+			weight: T::DbWeight::get().reads(2u64),
 		})?;
 		T::Currency::transfer(&source, &target, value, ExistenceRequirement::AllowDeath).map_err(
-			|_| RunnerError { error: Self::Error::BalanceLow, weight: Weight::default() },
+			|_| RunnerError {
+				error: Self::Error::BalanceLow,
+				weight: T::DbWeight::get().reads(2u64),
+			},
 		)?;
 		frame_system::Pallet::<T>::inc_account_nonce(&source);
 		Ok(())
