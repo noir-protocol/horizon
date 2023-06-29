@@ -47,6 +47,5 @@ impl Display for DecodeTxError {
 pub enum TransactionValidationError {
 	#[allow(dead_code)]
 	#[num_enum(default)]
-	UnknownError,
-	InvalidSignature,
+	UnsupportedSignerType = 128,
 }

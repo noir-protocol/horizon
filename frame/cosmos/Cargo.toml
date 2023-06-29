@@ -20,6 +20,8 @@ sp-io = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
+fp-ethereum = { workspace = true }
+
 hp-cosmos = { workspace = true, features = ["with-codec"] }
 hp-io = { workspace = true }
 
@@ -35,6 +37,7 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"sp-std/std",
+	"fp-ethereum/std",
 	"hp-cosmos/std",
 	"hp-io/std",
 ]

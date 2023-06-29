@@ -31,7 +31,7 @@ use frame_support::{
 	weights::Weight,
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use hp_cosmos::{error::TransactionValidationError, Account, AuthInfo, Msg};
+use hp_cosmos::{Account, AuthInfo, Msg};
 use sp_core::{H160, H256};
 use sp_runtime::{
 	traits::{BadOrigin, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
@@ -71,7 +71,7 @@ where
 		if let Call::transact { tx } = self {
 			let check = || {
 				let origin = Pallet::<T>::verify(tx).ok_or(InvalidTransaction::Custom(
-					TransactionValidationError::InvalidSignature as u8,
+					fp_ethereum::TransactionValidationError::InvalidSignature as u8,
 				))?;
 
 				Ok(origin)
@@ -200,7 +200,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	fn verify(tx: &hp_cosmos::Tx) -> Option<H160> {
+	pub fn verify(tx: &hp_cosmos::Tx) -> Option<H160> {
 		if let Some(public_key) = &tx.auth_info.signer_infos[0].public_key {
 			match public_key {
 				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::SECP256K1(pk)) =>

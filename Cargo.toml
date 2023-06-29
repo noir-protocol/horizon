@@ -38,6 +38,7 @@ sp-runtime-interface = { git = "https://github.com/paritytech/substrate", branch
 sp-std = { git = "https://github.com/paritytech/substrate", branch = "polkadot-v0.9.39", default-features = false }
 
 fc-rpc = { git = "https://github.com/paritytech/frontier", branch = "polkadot-v0.9.39", default-features = false }
+fp-ethereum = { git = "https://github.com/paritytech/frontier", branch = "polkadot-v0.9.39", default-features = false }
 
 hp-cosmos = { version = "0.1.0", path = "primitives/cosmos", default-features = false }
 hp-crypto = { version = "0.1.0", path = "primitives/crypto", default-features = false }
