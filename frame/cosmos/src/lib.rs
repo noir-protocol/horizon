@@ -40,7 +40,7 @@ use sp_runtime::{
 	},
 	DispatchError, RuntimeDebug,
 };
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, vec::Vec};
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum RawOrigin {
