@@ -70,7 +70,7 @@ where
 
 		let tx = cosmrs::Tx::from_bytes(&tx_bytes)
 			.map_err(|e| internal_err(format!("Invalid transaction. error={}", e)))?;
-		let chain_id = self.chain_spec.name();
+		let chain_id = self.chain_spec.id();
 		let tx = hp_cosmos::Tx::new(tx, chain_id)
 			.map_err(|e| internal_err(format!("Invalid transaction. error={}", e)))?;
 		let block_hash = self.client.info().best_hash;
