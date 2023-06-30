@@ -22,10 +22,7 @@
 pub mod runner;
 pub mod weights;
 
-use crate::{
-	runner::{Runner as RunnerT, RunnerError},
-	weights::WeightInfo,
-};
+use crate::runner::{Runner as RunnerT, RunnerError};
 use frame_support::{
 	codec::{Decode, Encode, MaxEncodedLen},
 	dispatch::{DispatchInfo, PostDispatchInfo},
@@ -45,6 +42,7 @@ use sp_runtime::{
 	DispatchError, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
+pub use weights::*;
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum RawOrigin {
@@ -174,10 +172,10 @@ pub mod pallet {
 		type AddressMapping: AddressMapping<Self::AccountId>;
 		/// Currency type for withdraw and balance storage.
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
-		/// The overarching event type.
-		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Cosmos execution runner.
 		type Runner: RunnerT<Self>;
+		/// The overarching event type.
+		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 	}
@@ -233,9 +231,26 @@ impl<T: Config> Pallet<T> {
 		tx: &hp_cosmos::Tx,
 	) -> Result<(), TransactionValidityError> {
 		let (who, _) = Self::account(&origin);
-		if who.sequence != tx.auth_info.signer_infos[0].sequence {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
+		if who.sequence < tx.auth_info.signer_infos[0].sequence {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale))
 		}
+		if who.sequence > tx.auth_info.signer_infos[0].sequence {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Future))
+		}
+
+		let mut total_payment = 0u128;
+		total_payment = total_payment.saturating_add(tx.auth_info.fee.amount);
+		for msg in tx.body.messages.iter() {
+			match msg {
+				Msg::MsgSend { amount, .. } => {
+					total_payment = total_payment.saturating_add(*amount);
+				},
+			}
+		}
+		if total_payment > who.amount {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
+		}
+
 		Ok(())
 	}
 
@@ -244,8 +259,23 @@ impl<T: Config> Pallet<T> {
 	// the function `validate_transaction_common`.
 	fn validate_transaction_in_pool(origin: H160, tx: &hp_cosmos::Tx) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		if who.sequence != tx.auth_info.signer_infos[0].sequence {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
+		if who.sequence < tx.auth_info.signer_infos[0].sequence {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale))
+		}
+		if who.sequence > tx.auth_info.signer_infos[0].sequence {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Future))
+		}
+		let mut total_payment = 0u128;
+		total_payment = total_payment.saturating_add(tx.auth_info.fee.amount);
+		for msg in tx.body.messages.iter() {
+			match msg {
+				Msg::MsgSend { amount, .. } => {
+					total_payment = total_payment.saturating_add(*amount);
+				},
+			}
+		}
+		if total_payment > who.amount {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
 		}
 
 		let transaction_nonce = tx.auth_info.signer_infos[0].sequence;

@@ -52,21 +52,19 @@ pub struct Tx {
 }
 
 #[cfg(feature = "std")]
-impl TryFrom<cosmrs::tx::Tx> for Tx {
-	type Error = DecodeTxError;
-
-	fn try_from(tx: cosmrs::tx::Tx) -> Result<Self, Self::Error> {
+impl Tx {
+	pub fn new(tx: cosmrs::tx::Tx, chain_id: &str) -> Result<Self, DecodeTxError> {
 		let signatures = tx.signatures.iter().map(|s| s.clone()).collect::<Vec<SignatureBytes>>();
 		let sign_doc = match tx.auth_info.signer_infos[0].mode_info {
 			cosmrs::tx::ModeInfo::Single(single) => match single.mode {
 				SignMode::Direct => {
-					let chain_id = chain::Id::from_str("noir").unwrap();
+					let chain_id = chain::Id::from_str(chain_id).unwrap();
 					let sign_doc =
 						cosmrs::tx::SignDoc::new(&tx.body, &tx.auth_info, &chain_id, 0u64)
 							.map_err(|_| DecodeTxError::InvalidTxData)?;
 					sign_doc.into_bytes().map_err(|_| DecodeTxError::InvalidSignDoc)?
 				},
-				SignMode::LegacyAminoJson => SignAminoDoc::try_from(&tx)?.to_bytes()?,
+				SignMode::LegacyAminoJson => SignAminoDoc::new(&tx, chain_id)?.to_bytes()?,
 				_ => return Err(DecodeTxError::UnsupportedSignMode),
 			},
 			_ => return Err(DecodeTxError::UnsupportedSignMode),
@@ -250,7 +248,7 @@ mod tests {
 		let tx_bytes =  "Cp0BCpgBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEngKLWNvc21vczFwdnJhbjRkbDl1NzNxNXo0dzNtY2xnbDUzMGtsdHdxY2EwMnk4ZBItY29zbW9zMThwd3ZxajB0ZG5oZ20zM241bG4wMjBqdnk4MjBmcjI5aDJtc213GhgKBHVjZHQSEDEwMDAwMDAwMDAwMDAwMDASABJkClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiED9ZPCan9HZlZbW/+hDSWLfy6cW+aPzrjSILmLmCSnUUcSBAoCCH8YABIQCgoKBHVjZHQSAjI1EKCNBhpA0YAS1zXHInFcdO2w/tZjTEWa9fNs53mTsitzpx21mxRVaJv8lJ2eErg+/IWvCWLHfsh71fMxOY2AJ7DrQIzTxg==";
 		let tx_bytes = general_purpose::STANDARD.decode(tx_bytes).unwrap();
 		let tx = cosmrs::Tx::from_bytes(&tx_bytes).unwrap();
-		let sign_doc: SignAminoDoc = tx.try_into().unwrap();
+		let sign_doc = SignAminoDoc::new(&tx, "noir").unwrap();
 		let hash = sha2_256(&sign_doc.to_bytes().unwrap());
 		assert_eq!(
 			hex::encode(hash),

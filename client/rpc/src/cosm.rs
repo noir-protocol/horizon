@@ -39,14 +39,19 @@ pub trait CosmApi {
 }
 
 pub struct Cosm<P, B: BlockT, C> {
+	chain_spec: Box<dyn sc_chain_spec::ChainSpec>,
 	pool: Arc<P>,
 	client: Arc<C>,
 	_marker: PhantomData<B>,
 }
 
 impl<P, B: BlockT, C> Cosm<P, B, C> {
-	pub fn new(pool: Arc<P>, client: Arc<C>) -> Self {
-		Self { pool, client, _marker: Default::default() }
+	pub fn new(
+		chain_spec: Box<dyn sc_chain_spec::ChainSpec>,
+		pool: Arc<P>,
+		client: Arc<C>,
+	) -> Self {
+		Self { chain_spec, pool, client, _marker: Default::default() }
 	}
 }
 
@@ -65,8 +70,8 @@ where
 
 		let tx = cosmrs::Tx::from_bytes(&tx_bytes)
 			.map_err(|e| internal_err(format!("Invalid transaction. error={}", e)))?;
-		let tx: hp_cosmos::Tx = tx
-			.try_into()
+		let chain_id = self.chain_spec.name();
+		let tx = hp_cosmos::Tx::new(tx, chain_id)
 			.map_err(|e| internal_err(format!("Invalid transaction. error={}", e)))?;
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = self

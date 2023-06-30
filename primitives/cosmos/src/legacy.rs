@@ -105,20 +105,8 @@ impl SignAminoDoc {
 	pub fn to_bytes(&self) -> Result<Vec<u8>, DecodeTxError> {
 		Ok(self.to_json()?.as_bytes().to_vec())
 	}
-}
 
-impl TryFrom<cosmrs::Tx> for SignAminoDoc {
-	type Error = DecodeTxError;
-
-	fn try_from(tx: cosmrs::Tx) -> Result<Self, Self::Error> {
-		SignAminoDoc::try_from(&tx)
-	}
-}
-
-impl TryFrom<&cosmrs::Tx> for SignAminoDoc {
-	type Error = DecodeTxError;
-
-	fn try_from(tx: &cosmrs::Tx) -> Result<Self, Self::Error> {
+	pub fn new(tx: &cosmrs::Tx, chain_id: &str) -> Result<Self, DecodeTxError> {
 		if tx.auth_info.signer_infos.is_empty() {
 			return Err(DecodeTxError::EmptySigners)
 		}
@@ -131,7 +119,7 @@ impl TryFrom<&cosmrs::Tx> for SignAminoDoc {
 			// TODO: get chain id from env
 			return Ok(Self {
 				account_number: "0".to_string(),
-				chain_id: "noir".to_string(),
+				chain_id: chain_id.to_string(),
 				fee: tx.auth_info.fee.clone().into(),
 				memo: tx.body.memo.clone(),
 				msgs,
