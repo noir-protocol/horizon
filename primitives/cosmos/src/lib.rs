@@ -54,6 +54,12 @@ pub struct Tx {
 #[cfg(feature = "std")]
 impl Tx {
 	pub fn new(tx: cosmrs::tx::Tx, chain_id: &str) -> Result<Self, DecodeTxError> {
+		if tx.signatures.is_empty() {
+			return Err(DecodeTxError::EmptySignatures)
+		}
+		if tx.auth_info.signer_infos.is_empty() {
+			return Err(DecodeTxError::EmptySigners)
+		}
 		let signatures = tx.signatures.iter().map(|s| s.clone()).collect::<Vec<SignatureBytes>>();
 		let sign_doc = match tx.auth_info.signer_infos[0].mode_info {
 			cosmrs::tx::ModeInfo::Single(single) => match single.mode {
@@ -120,15 +126,15 @@ impl TryFrom<&cosmrs::Any> for Msg {
 
 	fn try_from(any: &cosmrs::Any) -> Result<Self, Self::Error> {
 		if any.type_url == "/cosmos.bank.v1beta1.MsgSend" {
-			let type_msg = cosmrs::proto::cosmos::bank::v1beta1::MsgSend::from_any(any)
+			let typed_msg = cosmrs::proto::cosmos::bank::v1beta1::MsgSend::from_any(any)
 				.map_err(|_| DecodeTxError::InvalidMsgData)?;
-			let type_msg = cosmrs::bank::MsgSend::try_from(type_msg)
-				.map_err(|_| DecodeTxError::InvalidMsgData)?;
-			let amount = type_msg.amount[0].amount;
+			let typed_msg: cosmrs::bank::MsgSend =
+				typed_msg.try_into().map_err(|_| DecodeTxError::InvalidMsgData)?;
+			let amount = typed_msg.amount[0].amount;
 			let mut from_address: [u8; 20] = [0u8; 20];
-			from_address.copy_from_slice(&type_msg.from_address.to_bytes()[..]);
+			from_address.copy_from_slice(&typed_msg.from_address.to_bytes()[..]);
 			let mut to_address: [u8; 20] = [0u8; 20];
-			to_address.copy_from_slice(&type_msg.to_address.to_bytes()[..]);
+			to_address.copy_from_slice(&typed_msg.to_address.to_bytes()[..]);
 
 			Ok(Msg::MsgSend {
 				from_address: from_address.into(),

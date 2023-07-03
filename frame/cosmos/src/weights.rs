@@ -28,12 +28,18 @@ pub trait WeightInfo {
 pub struct HorizonWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for HorizonWeight<T> {
 	fn transact(tx: &hp_cosmos::Tx) -> Weight {
-		match tx.body.messages[0] {
-			hp_cosmos::Msg::MsgSend { .. } => {
-				use pallet_balances::WeightInfo;
-				pallet_balances::weights::SubstrateWeight::<T>::transfer()
-					.saturating_add(T::DbWeight::get().reads(2))
-			},
+		let total_weight = Weight::default();
+		for msg in tx.body.messages.iter() {
+			match msg {
+				hp_cosmos::Msg::MsgSend { .. } => {
+					use pallet_balances::WeightInfo;
+					total_weight.saturating_add(
+						pallet_balances::weights::SubstrateWeight::<T>::transfer()
+							.saturating_add(T::DbWeight::get().reads(2)),
+					);
+				},
+			}
 		}
+		total_weight
 	}
 }

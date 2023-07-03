@@ -113,10 +113,8 @@ impl SignAminoDoc {
 		if let cosmrs::tx::ModeInfo::Single(_) = &tx.auth_info.signer_infos[0].mode_info {
 			let mut msgs: Vec<Msg> = Vec::new();
 			for msg in &tx.body.messages {
-				let typed_msg = Msg::try_from(msg)?;
-				msgs.push(typed_msg);
+				msgs.push(msg.try_into()?);
 			}
-			// TODO: get chain id from env
 			return Ok(Self {
 				account_number: "0".to_string(),
 				chain_id: chain_id.to_string(),

@@ -20,6 +20,7 @@ use core::fmt::Display;
 #[derive(Debug)]
 pub enum DecodeTxError {
 	InvalidTxData,
+	EmptySignatures,
 	EmptySigners,
 	UnsupportedSignerType,
 	UnsupportedSignMode,
@@ -32,6 +33,7 @@ impl Display for DecodeTxError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		match self {
 			DecodeTxError::InvalidTxData => write!(f, "{}", "INVALID_TX_DATA"),
+			DecodeTxError::EmptySignatures => write!(f, "{}", "EMPTY_SIGNATURES"),
 			DecodeTxError::EmptySigners => write!(f, "{}", "EMPTY_SIGNERS"),
 			DecodeTxError::UnsupportedSignerType => write!(f, "{}", "UNSUPPORTED_SIGNER_TYPE"),
 			DecodeTxError::UnsupportedSignMode => write!(f, "{}", "UNSUPPORTED_SIGN_MODE"),

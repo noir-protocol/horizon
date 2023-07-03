@@ -294,7 +294,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResult {
-		match tx.body.messages[0].clone() {
+		match tx.body.messages[0] {
 			hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
 				if source != from_address {
 					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
