@@ -294,20 +294,21 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResult {
-		match tx.body.messages[0] {
-			hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
-				if source != from_address {
-					return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
-				}
-				T::Runner::msg_send(
-					from_address,
-					to_address,
-					amount.into(),
-					tx.auth_info.fee.amount,
-				)
-				.map_err(|_| Error::<T>::BalanceLow)?;
-			},
-		};
+		for msg in tx.body.messages.iter() {
+			match msg {
+				hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
+					if source != *from_address {
+						return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
+					}
+					T::Runner::msg_send(from_address, to_address, *amount)
+						.map_err(|_| Error::<T>::BalanceLow)?;
+				},
+			};
+		}
+		let fee = tx.auth_info.fee.amount.try_into().map_err(|_| Error::<T>::InvalidType)?;
+		let source = T::AddressMapping::into_account_id(source);
+		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
+			.map_err(|_| Error::<T>::BalanceLow)?;
 		Self::deposit_event(Event::Executed {
 			tx_hash: tx.hash.into(),
 			auth_info: tx.auth_info.clone(),
@@ -351,26 +352,16 @@ where
 	type Error = Error<T>;
 
 	fn msg_send(
-		from_address: H160,
-		to_address: H160,
+		from_address: &H160,
+		to_address: &H160,
 		amount: u128,
-		fee: u128,
 	) -> Result<(), RunnerError<Self::Error>> {
-		let source = T::AddressMapping::into_account_id(from_address);
-		let target = T::AddressMapping::into_account_id(to_address);
+		let source = T::AddressMapping::into_account_id(*from_address);
+		let target = T::AddressMapping::into_account_id(*to_address);
 		let amount = amount.try_into().map_err(|_| RunnerError {
 			error: Self::Error::InvalidType,
 			weight: T::DbWeight::get().reads(2u64),
 		})?;
-		let fee = fee.try_into().map_err(|_| RunnerError {
-			error: Self::Error::InvalidType,
-			weight: T::DbWeight::get().reads(2u64),
-		})?;
-		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
-			.map_err(|_| RunnerError {
-				error: Self::Error::BalanceLow,
-				weight: T::DbWeight::get().reads(2u64),
-			})?;
 		T::Currency::transfer(&source, &target, amount, ExistenceRequirement::AllowDeath).map_err(
 			|_| RunnerError {
 				error: Self::Error::BalanceLow,

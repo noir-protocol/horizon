@@ -28,9 +28,8 @@ pub trait Runner<T: Config> {
 	type Error: Into<sp_runtime::DispatchError>;
 
 	fn msg_send(
-		from_address: H160,
-		to_address: H160,
+		from_address: &H160,
+		to_address: &H160,
 		amount: u128,
-		fee: u128,
 	) -> Result<(), RunnerError<Self::Error>>;
 }
