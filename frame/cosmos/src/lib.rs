@@ -205,11 +205,11 @@ impl<T: Config> Pallet<T> {
 	pub fn verify(tx: &hp_cosmos::Tx) -> Option<H160> {
 		if let Some(public_key) = &tx.auth_info.signer_infos[0].public_key {
 			match public_key {
-				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::SECP256K1(pk)) =>
+				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::Secp256k1(pk)) =>
 					if hp_io::crypto::secp256k1_ecdsa_verify(
-						&pk,
-						tx.hash.as_bytes(),
 						&tx.signatures[0],
+						tx.hash.as_bytes(),
+						&pk[..],
 					) {
 						Some(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(pk)).into())
 					} else {

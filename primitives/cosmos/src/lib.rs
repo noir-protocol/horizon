@@ -187,12 +187,12 @@ impl TryFrom<cosmrs::tx::SignerInfo> for SignerInfo {
 					cosmrs::crypto::PublicKey::ED25519_TYPE_URL => {
 						let mut raw_bytes: [u8; 32] = [0u8; 32];
 						raw_bytes.copy_from_slice(&p.to_bytes()[..]);
-						Some(SignerPublicKey::Single(PublicKey::ED25519(raw_bytes)))
+						Some(SignerPublicKey::Single(PublicKey::Ed25519(raw_bytes)))
 					},
 					cosmrs::crypto::PublicKey::SECP256K1_TYPE_URL => {
 						let mut raw_bytes: [u8; 33] = [0u8; 33];
 						raw_bytes.copy_from_slice(&p.to_bytes()[..]);
-						Some(SignerPublicKey::Single(PublicKey::SECP256K1(raw_bytes)))
+						Some(SignerPublicKey::Single(PublicKey::Secp256k1(raw_bytes)))
 					},
 					_ => return Err(DecodeTxError::UnsupportedSignerType),
 				},
@@ -216,8 +216,8 @@ pub enum SignerPublicKey {
 #[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum PublicKey {
-	ED25519([u8; 32]),
-	SECP256K1([u8; 33]),
+	Ed25519([u8; 32]),
+	Secp256k1([u8; 33]),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

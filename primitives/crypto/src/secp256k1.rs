@@ -15,13 +15,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use signature::hazmat::PrehashVerifier;
+#[cfg(feature = "std")]
+use secp256k1::{ecdsa::Signature, Message, PublicKey};
 
-/// Verify with secp256k1.
-pub fn secp256k1_ecdsa_verify(pk: &[u8; 33], msg: &[u8], sig: &[u8]) -> bool {
-	match (k256::ecdsa::VerifyingKey::from_sec1_bytes(pk), k256::ecdsa::Signature::from_slice(sig))
-	{
-		(Ok(verifying_key), Ok(signature)) => verifying_key.verify_prehash(msg, &signature).is_ok(),
-		_ => false,
-	}
+/// Verify a secp256k1 ECDSA signature.
+#[cfg(feature = "std")]
+pub fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
+	let sig = match Signature::from_compact(sig) {
+		Ok(v) => v,
+		Err(_) => return false,
+	};
+	let msg = match Message::from_slice(msg) {
+		Ok(v) => v,
+		Err(_) => return false,
+	};
+	let pub_key = match PublicKey::from_slice(pub_key) {
+		Ok(v) => v,
+		Err(_) => return false,
+	};
+
+	sig.verify(&msg, &pub_key).is_ok()
 }
