@@ -22,7 +22,7 @@ sp-core = { workspace = true }
 sp-std = { workspace = true }
 
 [dev-dependencies]
-base64 = { workspace = true }
+base64ct = { workspace = true }
 hex = { workspace = true }
 
 [features]

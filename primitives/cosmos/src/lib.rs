@@ -246,13 +246,13 @@ pub struct Account {
 #[cfg(test)]
 mod tests {
 	use crate::legacy::SignAminoDoc;
-	use base64::{engine::general_purpose, Engine};
+	use base64ct::{Base64, Encoding};
 	use sp_core::hashing::sha2_256;
 
 	#[test]
 	fn test_sign_amino_doc_hash() {
 		let tx_bytes =  "Cp0BCpgBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEngKLWNvc21vczFwdnJhbjRkbDl1NzNxNXo0dzNtY2xnbDUzMGtsdHdxY2EwMnk4ZBItY29zbW9zMThwd3ZxajB0ZG5oZ20zM241bG4wMjBqdnk4MjBmcjI5aDJtc213GhgKBHVjZHQSEDEwMDAwMDAwMDAwMDAwMDASABJkClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiED9ZPCan9HZlZbW/+hDSWLfy6cW+aPzrjSILmLmCSnUUcSBAoCCH8YABIQCgoKBHVjZHQSAjI1EKCNBhpA0YAS1zXHInFcdO2w/tZjTEWa9fNs53mTsitzpx21mxRVaJv8lJ2eErg+/IWvCWLHfsh71fMxOY2AJ7DrQIzTxg==";
-		let tx_bytes = general_purpose::STANDARD.decode(tx_bytes).unwrap();
+		let tx_bytes = Base64::decode_vec(tx_bytes).unwrap();
 		let tx = cosmrs::Tx::from_bytes(&tx_bytes).unwrap();
 		let sign_doc = SignAminoDoc::new(&tx, "noir").unwrap();
 		let hash = sha2_256(&sign_doc.to_bytes().unwrap());

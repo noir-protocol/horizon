@@ -29,4 +29,4 @@ hp-cosmos = { workspace = true }
 hp-rpc = { workspace = true, features = ["default"] }
 
 [dev-dependencies]
-base64 = { workspace = true }
+base64ct = { workspace = true }
