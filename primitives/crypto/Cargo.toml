@@ -10,7 +10,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 ripemd = { workspace = true }
-secp256k1 = { workspace = true }
+secp256k1 = { workspace = true, optional = true }
 
 [features]
 default = ["std"]
