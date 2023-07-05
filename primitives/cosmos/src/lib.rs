@@ -49,11 +49,12 @@ pub struct Tx {
 	pub auth_info: AuthInfo,
 	pub signatures: Vec<SignatureBytes>,
 	pub hash: H256,
+	pub len: u32,
 }
 
 #[cfg(feature = "std")]
 impl Tx {
-	pub fn new(tx: cosmrs::tx::Tx, chain_id: &str) -> Result<Self, DecodeTxError> {
+	pub fn new(tx: cosmrs::tx::Tx, chain_id: &str, len: u32) -> Result<Self, DecodeTxError> {
 		if tx.signatures.is_empty() {
 			return Err(DecodeTxError::EmptySignatures)
 		}
@@ -80,6 +81,7 @@ impl Tx {
 			auth_info: tx.auth_info.try_into()?,
 			signatures,
 			hash: sha2_256(&sign_doc).into(),
+			len,
 		})
 	}
 }

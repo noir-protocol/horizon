@@ -27,16 +27,17 @@ use crate::runner::{Runner as RunnerT, RunnerError};
 use frame_support::{
 	codec::{Decode, Encode, MaxEncodedLen},
 	dispatch::{DispatchInfo, PostDispatchInfo},
-	pallet_prelude::DispatchResult,
+	pallet_prelude::{DispatchClass, DispatchResult},
 	scale_info::TypeInfo,
 	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement, Get, WithdrawReasons},
+	weights::{Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::{Account, AuthInfo, Msg};
 pub use pallet::*;
 use sp_core::{H160, H256};
 use sp_runtime::{
-	traits::{BadOrigin, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
+	traits::{BadOrigin, Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
@@ -173,12 +174,19 @@ pub mod pallet {
 		type AddressMapping: AddressMapping<Self::AccountId>;
 		/// Currency type for withdraw and balance storage.
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
+		/// Convert a length value into a deductible fee based on the currency type.
+		type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
 		/// Cosmos execution runner.
 		type Runner: RunnerT<Self>;
 		/// The overarching event type.
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
+		/// Used to answer contracts' queries regarding the current weight price. This is **not**
+		/// used to calculate the actual fee and is only for informational purposes.
+		type WeightPrice: Convert<Weight, BalanceOf<Self>>;
+		/// Convert a weight value into a deductible fee based on the currency type.
+		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
 	}
 
 	#[pallet::event]
@@ -306,7 +314,8 @@ impl<T: Config> Pallet<T> {
 				},
 			};
 		}
-		let fee = tx.auth_info.fee.amount.try_into().map_err(|_| Error::<T>::InvalidType)?;
+		let weight = <T as pallet::Config>::WeightInfo::transact(&tx);
+		let fee = Self::compute_fee(tx.len, weight);
 		let source = T::AddressMapping::into_account_id(source);
 		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
 			.map_err(|_| Error::<T>::BalanceLow)?;
@@ -334,6 +343,29 @@ impl<T: Config> Pallet<T> {
 			},
 			T::DbWeight::get().reads(2),
 		)
+	}
+
+	fn compute_fee(len: u32, weight: Weight) -> BalanceOf<T> {
+		let adjusted_weight_fee = T::WeightPrice::convert(weight);
+		let length_fee = Self::length_to_fee(len);
+		let base_fee =
+			Self::weight_to_fee(T::BlockWeights::get().get(DispatchClass::Normal).base_extrinsic);
+		let inclusion_fee = base_fee + length_fee + adjusted_weight_fee;
+		inclusion_fee
+	}
+
+	/// Compute the length portion of a fee by invoking the configured `LengthToFee` impl.
+	pub fn length_to_fee(length: u32) -> BalanceOf<T> {
+		T::LengthToFee::weight_to_fee(&Weight::from_ref_time(length as u64))
+	}
+
+	/// Compute the unadjusted portion of the weight fee by invoking the configured `WeightToFee`
+	/// impl. Note that the input `weight` is capped by the maximum block weight before computation.
+	pub fn weight_to_fee(weight: Weight) -> BalanceOf<T> {
+		// cap the weight to the maximum defined in runtime, otherwise it will be the
+		// `Bounded` maximum of its data type, which is not desired.
+		let capped_weight = weight.min(T::BlockWeights::get().max_block);
+		T::WeightToFee::weight_to_fee(&capped_weight)
 	}
 }
 

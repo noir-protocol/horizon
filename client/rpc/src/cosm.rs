@@ -68,11 +68,15 @@ where
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256> {
 		use hp_rpc::ConvertTxRuntimeApi;
 
-		let tx = cosmrs::Tx::from_bytes(&tx_bytes)
-			.map_err(|e| internal_err(format!("Invalid transaction. error={}", e)))?;
+		let tx =
+			cosmrs::Tx::from_bytes(&tx_bytes).map_err(|_| internal_err("Invalid transaction."))?;
 		let chain_id = self.chain_spec.id();
-		let tx = hp_cosmos::Tx::new(tx, chain_id)
-			.map_err(|e| internal_err(format!("Invalid transaction. error={}", e)))?;
+		let tx_len: u32 = tx_bytes
+			.len()
+			.try_into()
+			.map_err(|_| internal_err("Transaction is too long."))?;
+		let tx = hp_cosmos::Tx::new(tx, chain_id, tx_len)
+			.map_err(|_| internal_err("Invalid transaction."))?;
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = self
 			.client
