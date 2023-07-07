@@ -38,14 +38,14 @@ pub trait CosmApi {
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256>;
 }
 
-pub struct Cosm<P, B: BlockT, C> {
+pub struct Cosm<B: BlockT, C, P> {
 	chain_spec: Box<dyn sc_chain_spec::ChainSpec>,
 	pool: Arc<P>,
 	client: Arc<C>,
 	_marker: PhantomData<B>,
 }
 
-impl<P, B: BlockT, C> Cosm<P, B, C> {
+impl<B: BlockT, C, P> Cosm<B, C, P> {
 	pub fn new(
 		chain_spec: Box<dyn sc_chain_spec::ChainSpec>,
 		pool: Arc<P>,
@@ -56,7 +56,7 @@ impl<P, B: BlockT, C> Cosm<P, B, C> {
 }
 
 #[async_trait]
-impl<P, B, C> CosmApiServer for Cosm<P, B, C>
+impl<B, C, P> CosmApiServer for Cosm<B, C, P>
 where
 	B: BlockT,
 	C: Send + Sync + 'static,

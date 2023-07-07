@@ -318,7 +318,7 @@ impl<T: Config> Pallet<T> {
 		let fee = Self::compute_fee(tx.len, weight);
 		let maximum_fee = tx.auth_info.fee.amount.unique_saturated_into();
 		if fee > maximum_fee {
-			return Err(Error::<T>::FeeOverflow)?
+			return Err(Error::<T>::FeeOverflow.into());
 		}
 		let source = T::AddressMapping::into_account_id(source);
 		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)

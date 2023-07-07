@@ -259,7 +259,7 @@ mod tests {
 		let sign_doc = SignAminoDoc::new(&tx, "noir").unwrap();
 		let hash = sha2_256(&sign_doc.to_bytes().unwrap());
 		assert_eq!(
-			hex::encode(hash),
+			array_bytes::bytes2hex("", &hash),
 			"c853e81f04e499cb842c67b8c75a1e23d60bdc02ee51ff9f5e28925f5d9706a8"
 		);
 	}

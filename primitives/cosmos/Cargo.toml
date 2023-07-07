@@ -22,8 +22,8 @@ sp-core = { workspace = true }
 sp-std = { workspace = true }
 
 [dev-dependencies]
+array-bytes = { workspace = true }
 base64ct = { workspace = true }
-hex = { workspace = true }
 
 [features]
 default = ["std"]
