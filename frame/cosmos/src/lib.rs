@@ -266,8 +266,6 @@ impl<T: Config> Pallet<T> {
 	}
 
 	// Controls that must be performed by the pool.
-	// The controls common with the State Transition Function (STF) are in
-	// the function `validate_transaction_common`.
 	fn validate_transaction_in_pool(origin: H160, tx: &hp_cosmos::Tx) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
 		if who.sequence < tx.auth_info.signer_infos[0].sequence {
@@ -318,7 +316,7 @@ impl<T: Config> Pallet<T> {
 		}
 		let weight = <T as pallet::Config>::WeightInfo::transact(&tx);
 		let fee = Self::compute_fee(tx.len, weight);
-		let maximum_fee: BalanceOf<T> = tx.auth_info.fee.amount.unique_saturated_into();
+		let maximum_fee = tx.auth_info.fee.amount.unique_saturated_into();
 		if fee > maximum_fee {
 			return Err(Error::<T>::FeeOverflow)?
 		}
