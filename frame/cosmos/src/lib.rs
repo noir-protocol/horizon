@@ -303,10 +303,14 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResult {
+		Self::execute(&source, &tx)
+	}
+
+	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> DispatchResult {
 		for msg in tx.body.messages.iter() {
 			match msg {
 				hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
-					if source != *from_address {
+					if *source != *from_address {
 						return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
 					}
 					T::Runner::msg_send(from_address, to_address, *amount)
@@ -318,9 +322,9 @@ impl<T: Config> Pallet<T> {
 		let fee = Self::compute_fee(tx.len, weight);
 		let maximum_fee = tx.auth_info.fee.amount.unique_saturated_into();
 		if fee > maximum_fee {
-			return Err(Error::<T>::FeeOverflow.into());
+			return Err(Error::<T>::FeeOverflow.into())
 		}
-		let source = T::AddressMapping::into_account_id(source);
+		let source = T::AddressMapping::into_account_id(*source);
 		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
 			.map_err(|_| Error::<T>::BalanceLow)?;
 		Self::deposit_event(Event::Executed {
