@@ -22,25 +22,16 @@ use sp_std::marker::PhantomData;
 
 /// Weight functions needed for pallet_cosmos.
 pub trait WeightInfo {
-	fn transact(tx: &hp_cosmos::Tx) -> Weight;
+	fn msg_send() -> Weight;
 }
 
 /// Weights for pallet_cosmos using the Horizon node and recommended hardware.
 pub struct HorizonWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for HorizonWeight<T> {
-	fn transact(tx: &hp_cosmos::Tx) -> Weight {
-		let mut total_weight = Weight::default();
-		for msg in tx.body.messages.iter() {
-			match msg {
-				hp_cosmos::Msg::MsgSend { .. } => {
-					use pallet_balances::WeightInfo;
-					total_weight = total_weight.saturating_add(
-						pallet_balances::weights::SubstrateWeight::<T>::transfer()
-							.saturating_add(T::DbWeight::get().reads(2)),
-					);
-				},
-			}
-		}
-		total_weight
+	fn msg_send() -> Weight {
+		use pallet_balances::WeightInfo;
+		pallet_balances::weights::SubstrateWeight::<T>::transfer()
+			.saturating_add(T::DbWeight::get().reads(3))
+			.saturating_add(T::DbWeight::get().writes(1))
 	}
 }

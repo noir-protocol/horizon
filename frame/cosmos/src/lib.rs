@@ -204,7 +204,7 @@ pub mod pallet {
 	{
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::transact(&tx))]
+		#[pallet::weight(tx.auth_info.fee.gas_limit)]
 		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResult {
 			let source = ensure_cosmos_transaction(origin)?;
 			Self::apply_validated_transaction(source, tx)
@@ -307,6 +307,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> DispatchResult {
+		let mut total_weight = Weight::default();
 		for msg in tx.body.messages.iter() {
 			match msg {
 				hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
@@ -315,11 +316,12 @@ impl<T: Config> Pallet<T> {
 					}
 					T::Runner::msg_send(from_address, to_address, *amount)
 						.map_err(|_| Error::<T>::BalanceLow)?;
+					total_weight =
+						total_weight.saturating_add(<T as pallet::Config>::WeightInfo::msg_send());
 				},
 			};
 		}
-		let weight = <T as pallet::Config>::WeightInfo::transact(&tx);
-		let fee = Self::compute_fee(tx.len, weight);
+		let fee = Self::compute_fee(tx.len, total_weight);
 		let maximum_fee = tx.auth_info.fee.amount.unique_saturated_into();
 		if fee > maximum_fee {
 			return Err(Error::<T>::FeeOverflow.into())
