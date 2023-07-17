@@ -155,18 +155,6 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 
-	#[pallet::error]
-	pub enum Error<T> {
-		/// Not enough balance to perform action
-		BalanceLow,
-		/// Invalid type
-		InvalidType,
-		/// Unauthorized access
-		UnauthorizedAccess,
-		/// Calculating total fee overflowed
-		FeeOverflow,
-	}
-
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
