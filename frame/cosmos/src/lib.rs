@@ -26,8 +26,8 @@ pub mod weights;
 use crate::runner::{Runner as RunnerT, RunnerError};
 use frame_support::{
 	codec::{Decode, Encode, MaxEncodedLen},
-	dispatch::{DispatchInfo, PostDispatchInfo},
-	pallet_prelude::{DispatchClass, DispatchResult},
+	dispatch::{DispatchInfo, Pays, PostDispatchInfo},
+	pallet_prelude::{DispatchClass, DispatchResultWithPostInfo},
 	scale_info::TypeInfo,
 	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement, Get, WithdrawReasons},
 	weights::{Weight, WeightToFee},
@@ -41,7 +41,7 @@ use sp_runtime::{
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	DispatchError, RuntimeDebug,
+	DispatchErrorWithPostInfo, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
 pub use weights::*;
@@ -194,7 +194,13 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event {
-		Executed { tx_hash: H256, auth_info: AuthInfo, messages: Vec<Msg> },
+		Executed {
+			tx_hash: H256,
+			code: u8,
+			gas_used: Option<Weight>,
+			auth_info: AuthInfo,
+			messages: Vec<Msg>,
+		},
 	}
 
 	#[pallet::call]
@@ -205,7 +211,7 @@ pub mod pallet {
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
 		#[pallet::weight(tx.auth_info.fee.gas_limit)]
-		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResult {
+		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -302,39 +308,88 @@ impl<T: Config> Pallet<T> {
 		builder.build()
 	}
 
-	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResult {
-		Self::execute(&source, &tx)
+	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
+		match Self::execute(&source, &tx) {
+			Ok(weight) => {
+				Self::deposit_event(Event::Executed {
+					tx_hash: tx.hash.into(),
+					code: 0u8,
+					gas_used: Some(weight),
+					auth_info: tx.auth_info.clone(),
+					messages: tx.body.messages.clone(),
+				});
+				Ok(PostDispatchInfo { actual_weight: Some(weight), pays_fee: Pays::No })
+			},
+			Err(e) => {
+				Self::deposit_event(Event::Executed {
+					tx_hash: tx.hash.into(),
+					code: 1u8,
+					gas_used: e.post_info.actual_weight,
+					auth_info: tx.auth_info.clone(),
+					messages: tx.body.messages.clone(),
+				});
+				Err(e)
+			},
+		}
 	}
 
-	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> DispatchResult {
+	fn execute(
+		source: &H160,
+		tx: &hp_cosmos::Tx,
+	) -> Result<Weight, DispatchErrorWithPostInfo<PostDispatchInfo>> {
 		let mut total_weight = Weight::default();
 		for msg in tx.body.messages.iter() {
 			match msg {
 				hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
 					if *source != *from_address {
-						return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
+						return Err(DispatchErrorWithPostInfo {
+							post_info: PostDispatchInfo {
+								actual_weight: Some(total_weight),
+								pays_fee: Pays::Yes,
+							},
+							error: Error::<T>::UnauthorizedAccess.into(),
+						})
 					}
-					T::Runner::msg_send(from_address, to_address, *amount)
-						.map_err(|_| Error::<T>::BalanceLow)?;
-					total_weight =
-						total_weight.saturating_add(<T as pallet::Config>::WeightInfo::msg_send());
+					let weight =
+						T::Runner::msg_send(from_address, to_address, *amount).map_err(|e| {
+							DispatchErrorWithPostInfo {
+								post_info: PostDispatchInfo {
+									actual_weight: Some(total_weight.saturating_add(e.weight)),
+									pays_fee: Pays::Yes,
+								},
+								error: e.error.into(),
+							}
+						})?;
+					total_weight = total_weight.saturating_add(weight);
 				},
 			};
 		}
+		// Add account nonce increment weight.
+		total_weight = total_weight.saturating_add(
+			T::DbWeight::get().reads(1).saturating_add(T::DbWeight::get().writes(1)),
+		);
 		let fee = Self::compute_fee(tx.len, total_weight);
 		let maximum_fee = tx.auth_info.fee.amount.unique_saturated_into();
 		if fee > maximum_fee {
-			return Err(Error::<T>::FeeOverflow.into())
+			return Err(DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(total_weight),
+					pays_fee: Pays::Yes,
+				},
+				error: Error::<T>::FeeOverflow.into(),
+			})
 		}
 		let source = T::AddressMapping::into_account_id(*source);
 		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
-			.map_err(|_| Error::<T>::BalanceLow)?;
-		Self::deposit_event(Event::Executed {
-			tx_hash: tx.hash.into(),
-			auth_info: tx.auth_info.clone(),
-			messages: tx.body.messages.clone(),
-		});
-		Ok(())
+			.map_err(|e| DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(total_weight),
+					pays_fee: Pays::Yes,
+				},
+				error: e,
+			})?;
+		frame_system::Pallet::<T>::inc_account_nonce(source);
+		Ok(total_weight)
 	}
 
 	/// Get the base account info.
@@ -398,7 +453,7 @@ where
 		from_address: &H160,
 		to_address: &H160,
 		amount: u128,
-	) -> Result<(), RunnerError<Self::Error>> {
+	) -> Result<Weight, RunnerError<Self::Error>> {
 		let source = T::AddressMapping::into_account_id(*from_address);
 		let target = T::AddressMapping::into_account_id(*to_address);
 		let amount = amount.try_into().map_err(|_| RunnerError {
@@ -411,7 +466,6 @@ where
 				weight: T::DbWeight::get().reads(2u64),
 			},
 		)?;
-		frame_system::Pallet::<T>::inc_account_nonce(&source);
-		Ok(())
+		Ok(<T as pallet::Config>::WeightInfo::msg_send())
 	}
 }

@@ -31,7 +31,6 @@ impl<T: frame_system::Config> WeightInfo for HorizonWeight<T> {
 	fn msg_send() -> Weight {
 		use pallet_balances::WeightInfo;
 		pallet_balances::weights::SubstrateWeight::<T>::transfer()
-			.saturating_add(T::DbWeight::get().reads(3))
-			.saturating_add(T::DbWeight::get().writes(1))
+			.saturating_add(T::DbWeight::get().reads(2))
 	}
 }

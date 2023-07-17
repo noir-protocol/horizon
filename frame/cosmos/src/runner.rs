@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::Config;
+use frame_support::weights::Weight;
 use sp_core::H160;
 
 #[derive(Debug)]
@@ -32,5 +33,5 @@ pub trait Runner<T: Config> {
 		from_address: &H160,
 		to_address: &H160,
 		amount: u128,
-	) -> Result<(), RunnerError<Self::Error>>;
+	) -> Result<Weight, RunnerError<Self::Error>>;
 }
