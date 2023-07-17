@@ -20,14 +20,14 @@
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 #![deny(unused_crate_dependencies)]
 
-pub mod runner;
+pub mod errors;
 pub mod weights;
 
-use crate::runner::{Runner as RunnerT, RunnerError};
+use crate::errors::{CosmosError, CosmosErrorCode};
 use frame_support::{
 	codec::{Decode, Encode, MaxEncodedLen},
-	dispatch::{DispatchInfo, Pays, PostDispatchInfo},
-	pallet_prelude::{DispatchClass, DispatchResultWithPostInfo},
+	dispatch::{DispatchInfo, PostDispatchInfo},
+	pallet_prelude::{DispatchClass, DispatchResult},
 	scale_info::TypeInfo,
 	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement, Get, WithdrawReasons},
 	weights::{Weight, WeightToFee},
@@ -41,7 +41,7 @@ use sp_runtime::{
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	DispatchErrorWithPostInfo, RuntimeDebug,
+	RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
 pub use weights::*;
@@ -145,6 +145,11 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 	) -> Result<Self::Success, OuterOrigin>;
 }
 
+struct ExecuteResult {
+	pub code: u8,
+	pub weight: Weight,
+}
+
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -170,6 +175,10 @@ pub mod pallet {
 	#[pallet::origin]
 	pub type Origin = RawOrigin;
 
+	/// Type alias for currency balance.
+	pub type BalanceOf<T> =
+		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_timestamp::Config {
 		/// Mapping from address to account id.
@@ -178,8 +187,6 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
 		/// Convert a length value into a deductible fee based on the currency type.
 		type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
-		/// Cosmos execution runner.
-		type Runner: RunnerT<Self>;
 		/// The overarching event type.
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Weight information for extrinsics in this pallet.
@@ -197,7 +204,7 @@ pub mod pallet {
 		Executed {
 			tx_hash: H256,
 			code: u8,
-			gas_used: Option<Weight>,
+			gas_used: Weight,
 			auth_info: AuthInfo,
 			messages: Vec<Msg>,
 		},
@@ -211,7 +218,7 @@ pub mod pallet {
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
 		#[pallet::weight(tx.auth_info.fee.gas_limit)]
-		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
+		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResult {
 			let source = ensure_cosmos_transaction(origin)?;
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -308,59 +315,39 @@ impl<T: Config> Pallet<T> {
 		builder.build()
 	}
 
-	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
-		match Self::execute(&source, &tx) {
-			Ok(weight) => {
-				Self::deposit_event(Event::Executed {
-					tx_hash: tx.hash.into(),
-					code: 0u8,
-					gas_used: Some(weight),
-					auth_info: tx.auth_info.clone(),
-					messages: tx.body.messages.clone(),
-				});
-				Ok(PostDispatchInfo { actual_weight: Some(weight), pays_fee: Pays::No })
-			},
-			Err(e) => {
-				Self::deposit_event(Event::Executed {
-					tx_hash: tx.hash.into(),
-					code: 1u8,
-					gas_used: e.post_info.actual_weight,
-					auth_info: tx.auth_info.clone(),
-					messages: tx.body.messages.clone(),
-				});
-				Err(e)
-			},
-		}
+	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResult {
+		let result = Self::execute(&source, &tx);
+		Self::deposit_event(Event::Executed {
+			tx_hash: tx.hash.into(),
+			code: result.code,
+			gas_used: result.weight,
+			auth_info: tx.auth_info.clone(),
+			messages: tx.body.messages.clone(),
+		});
+		Ok(())
 	}
 
-	fn execute(
-		source: &H160,
-		tx: &hp_cosmos::Tx,
-	) -> Result<Weight, DispatchErrorWithPostInfo<PostDispatchInfo>> {
+	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> ExecuteResult {
 		let mut total_weight = Weight::default();
 		for msg in tx.body.messages.iter() {
 			match msg {
 				hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
 					if *source != *from_address {
-						return Err(DispatchErrorWithPostInfo {
-							post_info: PostDispatchInfo {
-								actual_weight: Some(total_weight),
-								pays_fee: Pays::Yes,
-							},
-							error: Error::<T>::UnauthorizedAccess.into(),
-						})
+						return ExecuteResult {
+							code: CosmosErrorCode::ErrUnauthorized as u8,
+							weight: total_weight,
+						}
 					}
-					let weight =
-						T::Runner::msg_send(from_address, to_address, *amount).map_err(|e| {
-							DispatchErrorWithPostInfo {
-								post_info: PostDispatchInfo {
-									actual_weight: Some(total_weight.saturating_add(e.weight)),
-									pays_fee: Pays::Yes,
-								},
-								error: e.error.into(),
-							}
-						})?;
-					total_weight = total_weight.saturating_add(weight);
+					match Self::msg_send(from_address, to_address, *amount) {
+						Ok(weight) => {
+							total_weight = total_weight.saturating_add(weight);
+						},
+						Err(e) =>
+							return ExecuteResult {
+								code: e.error as u8,
+								weight: total_weight.saturating_add(e.weight),
+							},
+					};
 				},
 			};
 		}
@@ -371,25 +358,25 @@ impl<T: Config> Pallet<T> {
 		let fee = Self::compute_fee(tx.len, total_weight);
 		let maximum_fee = tx.auth_info.fee.amount.unique_saturated_into();
 		if fee > maximum_fee {
-			return Err(DispatchErrorWithPostInfo {
-				post_info: PostDispatchInfo {
-					actual_weight: Some(total_weight),
-					pays_fee: Pays::Yes,
-				},
-				error: Error::<T>::FeeOverflow.into(),
-			})
+			return ExecuteResult {
+				code: CosmosErrorCode::ErrInsufficientFee as u8,
+				weight: total_weight,
+			}
 		}
 		let source = T::AddressMapping::into_account_id(*source);
-		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
-			.map_err(|e| DispatchErrorWithPostInfo {
-				post_info: PostDispatchInfo {
-					actual_weight: Some(total_weight),
-					pays_fee: Pays::Yes,
-				},
-				error: e,
-			})?;
+		if let Err(_) = T::Currency::withdraw(
+			&source,
+			fee,
+			WithdrawReasons::FEE,
+			ExistenceRequirement::AllowDeath,
+		) {
+			return ExecuteResult {
+				code: CosmosErrorCode::ErrInsufficientFee as u8,
+				weight: total_weight,
+			}
+		}
 		frame_system::Pallet::<T>::inc_account_nonce(source);
-		Ok(total_weight)
+		ExecuteResult { code: 0, weight: total_weight }
 	}
 
 	/// Get the base account info.
@@ -432,38 +419,22 @@ impl<T: Config> Pallet<T> {
 		let capped_weight = weight.min(T::BlockWeights::get().max_block);
 		T::WeightToFee::weight_to_fee(&capped_weight)
 	}
-}
-
-#[derive(Default)]
-pub struct Runner<T: Config> {
-	_marker: PhantomData<T>,
-}
-
-/// Type alias for currency balance.
-pub type BalanceOf<T> =
-	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
-impl<T: Config> RunnerT<T> for Runner<T>
-where
-	BalanceOf<T>: TryFrom<u128> + Into<u128>,
-{
-	type Error = Error<T>;
 
 	fn msg_send(
 		from_address: &H160,
 		to_address: &H160,
 		amount: u128,
-	) -> Result<Weight, RunnerError<Self::Error>> {
+	) -> Result<Weight, CosmosError> {
 		let source = T::AddressMapping::into_account_id(*from_address);
 		let target = T::AddressMapping::into_account_id(*to_address);
-		let amount = amount.try_into().map_err(|_| RunnerError {
-			error: Self::Error::InvalidType,
+		let amount = amount.try_into().map_err(|_| CosmosError {
 			weight: T::DbWeight::get().reads(2u64),
+			error: CosmosErrorCode::ErrInvalidType,
 		})?;
 		T::Currency::transfer(&source, &target, amount, ExistenceRequirement::AllowDeath).map_err(
-			|_| RunnerError {
-				error: Self::Error::BalanceLow,
+			|_| CosmosError {
 				weight: T::DbWeight::get().reads(2u64),
+				error: CosmosErrorCode::ErrInsufficientFunds,
 			},
 		)?;
 		Ok(<T as pallet::Config>::WeightInfo::msg_send())
