@@ -360,17 +360,11 @@ impl<T: Config> Pallet<T> {
 			})
 		}
 		let source = T::AddressMapping::into_account_id(*source);
-		if let Err(_) = T::Currency::withdraw(
-			&source,
-			fee,
-			WithdrawReasons::FEE,
-			ExistenceRequirement::AllowDeath,
-		) {
-			return Err(CosmosError {
+		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
+			.map_err(|_| CosmosError {
 				weight: total_weight,
 				error: CosmosErrorCode::ErrInsufficientFee,
-			})
-		}
+			})?;
 		frame_system::Pallet::<T>::inc_account_nonce(source);
 		Ok(total_weight)
 	}
