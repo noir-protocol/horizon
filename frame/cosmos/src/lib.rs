@@ -342,7 +342,13 @@ impl<T: Config> Pallet<T> {
 							error: CosmosErrorCode::ErrUnauthorized,
 						})
 					}
-					let weight = Self::msg_send(from_address, to_address, *amount)?;
+					let weight =
+						Self::msg_send(from_address, to_address, *amount).map_err(|e| {
+							CosmosError {
+								weight: total_weight.saturating_add(e.weight),
+								error: e.error,
+							}
+						})?;
 					total_weight = total_weight.saturating_add(weight);
 				},
 			};
