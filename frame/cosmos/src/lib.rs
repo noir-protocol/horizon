@@ -324,15 +324,10 @@ impl<T: Config> Pallet<T> {
 				});
 				Ok(PostDispatchInfo { actual_weight: Some(weight), pays_fee: Pays::No })
 			},
-			Err(e) => {
-				Err(DispatchErrorWithPostInfo {
-					post_info: PostDispatchInfo {
-						actual_weight: Some(e.weight),
-						pays_fee: Pays::Yes,
-					},
-					error: Error::<T>::from(e.error).into(),
-				})
-			},
+			Err(e) => Err(DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo { actual_weight: Some(e.weight), pays_fee: Pays::Yes },
+				error: Error::<T>::from(e.error).into(),
+			}),
 		}
 	}
 
