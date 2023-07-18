@@ -184,13 +184,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event {
-		Executed {
-			tx_hash: H256,
-			code: u8,
-			gas_used: Weight,
-			auth_info: AuthInfo,
-			messages: Vec<Msg>,
-		},
+		Executed { tx_hash: H256, gas_used: Weight, auth_info: AuthInfo, messages: Vec<Msg> },
 	}
 
 	#[pallet::error]
@@ -324,7 +318,6 @@ impl<T: Config> Pallet<T> {
 			Ok(weight) => {
 				Self::deposit_event(Event::Executed {
 					tx_hash: tx.hash.into(),
-					code: 0u8,
 					gas_used: weight,
 					auth_info: tx.auth_info.clone(),
 					messages: tx.body.messages.clone(),
@@ -332,20 +325,12 @@ impl<T: Config> Pallet<T> {
 				Ok(PostDispatchInfo { actual_weight: Some(weight), pays_fee: Pays::No })
 			},
 			Err(e) => {
-				Self::deposit_event(Event::Executed {
-					tx_hash: tx.hash.into(),
-					code: e.error as u8,
-					gas_used: e.weight,
-					auth_info: tx.auth_info.clone(),
-					messages: tx.body.messages.clone(),
-				});
-				let error: Error<T> = e.error.into();
 				Err(DispatchErrorWithPostInfo {
 					post_info: PostDispatchInfo {
 						actual_weight: Some(e.weight),
 						pays_fee: Pays::Yes,
 					},
-					error: error.into(),
+					error: Error::<T>::from(e.error).into(),
 				})
 			},
 		}
