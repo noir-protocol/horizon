@@ -26,8 +26,8 @@ pub mod weights;
 use crate::errors::{CosmosError, CosmosErrorCode};
 use frame_support::{
 	codec::{Decode, Encode, MaxEncodedLen},
-	dispatch::{DispatchInfo, PostDispatchInfo},
-	pallet_prelude::{DispatchClass, DispatchResult},
+	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
+	pallet_prelude::{DispatchClass, DispatchResultWithPostInfo, Pays},
 	scale_info::TypeInfo,
 	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement, Get, WithdrawReasons},
 	weights::{Weight, WeightToFee},
@@ -145,11 +145,6 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 	) -> Result<Self::Success, OuterOrigin>;
 }
 
-struct ExecuteResult {
-	pub code: u8,
-	pub weight: Weight,
-}
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -198,6 +193,27 @@ pub mod pallet {
 		},
 	}
 
+	#[pallet::error]
+	pub enum Error<T> {
+		Unauthorized,
+		InsufficientFunds,
+		OutOfGas,
+		InsufficientFee,
+		InvalidType,
+	}
+
+	impl<T> From<CosmosErrorCode> for Error<T> {
+		fn from(error: CosmosErrorCode) -> Self {
+			match error {
+				CosmosErrorCode::ErrUnauthorized => Error::<T>::Unauthorized,
+				CosmosErrorCode::ErrInsufficientFunds => Error::<T>::InsufficientFunds,
+				CosmosErrorCode::ErrOutOfGas => Error::<T>::OutOfGas,
+				CosmosErrorCode::ErrInsufficientFee => Error::<T>::InsufficientFee,
+				CosmosErrorCode::ErrInvalidType => Error::<T>::InvalidType,
+			}
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	where
@@ -206,7 +222,7 @@ pub mod pallet {
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
 		#[pallet::weight(tx.auth_info.fee.gas_limit)]
-		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResult {
+		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -303,38 +319,54 @@ impl<T: Config> Pallet<T> {
 		builder.build()
 	}
 
-	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResult {
-		let result = Self::execute(&source, &tx);
-		Self::deposit_event(Event::Executed {
-			tx_hash: tx.hash.into(),
-			code: result.code,
-			gas_used: result.weight,
-			auth_info: tx.auth_info.clone(),
-			messages: tx.body.messages.clone(),
-		});
-		Ok(())
+	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
+		match Self::execute(&source, &tx) {
+			Ok(weight) => {
+				Self::deposit_event(Event::Executed {
+					tx_hash: tx.hash.into(),
+					code: 0u8,
+					gas_used: weight,
+					auth_info: tx.auth_info.clone(),
+					messages: tx.body.messages.clone(),
+				});
+				Ok(PostDispatchInfo { actual_weight: Some(weight), pays_fee: Pays::No })
+			},
+			Err(e) => {
+				Self::deposit_event(Event::Executed {
+					tx_hash: tx.hash.into(),
+					code: e.error as u8,
+					gas_used: e.weight,
+					auth_info: tx.auth_info.clone(),
+					messages: tx.body.messages.clone(),
+				});
+				let error: Error<T> = e.error.into();
+				Err(DispatchErrorWithPostInfo {
+					post_info: PostDispatchInfo {
+						actual_weight: Some(e.weight),
+						pays_fee: Pays::Yes,
+					},
+					error: error.into(),
+				})
+			},
+		}
 	}
 
-	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> ExecuteResult {
+	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> Result<Weight, CosmosError> {
 		let mut total_weight = Weight::default();
 		for msg in tx.body.messages.iter() {
 			match msg {
 				hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
 					if *source != *from_address {
-						return ExecuteResult {
-							code: CosmosErrorCode::ErrUnauthorized as u8,
+						return Err(CosmosError {
 							weight: total_weight,
-						}
+							error: CosmosErrorCode::ErrUnauthorized,
+						})
 					}
 					match Self::msg_send(from_address, to_address, *amount) {
 						Ok(weight) => {
 							total_weight = total_weight.saturating_add(weight);
 						},
-						Err(e) =>
-							return ExecuteResult {
-								code: e.error as u8,
-								weight: total_weight.saturating_add(e.weight),
-							},
+						Err(e) => return Err(e),
 					};
 				},
 			};
@@ -346,10 +378,10 @@ impl<T: Config> Pallet<T> {
 		let fee = Self::compute_fee(tx.len, total_weight);
 		let maximum_fee = tx.auth_info.fee.amount.unique_saturated_into();
 		if fee > maximum_fee {
-			return ExecuteResult {
-				code: CosmosErrorCode::ErrInsufficientFee as u8,
+			return Err(CosmosError {
 				weight: total_weight,
-			}
+				error: CosmosErrorCode::ErrInsufficientFee,
+			})
 		}
 		let source = T::AddressMapping::into_account_id(*source);
 		if let Err(_) = T::Currency::withdraw(
@@ -358,13 +390,13 @@ impl<T: Config> Pallet<T> {
 			WithdrawReasons::FEE,
 			ExistenceRequirement::AllowDeath,
 		) {
-			return ExecuteResult {
-				code: CosmosErrorCode::ErrInsufficientFee as u8,
+			return Err(CosmosError {
 				weight: total_weight,
-			}
+				error: CosmosErrorCode::ErrInsufficientFee,
+			})
 		}
 		frame_system::Pallet::<T>::inc_account_nonce(source);
-		ExecuteResult { code: 0, weight: total_weight }
+		Ok(total_weight)
 	}
 
 	/// Get the base account info.
