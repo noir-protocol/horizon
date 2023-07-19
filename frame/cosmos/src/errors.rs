@@ -16,21 +16,25 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::Config;
-use sp_core::H160;
+use frame_support::weights::Weight;
 
-#[derive(Debug)]
-pub struct RunnerError<E: Into<sp_runtime::DispatchError>> {
-	pub error: E,
-	pub weight: frame_support::weights::Weight,
+#[derive(Clone)]
+pub struct CosmosError {
+	pub weight: Weight,
+	pub error: CosmosErrorCode,
 }
 
-pub trait Runner<T: Config> {
-	type Error: Into<sp_runtime::DispatchError>;
-
-	fn msg_send(
-		from_address: &H160,
-		to_address: &H160,
-		amount: u128,
-	) -> Result<(), RunnerError<Self::Error>>;
+#[derive(Clone, Copy)]
+pub enum CosmosErrorCode {
+	// ErrUnauthorized is used whenever a request without sufficient
+	// authorization is handled.
+	ErrUnauthorized = 4,
+	// ErrInsufficientFunds is used when the account cannot pay requested amount.
+	ErrInsufficientFunds = 5,
+	// ErrOutOfGas to doc
+	ErrOutOfGas = 11,
+	// ErrInsufficientFee to doc
+	ErrInsufficientFee = 13,
+	// ErrInvalidType defines an error an invalid type.
+	ErrInvalidType = 29,
 }

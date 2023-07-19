@@ -20,14 +20,14 @@
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 #![deny(unused_crate_dependencies)]
 
-pub mod runner;
+pub mod errors;
 pub mod weights;
 
-use crate::runner::{Runner as RunnerT, RunnerError};
+use crate::errors::{CosmosError, CosmosErrorCode};
 use frame_support::{
 	codec::{Decode, Encode, MaxEncodedLen},
-	dispatch::{DispatchInfo, PostDispatchInfo},
-	pallet_prelude::{DispatchClass, DispatchResult},
+	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
+	pallet_prelude::{DispatchClass, DispatchResultWithPostInfo, Pays},
 	scale_info::TypeInfo,
 	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement, Get, WithdrawReasons},
 	weights::{Weight, WeightToFee},
@@ -41,7 +41,7 @@ use sp_runtime::{
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	DispatchError, RuntimeDebug,
+	RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
 pub use weights::*;
@@ -150,18 +150,6 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 
-	#[pallet::error]
-	pub enum Error<T> {
-		/// Not enough balance to perform action
-		BalanceLow,
-		/// Invalid type
-		InvalidType,
-		/// Unauthorized access
-		UnauthorizedAccess,
-		/// Calculating total fee overflowed
-		FeeOverflow,
-	}
-
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
@@ -169,6 +157,10 @@ pub mod pallet {
 
 	#[pallet::origin]
 	pub type Origin = RawOrigin;
+
+	/// Type alias for currency balance.
+	pub type BalanceOf<T> =
+		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	#[pallet::config]
 	pub trait Config: frame_system::Config + pallet_timestamp::Config {
@@ -178,8 +170,6 @@ pub mod pallet {
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
 		/// Convert a length value into a deductible fee based on the currency type.
 		type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
-		/// Cosmos execution runner.
-		type Runner: RunnerT<Self>;
 		/// The overarching event type.
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Weight information for extrinsics in this pallet.
@@ -194,7 +184,28 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event {
-		Executed { tx_hash: H256, auth_info: AuthInfo, messages: Vec<Msg> },
+		Executed { tx_hash: H256, gas_used: Weight, auth_info: AuthInfo, messages: Vec<Msg> },
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+		Unauthorized,
+		InsufficientFunds,
+		OutOfGas,
+		InsufficientFee,
+		InvalidType,
+	}
+
+	impl<T> From<CosmosErrorCode> for Error<T> {
+		fn from(error: CosmosErrorCode) -> Self {
+			match error {
+				CosmosErrorCode::ErrUnauthorized => Error::<T>::Unauthorized,
+				CosmosErrorCode::ErrInsufficientFunds => Error::<T>::InsufficientFunds,
+				CosmosErrorCode::ErrOutOfGas => Error::<T>::OutOfGas,
+				CosmosErrorCode::ErrInsufficientFee => Error::<T>::InsufficientFee,
+				CosmosErrorCode::ErrInvalidType => Error::<T>::InvalidType,
+			}
+		}
 	}
 
 	#[pallet::call]
@@ -204,8 +215,8 @@ pub mod pallet {
 	{
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
-		#[pallet::weight(<T as pallet::Config>::WeightInfo::transact(&tx))]
-		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResult {
+		#[pallet::weight(tx.auth_info.fee.gas_limit)]
+		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -302,37 +313,66 @@ impl<T: Config> Pallet<T> {
 		builder.build()
 	}
 
-	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResult {
-		Self::execute(&source, &tx)
+	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
+		match Self::execute(&source, &tx) {
+			Ok(weight) => {
+				Self::deposit_event(Event::Executed {
+					tx_hash: tx.hash.into(),
+					gas_used: weight,
+					auth_info: tx.auth_info.clone(),
+					messages: tx.body.messages.clone(),
+				});
+				Ok(PostDispatchInfo { actual_weight: Some(weight), pays_fee: Pays::No })
+			},
+			Err(e) => Err(DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo { actual_weight: Some(e.weight), pays_fee: Pays::Yes },
+				error: Error::<T>::from(e.error).into(),
+			}),
+		}
 	}
 
-	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> DispatchResult {
+	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> Result<Weight, CosmosError> {
+		let mut total_weight = Weight::default();
 		for msg in tx.body.messages.iter() {
 			match msg {
 				hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
 					if *source != *from_address {
-						return Err(DispatchError::from(Error::<T>::UnauthorizedAccess))
+						return Err(CosmosError {
+							weight: total_weight,
+							error: CosmosErrorCode::ErrUnauthorized,
+						})
 					}
-					T::Runner::msg_send(from_address, to_address, *amount)
-						.map_err(|_| Error::<T>::BalanceLow)?;
+					let weight =
+						Self::msg_send(from_address, to_address, *amount).map_err(|e| {
+							CosmosError {
+								weight: total_weight.saturating_add(e.weight),
+								error: e.error,
+							}
+						})?;
+					total_weight = total_weight.saturating_add(weight);
 				},
 			};
 		}
-		let weight = <T as pallet::Config>::WeightInfo::transact(&tx);
-		let fee = Self::compute_fee(tx.len, weight);
+		// Add account nonce increment weight.
+		total_weight = total_weight.saturating_add(
+			T::DbWeight::get().reads(1).saturating_add(T::DbWeight::get().writes(1)),
+		);
+		let fee = Self::compute_fee(tx.len, total_weight);
 		let maximum_fee = tx.auth_info.fee.amount.unique_saturated_into();
 		if fee > maximum_fee {
-			return Err(Error::<T>::FeeOverflow.into())
+			return Err(CosmosError {
+				weight: total_weight,
+				error: CosmosErrorCode::ErrInsufficientFee,
+			})
 		}
 		let source = T::AddressMapping::into_account_id(*source);
 		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
-			.map_err(|_| Error::<T>::BalanceLow)?;
-		Self::deposit_event(Event::Executed {
-			tx_hash: tx.hash.into(),
-			auth_info: tx.auth_info.clone(),
-			messages: tx.body.messages.clone(),
-		});
-		Ok(())
+			.map_err(|_| CosmosError {
+				weight: total_weight,
+				error: CosmosErrorCode::ErrInsufficientFee,
+			})?;
+		frame_system::Pallet::<T>::inc_account_nonce(source);
+		Ok(total_weight)
 	}
 
 	/// Get the base account info.
@@ -375,41 +415,24 @@ impl<T: Config> Pallet<T> {
 		let capped_weight = weight.min(T::BlockWeights::get().max_block);
 		T::WeightToFee::weight_to_fee(&capped_weight)
 	}
-}
-
-#[derive(Default)]
-pub struct Runner<T: Config> {
-	_marker: PhantomData<T>,
-}
-
-/// Type alias for currency balance.
-pub type BalanceOf<T> =
-	<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
-impl<T: Config> RunnerT<T> for Runner<T>
-where
-	BalanceOf<T>: TryFrom<u128> + Into<u128>,
-{
-	type Error = Error<T>;
 
 	fn msg_send(
 		from_address: &H160,
 		to_address: &H160,
 		amount: u128,
-	) -> Result<(), RunnerError<Self::Error>> {
+	) -> Result<Weight, CosmosError> {
 		let source = T::AddressMapping::into_account_id(*from_address);
 		let target = T::AddressMapping::into_account_id(*to_address);
-		let amount = amount.try_into().map_err(|_| RunnerError {
-			error: Self::Error::InvalidType,
+		let amount = amount.try_into().map_err(|_| CosmosError {
 			weight: T::DbWeight::get().reads(2u64),
+			error: CosmosErrorCode::ErrInvalidType,
 		})?;
 		T::Currency::transfer(&source, &target, amount, ExistenceRequirement::AllowDeath).map_err(
-			|_| RunnerError {
-				error: Self::Error::BalanceLow,
+			|_| CosmosError {
 				weight: T::DbWeight::get().reads(2u64),
+				error: CosmosErrorCode::ErrInsufficientFunds,
 			},
 		)?;
-		frame_system::Pallet::<T>::inc_account_nonce(&source);
-		Ok(())
+		Ok(<T as pallet::Config>::WeightInfo::msg_send())
 	}
 }
