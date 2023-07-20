@@ -353,9 +353,10 @@ impl<T: Config> Pallet<T> {
 				},
 			};
 		}
-		// Add account nonce increment weight.
+
+		// Includes weights of finding origin, increment account nonce, withdraw fee.
 		total_weight = total_weight.saturating_add(
-			T::DbWeight::get().reads(1).saturating_add(T::DbWeight::get().writes(1)),
+			T::DbWeight::get().reads(3).saturating_add(T::DbWeight::get().writes(2)),
 		);
 		let fee = Self::compute_fee(tx.len, total_weight);
 		let maximum_fee = tx.auth_info.fee.amount.unique_saturated_into();
@@ -365,13 +366,13 @@ impl<T: Config> Pallet<T> {
 				error: CosmosErrorCode::ErrInsufficientFee,
 			})
 		}
-		let source = T::AddressMapping::into_account_id(*source);
-		T::Currency::withdraw(&source, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
+		let origin = T::AddressMapping::into_account_id(*source);
+		T::Currency::withdraw(&origin, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
 			.map_err(|_| CosmosError {
 				weight: total_weight,
 				error: CosmosErrorCode::ErrInsufficientFee,
 			})?;
-		frame_system::Pallet::<T>::inc_account_nonce(source);
+		frame_system::Pallet::<T>::inc_account_nonce(origin);
 		Ok(total_weight)
 	}
 
