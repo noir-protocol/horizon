@@ -332,7 +332,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> Result<Weight, CosmosError> {
-		let mut total_weight = Weight::default();
+		let mut total_weight = T::BlockWeights::get().get(DispatchClass::Normal).base_extrinsic;
 		for msg in tx.body.messages.iter() {
 			match msg {
 				hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
@@ -394,11 +394,10 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn compute_fee(len: u32, weight: Weight) -> BalanceOf<T> {
+		// Base fee is already included.
 		let adjusted_weight_fee = T::WeightPrice::convert(weight);
 		let length_fee = Self::length_to_fee(len);
-		let base_fee =
-			Self::weight_to_fee(T::BlockWeights::get().get(DispatchClass::Normal).base_extrinsic);
-		let inclusion_fee = base_fee + length_fee + adjusted_weight_fee;
+		let inclusion_fee = length_fee + adjusted_weight_fee;
 		inclusion_fee
 	}
 
