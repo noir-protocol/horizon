@@ -110,7 +110,7 @@ impl TryFrom<cosmrs::tx::Body> for Body {
 #[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Msg {
-	MsgSend { from_address: H160, to_address: H160, amount: u128 },
+	MsgSend { from_address: H160, to_address: H160, amount: Coin },
 }
 
 #[cfg(feature = "std")]
@@ -132,7 +132,7 @@ impl TryFrom<&cosmrs::Any> for Msg {
 				.map_err(|_| DecodeTxError::InvalidMsgData)?;
 			let typed_msg: cosmrs::bank::MsgSend =
 				typed_msg.try_into().map_err(|_| DecodeTxError::InvalidMsgData)?;
-			let amount = typed_msg.amount[0].amount;
+			let amount = (&typed_msg.amount[0]).into();
 			let mut from_address: [u8; 20] = [0u8; 20];
 			from_address.copy_from_slice(&typed_msg.from_address.to_bytes()[..]);
 			let mut to_address: [u8; 20] = [0u8; 20];
@@ -166,7 +166,7 @@ impl TryFrom<cosmrs::tx::AuthInfo> for AuthInfo {
 		for signer_info in auth_info.signer_infos {
 			signer_infos.push(signer_info.try_into()?);
 		}
-		Ok(Self { signer_infos, fee: auth_info.fee.into() })
+		Ok(Self { signer_infos, fee: auth_info.fee.try_into()? })
 	}
 }
 
@@ -226,14 +226,19 @@ pub enum PublicKey {
 #[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fee {
-	pub amount: u128,
+	pub amount: Coin,
 	pub gas_limit: Gas,
 }
 
 #[cfg(feature = "std")]
-impl From<cosmrs::tx::Fee> for Fee {
-	fn from(fee: cosmrs::tx::Fee) -> Self {
-		Self { amount: fee.amount[0].amount, gas_limit: fee.gas_limit }
+impl TryFrom<cosmrs::tx::Fee> for Fee {
+	type Error = DecodeTxError;
+
+	fn try_from(fee: cosmrs::tx::Fee) -> Result<Self, Self::Error> {
+		if fee.amount.len() == 0 {
+			return Err(DecodeTxError::EmptyFeeAmount)
+		}
+		Ok(Self { amount: (&fee.amount[0]).into(), gas_limit: fee.gas_limit })
 	}
 }
 
@@ -243,6 +248,22 @@ impl From<cosmrs::tx::Fee> for Fee {
 pub struct Account {
 	pub sequence: SequenceNumber,
 	pub amount: u128,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Coin {
+	pub denom: Vec<u8>,
+	pub amount: u128,
+}
+
+#[cfg(feature = "std")]
+impl From<&cosmrs::Coin> for Coin {
+	fn from(coin: &cosmrs::Coin) -> Self {
+		let denom = coin.denom.as_ref().as_bytes().to_vec();
+		Self { denom, amount: coin.amount }
+	}
 }
 
 #[cfg(test)]
