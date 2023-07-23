@@ -71,7 +71,7 @@ where
 		let tx =
 			cosmrs::Tx::from_bytes(&tx_bytes).map_err(|_| internal_err("Invalid transaction."))?;
 		let chain_id = self.chain_spec.id();
-		let tx_len: u32 = tx_bytes
+		let tx_len = tx_bytes
 			.len()
 			.try_into()
 			.map_err(|_| internal_err("Transaction is too long."))?;
