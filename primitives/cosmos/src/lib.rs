@@ -110,7 +110,7 @@ impl TryFrom<cosmrs::tx::Body> for Body {
 #[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Msg {
-	MsgSend { from_address: H160, to_address: H160, amount: Coin },
+	MsgSend { from_address: H160, to_address: H160, amount: Vec<Coin> },
 }
 
 #[cfg(feature = "std")]
@@ -132,7 +132,10 @@ impl TryFrom<&cosmrs::Any> for Msg {
 				.map_err(|_| DecodeTxError::InvalidMsgData)?;
 			let typed_msg: cosmrs::bank::MsgSend =
 				typed_msg.try_into().map_err(|_| DecodeTxError::InvalidMsgData)?;
-			let amount = (&typed_msg.amount[0]).into();
+			if typed_msg.amount.is_empty() {
+				return Err(DecodeTxError::InvalidMsgData)
+			}
+			let amount = typed_msg.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
 			let mut from_address: [u8; 20] = [0u8; 20];
 			from_address.copy_from_slice(&typed_msg.from_address.to_bytes()[..]);
 			let mut to_address: [u8; 20] = [0u8; 20];
@@ -226,7 +229,7 @@ pub enum PublicKey {
 #[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Fee {
-	pub amount: Coin,
+	pub amount: Vec<Coin>,
 	pub gas_limit: Gas,
 }
 
@@ -238,7 +241,8 @@ impl TryFrom<cosmrs::tx::Fee> for Fee {
 		if fee.amount.len() == 0 {
 			return Err(DecodeTxError::EmptyFeeAmount)
 		}
-		Ok(Self { amount: (&fee.amount[0]).into(), gas_limit: fee.gas_limit })
+		let amount = fee.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
+		Ok(Self { amount, gas_limit: fee.gas_limit })
 	}
 }
 

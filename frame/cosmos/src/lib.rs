@@ -261,11 +261,11 @@ impl<T: Config> Pallet<T> {
 		}
 
 		let mut total_payment = 0u128;
-		total_payment = total_payment.saturating_add(tx.auth_info.fee.amount.amount);
+		total_payment = total_payment.saturating_add(tx.auth_info.fee.amount[0].amount);
 		for msg in tx.body.messages.iter() {
 			match msg {
 				Msg::MsgSend { amount, .. } => {
-					total_payment = total_payment.saturating_add(amount.amount);
+					total_payment = total_payment.saturating_add(amount[0].amount);
 				},
 			}
 		}
@@ -286,11 +286,11 @@ impl<T: Config> Pallet<T> {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Future))
 		}
 		let mut total_payment = 0u128;
-		total_payment = total_payment.saturating_add(tx.auth_info.fee.amount.amount);
+		total_payment = total_payment.saturating_add(tx.auth_info.fee.amount[0].amount);
 		for msg in tx.body.messages.iter() {
 			match msg {
 				Msg::MsgSend { amount, .. } => {
-					total_payment = total_payment.saturating_add(amount.amount);
+					total_payment = total_payment.saturating_add(amount[0].amount);
 				},
 			}
 		}
@@ -343,7 +343,7 @@ impl<T: Config> Pallet<T> {
 						})
 					}
 					let weight =
-						Self::msg_send(from_address, to_address, amount.amount).map_err(|e| {
+						Self::msg_send(from_address, to_address, amount[0].amount).map_err(|e| {
 							CosmosError {
 								weight: total_weight.saturating_add(e.weight),
 								error: e.error,
@@ -359,7 +359,7 @@ impl<T: Config> Pallet<T> {
 			T::DbWeight::get().reads(3).saturating_add(T::DbWeight::get().writes(2)),
 		);
 		let fee = Self::compute_fee(tx.len, total_weight);
-		let maximum_fee = tx.auth_info.fee.amount.amount.unique_saturated_into();
+		let maximum_fee = tx.auth_info.fee.amount[0].amount.unique_saturated_into();
 		if fee > maximum_fee {
 			return Err(CosmosError {
 				weight: total_weight,
