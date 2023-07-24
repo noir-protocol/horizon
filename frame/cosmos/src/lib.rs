@@ -74,11 +74,26 @@ where
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx } = self {
 			let check = || {
-				let origin = Pallet::<T>::verify(tx).ok_or(InvalidTransaction::Custom(
-					fp_ethereum::TransactionValidationError::InvalidSignature as u8,
-				))?;
-
-				Ok(origin)
+				if let Some(hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::Secp256k1(
+					pk,
+				))) = tx.auth_info.signer_infos[0].public_key
+				{
+					if hp_io::crypto::secp256k1_ecdsa_verify(
+						&tx.signatures[0],
+						tx.hash.as_bytes(),
+						&pk,
+					) {
+						Ok(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(&pk)).into())
+					} else {
+						Err(InvalidTransaction::Custom(
+							fp_ethereum::TransactionValidationError::InvalidSignature as u8,
+						))?
+					}
+				} else {
+					Err(InvalidTransaction::Custom(
+						fp_ethereum::TransactionValidationError::InvalidSignature as u8,
+					))?
+				}
 			};
 
 			Some(check())
@@ -224,23 +239,18 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn verify(tx: &hp_cosmos::Tx) -> Option<H160> {
-		if let Some(public_key) = &tx.auth_info.signer_infos[0].public_key {
-			match public_key {
-				hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::Secp256k1(pk)) =>
-					if hp_io::crypto::secp256k1_ecdsa_verify(
-						&tx.signatures[0],
-						tx.hash.as_bytes(),
-						&pk[..],
-					) {
-						Some(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(pk)).into())
-					} else {
-						None
-					},
-				_ => None,
-			}
+	pub fn verify(tx: &hp_cosmos::Tx) -> bool {
+		if let Some(hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::Secp256k1(
+			public_key,
+		))) = tx.auth_info.signer_infos[0].public_key
+		{
+			hp_io::crypto::secp256k1_ecdsa_verify(
+				&tx.signatures[0],
+				tx.hash.as_bytes(),
+				&public_key,
+			)
 		} else {
-			None
+			false
 		}
 	}
 
