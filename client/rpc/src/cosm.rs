@@ -68,14 +68,8 @@ where
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256> {
 		use hp_rpc::ConvertTxRuntimeApi;
 
-		let tx =
-			cosmrs::Tx::from_bytes(&tx_bytes).map_err(|_| internal_err("Invalid transaction."))?;
 		let chain_id = self.chain_spec.id();
-		let tx_len = tx_bytes
-			.len()
-			.try_into()
-			.map_err(|_| internal_err("Transaction is too long."))?;
-		let tx = hp_cosmos::Tx::new(tx, chain_id, tx_len)
+		let tx = hp_cosmos::Tx::decode(&tx_bytes, chain_id)
 			.map_err(|_| internal_err("Invalid transaction."))?;
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = self
@@ -88,25 +82,5 @@ where
 			.map_ok(move |_| tx.hash.into())
 			.map_err(|e| internal_err(e.to_string()))
 			.await
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use base64ct::{Base64, Encoding};
-	use cosmrs::tx::MessageExt;
-
-	#[test]
-	fn test_decode_tx() {
-		let tx_bytes =
-			"CpcBCpIBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEnIKLWNvc21vczFodzRkNGRzeHgyc2xoMzlxdzVoY3JxbjUya2FzNW5sNTYzbmVkcBItY29zbW9zMXhtZ2d4Y3duZ2Nta3JscmM2cnhrZHU2ZGpzczc4dTV2ZTR2dmc5GhIKBGNjZHQSCjEwMDAwMDAwMDASABJlClEKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiED0Ttls626xrRUN1BnwRYPKGsFMtIWWUFEojTiWQf6j80SBAoCCH8YngMSEAoKCgRjY2R0EgIyNRCgjQYaQMuNWIlLtLg2pEUPDeqNv7vmvBU0HWGPndjjj1/fHGY5BGUjvnWN1wgRGcl92adj3k3WxuZqXN2PEmM4krsedPE=";
-		let tx_bytes = Base64::decode_vec(tx_bytes).unwrap();
-		let tx = cosmrs::Tx::from_bytes(&tx_bytes).unwrap();
-		let message =
-			cosmrs::proto::cosmos::bank::v1beta1::MsgSend::from_any(&tx.body.messages[0]).unwrap();
-		assert_eq!(message.from_address, "cosmos1hw4d4dsxx2slh39qw5hcrqn52kas5nl563nedp");
-		assert_eq!(message.to_address, "cosmos1xmggxcwngcmkrlrc6rxkdu6djss78u5ve4vvg9");
-		assert_eq!(message.amount[0].denom, "ccdt");
-		assert_eq!(message.amount[0].amount, "1000000000");
 	}
 }

@@ -34,7 +34,7 @@ use error::DecodeTxError;
 use legacy::SignAminoDoc;
 #[cfg(feature = "std")]
 use sp_core::hashing::sha2_256;
-use sp_core::{H160, H256};
+use sp_core::{Bytes, H160, H256};
 use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;
@@ -54,35 +54,76 @@ pub struct Tx {
 
 #[cfg(feature = "std")]
 impl Tx {
-	pub fn new(tx: cosmrs::tx::Tx, chain_id: &str, len: u32) -> Result<Self, DecodeTxError> {
-		if tx.signatures.is_empty() {
-			return Err(DecodeTxError::EmptySignatures)
+	pub fn decode(tx_bytes: &Bytes, chain_id: &str) -> Result<Self, DecodeTxError> {
+		if tx_bytes.is_empty() {
+			return Err(DecodeTxError::InvalidTxData)
 		}
-		if tx.auth_info.signer_infos.is_empty() {
-			return Err(DecodeTxError::EmptySigners)
-		}
-		let signatures = tx.signatures.iter().map(|s| s.clone()).collect::<Vec<SignatureBytes>>();
-		let sign_doc = match tx.auth_info.signer_infos[0].mode_info {
+
+		let tx_origin =
+			cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeTxError::InvalidTxData)?;
+		Self::validate_origin(&tx_origin)?;
+		Self::validate_extras(&tx_origin)?;
+
+		let signatures =
+			tx_origin.signatures.iter().map(|s| s.clone()).collect::<Vec<SignatureBytes>>();
+		let sign_doc = match tx_origin.auth_info.signer_infos[0].mode_info {
 			cosmrs::tx::ModeInfo::Single(single) => match single.mode {
 				SignMode::Direct => {
 					let chain_id = chain::Id::from_str(chain_id).unwrap();
-					let sign_doc =
-						cosmrs::tx::SignDoc::new(&tx.body, &tx.auth_info, &chain_id, 0u64)
-							.map_err(|_| DecodeTxError::InvalidTxData)?;
+					let sign_doc = cosmrs::tx::SignDoc::new(
+						&tx_origin.body,
+						&tx_origin.auth_info,
+						&chain_id,
+						0u64,
+					)
+					.map_err(|_| DecodeTxError::InvalidTxData)?;
 					sign_doc.into_bytes().map_err(|_| DecodeTxError::InvalidSignDoc)?
 				},
-				SignMode::LegacyAminoJson => SignAminoDoc::new(&tx, chain_id)?.to_bytes()?,
+				SignMode::LegacyAminoJson => SignAminoDoc::new(&tx_origin, chain_id)?.to_bytes()?,
 				_ => return Err(DecodeTxError::UnsupportedSignMode),
 			},
 			_ => return Err(DecodeTxError::UnsupportedSignMode),
 		};
+		let len = tx_bytes.len().try_into().map_err(|_| DecodeTxError::InvalidTxData)?;
 		Ok(Self {
-			body: tx.body.try_into()?,
-			auth_info: tx.auth_info.try_into()?,
+			body: tx_origin.body.try_into()?,
+			auth_info: tx_origin.auth_info.try_into()?,
 			signatures,
 			hash: sha2_256(&sign_doc).into(),
 			len,
 		})
+	}
+
+	fn validate_origin(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
+		if tx.auth_info.signer_infos.is_empty() {
+			return Err(DecodeTxError::EmptySigners)
+		}
+		if tx.body.messages.is_empty() {
+			return Err(DecodeTxError::EmptyMessages)
+		}
+		if tx.signatures.is_empty() {
+			return Err(DecodeTxError::EmptySignatures)
+		}
+		if tx.auth_info.fee.amount.is_empty() {
+			return Err(DecodeTxError::EmptyFeeAmount)
+		}
+		Ok(())
+	}
+
+	fn validate_extras(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
+		if tx.auth_info.signer_infos.len() > 1 {
+			return Err(DecodeTxError::TooManySigners)
+		}
+		if tx.body.messages.len() > 1 {
+			return Err(DecodeTxError::TooManyMessages)
+		}
+		if tx.signatures.len() > 1 {
+			return Err(DecodeTxError::TooManySignatures)
+		}
+		if tx.auth_info.fee.amount.len() > 1 {
+			return Err(DecodeTxError::TooManyFeeAmount)
+		}
+		Ok(())
 	}
 }
 
@@ -133,7 +174,10 @@ impl TryFrom<&cosmrs::Any> for Msg {
 			let typed_msg: cosmrs::bank::MsgSend =
 				typed_msg.try_into().map_err(|_| DecodeTxError::InvalidMsgData)?;
 			if typed_msg.amount.is_empty() {
-				return Err(DecodeTxError::InvalidMsgData)
+				return Err(DecodeTxError::EmptyMsgSendAmount)
+			}
+			if typed_msg.amount.len() > 1 {
+				return Err(DecodeTxError::TooManyMsgSendAmount)
 			}
 			let amount = typed_msg.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
 			let mut from_address: [u8; 20] = [0u8; 20];
@@ -238,7 +282,7 @@ impl TryFrom<cosmrs::tx::Fee> for Fee {
 	type Error = DecodeTxError;
 
 	fn try_from(fee: cosmrs::tx::Fee) -> Result<Self, Self::Error> {
-		if fee.amount.len() == 0 {
+		if fee.amount.is_empty() {
 			return Err(DecodeTxError::EmptyFeeAmount)
 		}
 		let amount = fee.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
