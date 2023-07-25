@@ -33,9 +33,9 @@ use frame_support::{
 	weights::{Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use hp_cosmos::{Account, AuthInfo, Msg};
+use hp_cosmos::{Account, Msg};
 pub use pallet::*;
-use sp_core::{H160, H256};
+use sp_core::H160;
 use sp_runtime::{
 	traits::{BadOrigin, Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
@@ -199,7 +199,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event {
-		Executed { tx_hash: H256, gas_used: Weight, auth_info: AuthInfo, messages: Vec<Msg> },
+		Executed { code: u32, gas_used: Weight, messages: Vec<Msg> },
 	}
 
 	#[pallet::error]
@@ -239,21 +239,6 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	pub fn verify(tx: &hp_cosmos::Tx) -> bool {
-		if let Some(hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::Secp256k1(
-			public_key,
-		))) = tx.auth_info.signer_infos[0].public_key
-		{
-			hp_io::crypto::secp256k1_ecdsa_verify(
-				&tx.signatures[0],
-				tx.hash.as_bytes(),
-				&public_key,
-			)
-		} else {
-			false
-		}
-	}
-
 	/// Validate an Cosmos transaction already in block
 	///
 	/// This function must be called during the pre-dispatch phase
@@ -324,20 +309,43 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
+		sp_io::storage::start_transaction();
 		match Self::execute(&source, &tx) {
 			Ok(weight) => {
 				Self::deposit_event(Event::Executed {
-					tx_hash: tx.hash.into(),
+					code: 0u32,
 					gas_used: weight,
-					auth_info: tx.auth_info.clone(),
 					messages: tx.body.messages.clone(),
 				});
+				sp_io::storage::commit_transaction();
 				Ok(PostDispatchInfo { actual_weight: Some(weight), pays_fee: Pays::No })
 			},
-			Err(e) => Err(DispatchErrorWithPostInfo {
-				post_info: PostDispatchInfo { actual_weight: Some(e.weight), pays_fee: Pays::Yes },
-				error: Error::<T>::from(e.error).into(),
-			}),
+			Err(e) => {
+				sp_io::storage::rollback_transaction();
+				Self::deposit_event(Event::Executed {
+					code: e.error as u32,
+					gas_used: e.weight,
+					messages: tx.body.messages.clone(),
+				});
+				let origin = T::AddressMapping::into_account_id(source);
+				let fee = Self::compute_fee(tx.len, e.weight);
+				if let Ok(_) = T::Currency::withdraw(
+					&origin,
+					fee,
+					WithdrawReasons::FEE,
+					ExistenceRequirement::AllowDeath,
+				) {
+					Ok(PostDispatchInfo { actual_weight: Some(e.weight), pays_fee: Pays::No })
+				} else {
+					Err(DispatchErrorWithPostInfo {
+						post_info: PostDispatchInfo {
+							actual_weight: Some(e.weight),
+							pays_fee: Pays::No,
+						},
+						error: Error::<T>::InsufficientFee.into(),
+					})
+				}
+			},
 		}
 	}
 
