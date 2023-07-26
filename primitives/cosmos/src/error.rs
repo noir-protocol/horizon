@@ -19,29 +19,43 @@ use core::fmt::Display;
 
 #[derive(Debug)]
 pub enum DecodeTxError {
-	InvalidTxData,
 	EmptyFeeAmount,
+	EmptyMessages,
+	EmptyMsgSendAmount,
 	EmptySignatures,
 	EmptySigners,
+	InvalidMsgData,
+	InvalidSignDoc,
+	InvalidTxData,
+	TooManyFeeAmount,
+	TooManyMsgSendAmount,
+	TooManyMessages,
+	TooManySignatures,
+	TooManySigners,
+	UnsupportedMsgType,
 	UnsupportedSignerType,
 	UnsupportedSignMode,
-	InvalidMsgData,
-	UnsupportedMsgType,
-	InvalidSignDoc,
 }
 
 impl Display for DecodeTxError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		match self {
-			DecodeTxError::InvalidTxData => write!(f, "{}", "INVALID_TX_DATA"),
 			DecodeTxError::EmptyFeeAmount => write!(f, "{}", "EMPTY_FEE_AMOUNT"),
+			DecodeTxError::EmptyMessages => write!(f, "{}", "EMPTY_MESSAGES"),
+			DecodeTxError::EmptyMsgSendAmount => write!(f, "{}", "EMPTY_MSG_SEND_AMOUNT"),
 			DecodeTxError::EmptySignatures => write!(f, "{}", "EMPTY_SIGNATURES"),
 			DecodeTxError::EmptySigners => write!(f, "{}", "EMPTY_SIGNERS"),
+			DecodeTxError::InvalidMsgData => write!(f, "{}", "INVALID_MSG_DATA"),
+			DecodeTxError::InvalidSignDoc => write!(f, "{}", "INVALID_SIGN_DOC"),
+			DecodeTxError::InvalidTxData => write!(f, "{}", "INVALID_TX_DATA"),
+			DecodeTxError::TooManyFeeAmount => write!(f, "{}", "TOO_MANY_FEE_AMOUNT"),
+			DecodeTxError::TooManyMessages => write!(f, "{}", "TOO_MANY_MESSAGES"),
+			DecodeTxError::TooManyMsgSendAmount => write!(f, "{}", "TOO_MANY_MSG_SEND_AMOUNT"),
+			DecodeTxError::TooManySignatures => write!(f, "{}", "TOO_MANY_SIGNATURES"),
+			DecodeTxError::TooManySigners => write!(f, "{}", "TOO_MANY_SIGNERS"),
+			DecodeTxError::UnsupportedMsgType => write!(f, "{}", "UNSUPPORTED_MSG_TYPE"),
 			DecodeTxError::UnsupportedSignerType => write!(f, "{}", "UNSUPPORTED_SIGNER_TYPE"),
 			DecodeTxError::UnsupportedSignMode => write!(f, "{}", "UNSUPPORTED_SIGN_MODE"),
-			DecodeTxError::InvalidMsgData => write!(f, "{}", "INVALID_MSG_DATA"),
-			DecodeTxError::UnsupportedMsgType => write!(f, "{}", "UNSUPPORTED_MSG_TYPE"),
-			DecodeTxError::InvalidSignDoc => write!(f, "{}", "INVALID_SIGN_DOC"),
 		}
 	}
 }

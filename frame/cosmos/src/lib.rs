@@ -257,12 +257,10 @@ impl<T: Config> Pallet<T> {
 
 		let mut total_payment = 0u128;
 		total_payment = total_payment.saturating_add(tx.auth_info.fee.amount[0].amount);
-		for msg in tx.body.messages.iter() {
-			match msg {
-				Msg::MsgSend { amount, .. } => {
-					total_payment = total_payment.saturating_add(amount[0].amount);
-				},
-			}
+		match &tx.body.messages[0] {
+			Msg::MsgSend { amount, .. } => {
+				total_payment = total_payment.saturating_add(amount[0].amount);
+			},
 		}
 		if total_payment > who.amount {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
@@ -282,12 +280,10 @@ impl<T: Config> Pallet<T> {
 		}
 		let mut total_payment = 0u128;
 		total_payment = total_payment.saturating_add(tx.auth_info.fee.amount[0].amount);
-		for msg in tx.body.messages.iter() {
-			match msg {
-				Msg::MsgSend { amount, .. } => {
-					total_payment = total_payment.saturating_add(amount[0].amount);
-				},
-			}
+		match &tx.body.messages[0] {
+			Msg::MsgSend { amount, .. } => {
+				total_payment = total_payment.saturating_add(amount[0].amount);
+			},
 		}
 		if total_payment > who.amount {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
@@ -350,25 +346,27 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> Result<Weight, CosmosError> {
-		let mut total_weight = T::BlockWeights::get().get(DispatchClass::Normal).base_extrinsic;
-		for msg in tx.body.messages.iter() {
-			match msg {
-				hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
-					if *source != *from_address {
-						return Err(CosmosError {
-							weight: total_weight,
-							error: CosmosErrorCode::ErrUnauthorized,
-						})
-					}
-					let weight = Self::msg_send(from_address, to_address, amount[0].amount)
-						.map_err(|e| CosmosError {
+		let mut total_weight = Weight::zero();
+		total_weight = total_weight
+			.saturating_add(T::BlockWeights::get().get(DispatchClass::Normal).base_extrinsic);
+		match &tx.body.messages[0] {
+			hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
+				if *source != *from_address {
+					return Err(CosmosError {
+						weight: total_weight,
+						error: CosmosErrorCode::ErrUnauthorized,
+					})
+				}
+				let weight =
+					Self::msg_send(from_address, to_address, amount[0].amount).map_err(|e| {
+						CosmosError {
 							weight: total_weight.saturating_add(e.weight),
 							error: e.error,
-						})?;
-					total_weight = total_weight.saturating_add(weight);
-				},
-			};
-		}
+						}
+					})?;
+				total_weight = total_weight.saturating_add(weight);
+			},
+		};
 
 		// Includes weights of finding origin, increment account nonce, withdraw fee.
 		total_weight = total_weight.saturating_add(
