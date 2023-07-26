@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use fc_rpc::internal_err;
+use crate::internal_err;
 use futures::future::TryFutureExt;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},

@@ -86,12 +86,12 @@ where
 						Ok(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(&pk)).into())
 					} else {
 						Err(InvalidTransaction::Custom(
-							fp_ethereum::TransactionValidationError::InvalidSignature as u8,
+							hp_cosmos::error::TransactionValidationError::InvalidSignature as u8,
 						))?
 					}
 				} else {
 					Err(InvalidTransaction::Custom(
-						fp_ethereum::TransactionValidationError::InvalidSignature as u8,
+						hp_cosmos::error::TransactionValidationError::InvalidSignature as u8,
 					))?
 				}
 			};
