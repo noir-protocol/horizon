@@ -91,7 +91,7 @@ where
 					}
 				} else {
 					Err(InvalidTransaction::Custom(
-						hp_cosmos::error::TransactionValidationError::InvalidSignature as u8,
+						hp_cosmos::error::TransactionValidationError::UnsupportedSignerType as u8,
 					))?
 				}
 			};
