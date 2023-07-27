@@ -178,7 +178,7 @@ pub mod pallet {
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 	#[pallet::config]
-	pub trait Config: frame_system::Config + pallet_timestamp::Config {
+	pub trait Config: frame_system::Config {
 		/// Mapping from address to account id.
 		type AddressMapping: AddressMapping<Self::AccountId>;
 		/// Currency type for withdraw and balance storage.
