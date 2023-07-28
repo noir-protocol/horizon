@@ -1,0 +1,60 @@
+[package]
+name = "horizon-node"
+version = "0.1.0"
+edition = "2021"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/noir-protocol/horizon/"
+build = "build.rs"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[[bin]]
+name = 'horizon'
+path = 'src/main.rs'
+
+[dependencies]
+clap = { workspace = true }
+jsonrpsee = { workspace = true }
+
+# Substrate
+frame-system-rpc-runtime-api = { workspace = true }
+pallet-transaction-payment-rpc = { workspace = true }
+pallet-transaction-payment-rpc-runtime-api = { workspace = true }
+sc-basic-authorship = { workspace = true }
+sc-chain-spec = { workspace = true }
+sc-cli = { workspace = true }
+sc-client-api = { workspace = true }
+sc-consensus = { workspace = true }
+sc-consensus-aura = { workspace = true }
+sc-executor = { workspace = true }
+sc-keystore = { workspace = true }
+sc-rpc-api = { workspace = true }
+sc-service = { workspace = true }
+sc-telemetry = { workspace = true }
+sc-finality-grandpa = { workspace = true }
+sc-transaction-pool = { workspace = true }
+sc-transaction-pool-api = { workspace = true }
+sp-api = { workspace = true }
+sp-blockchain = { workspace = true }
+sp-block-builder = { workspace = true }
+sp-core = { workspace = true }
+sp-consensus-aura = { workspace = true }
+sp-finality-grandpa = { workspace = true }
+sp-offchain = { workspace = true }
+sp-runtime = { workspace = true }
+sp-session = { workspace = true }
+sp-timestamp = { workspace = true }
+sp-transaction-pool = { workspace = true }
+substrate-frame-rpc-system = { workspace = true }
+# Horizon
+hc-rpc = { workspace = true }
+hp-io = { workspace = true }
+hp-rpc = { workspace = true }
+horizon-runtime = { workspace = true }
+
+[build-dependencies]
+substrate-build-script-utils = { workspace = true }
+
+[features]
+default = []

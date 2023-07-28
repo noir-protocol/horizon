@@ -46,7 +46,7 @@ impl From<[u8; 33]> for CosmosSigner {
 #[cfg(feature = "std")]
 impl std::fmt::Display for CosmosSigner {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{}", hex::encode(self.0.0))
+		write!(f, "{}", hex::encode(self.0 .0))
 	}
 }
 

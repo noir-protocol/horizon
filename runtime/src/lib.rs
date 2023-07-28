@@ -57,6 +57,8 @@ use sp_runtime::{
 	ApplyExtrinsicResult, Perbill,
 };
 use sp_std::{marker::PhantomData, prelude::*};
+#[cfg(feature = "std")]
+use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
 /// Type of block number.
@@ -112,6 +114,12 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	transaction_version: 1,
 	state_version: 1,
 };
+
+/// Native version.
+#[cfg(feature = "std")]
+pub fn native_version() -> NativeVersion {
+	NativeVersion { runtime_version: VERSION, can_author_with: Default::default() }
+}
 
 pub const MILLISECS_PER_BLOCK: u64 = 6000;
 const NORMAL_DISPATCH_RATIO: Perbill = Perbill::from_percent(75);
@@ -302,6 +310,11 @@ impl pallet_cosmos_accounts::Config for Runtime {
 	type WeightInfo = pallet_cosmos_accounts::weights::HorizonWeight<Runtime>;
 }
 
+impl pallet_sudo::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type RuntimeCall = RuntimeCall;
+}
+
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime where
@@ -314,6 +327,7 @@ construct_runtime!(
 		Cosmos: pallet_cosmos,
 		CosmosAccounts: pallet_cosmos_accounts,
 		Grandpa: pallet_grandpa,
+		Sudo: pallet_sudo,
 		System: frame_system,
 		Timestamp: pallet_timestamp,
 		TransactionPayment: pallet_transaction_payment,
