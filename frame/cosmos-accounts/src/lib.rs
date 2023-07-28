@@ -1,0 +1,78 @@
+// This file is part of Horizon.
+
+// Copyright (C) 2023 Haderech Pte. Ltd.
+// SPDX-License-Identifier: GPL-3.0-or-later
+
+// This program is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+#![cfg_attr(not(feature = "std"), no_std)]
+#![allow(clippy::comparison_chain, clippy::large_enum_variant)]
+#![deny(unused_crate_dependencies)]
+
+pub mod weights;
+
+use crate::weights::WeightInfo;
+use hp_crypto::EcdsaExt;
+pub use pallet::*;
+use sp_core::H160;
+
+#[frame_support::pallet]
+pub mod pallet {
+	use super::*;
+	use frame_support::pallet_prelude::*;
+	use frame_system::pallet_prelude::*;
+
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(PhantomData<T>);
+
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		/// The overarching event type.
+		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
+		/// Weight information for extrinsics in this pallet.
+		type WeightInfo: WeightInfo;
+	}
+
+	#[pallet::event]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+		/// An cosmos account added.
+		CosmosAccountAdded { who: T::AccountId, address: H160 },
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+		DeriveAddressFailed,
+	}
+
+	#[pallet::storage]
+	pub type CosmosAccounts<T: Config> = StorageMap<_, Blake2_128Concat, H160, T::AccountId>;
+
+	#[pallet::call]
+	impl<T: Config> Pallet<T>
+	where
+		T::AccountId: EcdsaExt,
+	{
+		#[pallet::call_index(0)]
+		#[pallet::weight(T::WeightInfo::add())]
+		pub fn add(origin: OriginFor<T>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			let address = who.to_cosm_address().ok_or(Error::<T>::DeriveAddressFailed)?;
+			CosmosAccounts::<T>::insert(&address, &who);
+			Self::deposit_event(Event::<T>::CosmosAccountAdded { who, address });
+			Ok(())
+		}
+	}
+}

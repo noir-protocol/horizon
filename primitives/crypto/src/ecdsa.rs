@@ -1,4 +1,4 @@
-// This file is part of Horizon.
+// This file is part of Hrozion.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: Apache-2.0
@@ -15,13 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+//! Simple ECDSA secp256k1 API.
 
-mod ecdsa;
-mod ripmd160;
-mod secp256k1;
+use sp_core::H160;
 
-#[cfg(feature = "std")]
-pub use crate::secp256k1::secp256k1_ecdsa_verify;
-pub use ecdsa::EcdsaExt;
-pub use ripmd160::ripemd160;
+/// Extension trait to sp_core::ecdsa (alternative to frame_support::crypto::ECDSAExt)
+pub trait EcdsaExt {
+	/// Convert to cosmos address, if available.
+	fn to_cosm_address(&self) -> Option<H160>;
+}
