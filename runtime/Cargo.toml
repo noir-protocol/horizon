@@ -46,6 +46,7 @@ hp-account = { workspace = true }
 hp-cosmos = { workspace = true }
 hp-crypto = { workspace = true }
 hp-io = { workspace = true }
+hp-rpc = { workspace = true }
 pallet-cosmos = { workspace = true }
 pallet-cosmos-accounts = { workspace = true }
 
@@ -81,6 +82,7 @@ std = [
 	"hp-cosmos/std",
 	"hp-crypto/std",
 	"hp-io/std",
+	"hp-rpc/std",
 	"pallet-cosmos/std",
 	"pallet-cosmos-accounts/std",
 	"substrate-wasm-builder",

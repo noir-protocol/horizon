@@ -490,6 +490,14 @@ impl Runtime {
 }
 
 impl_runtime_apis! {
+	impl hp_rpc::ConvertTxRuntimeApi<Block> for Runtime {
+		fn convert_tx(tx: hp_cosmos::Tx) -> <Block as BlockT>::Extrinsic {
+			UncheckedExtrinsic::new_unsigned(
+				pallet_cosmos::Call::<Runtime>::transact { tx }.into(),
+			)
+		}
+	}
+
 	impl sp_api::Core<Block> for Runtime {
 		fn version() -> RuntimeVersion {
 			VERSION
