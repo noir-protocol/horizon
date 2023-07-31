@@ -16,9 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
-
-use crate::client::{BaseRuntimeApiCollection, FullBackend, FullClient, RuntimeApiCollection};
 use horizon_runtime::{self, opaque::Block, RuntimeApi};
 use sc_client_api::BlockBackend;
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
@@ -29,6 +26,26 @@ use sc_service::{error::Error as ServiceError, Configuration, TaskManager, WarpS
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
 use std::{sync::Arc, time::Duration};
+
+// Our native executor instance.
+pub struct ExecutorDispatch;
+
+impl sc_executor::NativeExecutionDispatch for ExecutorDispatch {
+	type ExtendHostFunctions = hp_io::crypto::HostFunctions;
+
+	fn dispatch(method: &str, data: &[u8]) -> Option<Vec<u8>> {
+		horizon_runtime::api::dispatch(method, data)
+	}
+
+	fn native_version() -> sc_executor::NativeVersion {
+		horizon_runtime::native_version()
+	}
+}
+
+pub(crate) type FullClient =
+	sc_service::TFullClient<Block, RuntimeApi, NativeElseWasmExecutor<ExecutorDispatch>>;
+type FullBackend = sc_service::TFullBackend<Block>;
+type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
 pub fn new_partial(
 	config: &Configuration,
@@ -216,10 +233,15 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
 	let rpc_extensions_builder = {
 		let client = client.clone();
 		let pool = transaction_pool.clone();
+		let chain_spec = config.chain_spec.cloned_box();
 
 		Box::new(move |deny_unsafe, _| {
-			let deps =
-				crate::rpc::FullDeps { client: client.clone(), pool: pool.clone(), deny_unsafe };
+			let deps = crate::rpc::FullDeps {
+				client: client.clone(),
+				pool: pool.clone(),
+				deny_unsafe,
+				chain_spec: chain_spec.cloned_box(),
+			};
 			crate::rpc::create_full(deps).map_err(Into::into)
 		})
 	};

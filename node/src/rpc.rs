@@ -1,24 +1,12 @@
-// This file is part of Horizon.
-
-// Copyright (C) 2023 Haderech Pte. Ltd.
-// SPDX-License-Identifier: GPL-3.0-or-later
-
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//! A collection of node-specific RPC methods.
+//! Substrate provides the `sc-rpc` crate, which defines the core RPC layer
+//! used by Substrate nodes. This file extends those RPC definitions with
+//! capabilities that are specific to this project's runtime configuration.
 
 #![warn(missing_docs)]
 
 use std::sync::Arc;
+
 use horizon_runtime::{opaque::Block, AccountId, Balance, Index};
 use jsonrpsee::RpcModule;
 pub use sc_rpc_api::DenyUnsafe;
@@ -50,8 +38,8 @@ where
 	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: BlockBuilder<Block>,
+	P: TransactionPool<Block = Block> + 'static,
 	C::Api: hp_rpc::ConvertTxRuntimeApi<Block>,
-	P: TransactionPool + 'static,
 {
 	use hc_rpc::{Cosm, CosmApiServer};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
@@ -61,10 +49,10 @@ where
 	let FullDeps { client, pool, deny_unsafe, chain_spec } = deps;
 
 	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
-	module.merge(TransactionPayment::new(client).into_rpc())?;
+	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 
-	// Cosmos compatibility RPCs
 	module.merge(Cosm::new(chain_spec, pool, client).into_rpc())?;
+
 	// Extend this RPC with a custom API by using the following syntax.
 	// `YourRpcStruct` should have a reference to a client, which is needed
 	// to call into the runtime.

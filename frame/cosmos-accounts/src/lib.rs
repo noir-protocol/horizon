@@ -23,6 +23,8 @@
 pub mod weights;
 
 use crate::weights::WeightInfo;
+#[cfg(feature = "std")]
+use frame_support::traits::GenesisBuild;
 use hp_crypto::EcdsaExt;
 pub use pallet::*;
 use sp_core::H160;
@@ -60,6 +62,30 @@ pub mod pallet {
 	#[pallet::storage]
 	pub type CosmosAccounts<T: Config> = StorageMap<_, Blake2_128Concat, H160, T::AccountId>;
 
+	#[pallet::genesis_config]
+	pub struct GenesisConfig<T: Config> {
+		pub accounts: Vec<T::AccountId>,
+	}
+
+	#[cfg(feature = "std")]
+	impl<T: Config> Default for GenesisConfig<T> {
+		fn default() -> Self {
+			Self { accounts: Default::default() }
+		}
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> GenesisBuild<T> for GenesisConfig<T>
+	where
+		T::AccountId: EcdsaExt,
+	{
+		fn build(&self) {
+			for account in self.accounts.iter() {
+				let _ = Pallet::<T>::add_account(account);
+			}
+		}
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	where
@@ -69,9 +95,19 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::add())]
 		pub fn add(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
+			let _ = Self::add_account(&who)?;
+			Ok(())
+		}
+	}
+
+	impl<T: Config> Pallet<T>
+	where
+		T::AccountId: EcdsaExt,
+	{
+		pub fn add_account(who: &T::AccountId) -> Result<(), DispatchError> {
 			let address = who.to_cosm_address().ok_or(Error::<T>::DeriveAddressFailed)?;
 			CosmosAccounts::<T>::insert(&address, &who);
-			Self::deposit_event(Event::<T>::CosmosAccountAdded { who, address });
+			Self::deposit_event(Event::<T>::CosmosAccountAdded { who: who.clone(), address });
 			Ok(())
 		}
 	}

@@ -15,7 +15,9 @@ path = 'src/main.rs'
 
 [dependencies]
 clap = { workspace = true }
+hex = { workspace = true }
 jsonrpsee = { workspace = true }
+log = { workspace = true }
 
 # Substrate
 frame-system-rpc-runtime-api = { workspace = true }
@@ -29,6 +31,7 @@ sc-consensus = { workspace = true }
 sc-consensus-aura = { workspace = true }
 sc-executor = { workspace = true }
 sc-keystore = { workspace = true }
+sc-network = { workspace = true }
 sc-rpc-api = { workspace = true }
 sc-service = { workspace = true }
 sc-telemetry = { workspace = true }
@@ -49,6 +52,7 @@ sp-transaction-pool = { workspace = true }
 substrate-frame-rpc-system = { workspace = true }
 # Horizon
 hc-rpc = { workspace = true }
+hp-account = { workspace = true }
 hp-io = { workspace = true }
 hp-rpc = { workspace = true }
 horizon-runtime = { workspace = true }
