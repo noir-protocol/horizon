@@ -17,12 +17,13 @@ path = 'src/main.rs'
 clap = { workspace = true }
 hex = { workspace = true }
 jsonrpsee = { workspace = true }
-log = { workspace = true }
 
-# Substrate
+# Substrate FRAME
 frame-system-rpc-runtime-api = { workspace = true }
 pallet-transaction-payment-rpc = { workspace = true }
 pallet-transaction-payment-rpc-runtime-api = { workspace = true }
+
+# Substrate
 sc-basic-authorship = { workspace = true }
 sc-chain-spec = { workspace = true }
 sc-cli = { workspace = true }
@@ -50,6 +51,7 @@ sp-session = { workspace = true }
 sp-timestamp = { workspace = true }
 sp-transaction-pool = { workspace = true }
 substrate-frame-rpc-system = { workspace = true }
+
 # Horizon
 hc-rpc = { workspace = true }
 hp-account = { workspace = true }
