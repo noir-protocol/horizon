@@ -55,6 +55,44 @@ pub struct Tx {
 	pub len: u32,
 }
 
+impl Tx {
+	pub fn is_valid(&self) -> bool {
+		return self.validate_origin() && self.validate_extra()
+	}
+
+	fn validate_origin(&self) -> bool {
+		if self.auth_info.signer_infos.is_empty() {
+			return false
+		}
+		if self.body.messages.is_empty() {
+			return false
+		}
+		if self.signatures.is_empty() {
+			return false
+		}
+		if self.auth_info.fee.amount.is_empty() {
+			return false
+		}
+		return true
+	}
+
+	fn validate_extra(&self) -> bool {
+		if self.auth_info.signer_infos.len() > 1 {
+			return false
+		}
+		if self.body.messages.len() > 1 {
+			return false
+		}
+		if self.signatures.len() > 1 {
+			return false
+		}
+		if self.auth_info.fee.amount.len() > 1 {
+			return false
+		}
+		return true
+	}
+}
+
 #[cfg(feature = "std")]
 impl Tx {
 	pub fn decode(tx_bytes: &Bytes, chain_id: &str) -> Result<Self, DecodeTxError> {
@@ -64,8 +102,8 @@ impl Tx {
 
 		let tx_origin =
 			cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeTxError::InvalidTxData)?;
-		Self::validate_origin(&tx_origin)?;
-		Self::validate_extras(&tx_origin)?;
+		let _ = validate_origin(&tx_origin)?;
+		let _ = validate_extras(&tx_origin)?;
 
 		let signatures =
 			tx_origin.signatures.iter().map(|s| s.clone()).collect::<Vec<SignatureBytes>>();
@@ -96,38 +134,40 @@ impl Tx {
 			len,
 		})
 	}
+}
 
-	fn validate_origin(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
-		if tx.auth_info.signer_infos.is_empty() {
-			return Err(DecodeTxError::EmptySigners)
-		}
-		if tx.body.messages.is_empty() {
-			return Err(DecodeTxError::EmptyMessages)
-		}
-		if tx.signatures.is_empty() {
-			return Err(DecodeTxError::EmptySignatures)
-		}
-		if tx.auth_info.fee.amount.is_empty() {
-			return Err(DecodeTxError::EmptyFeeAmount)
-		}
-		Ok(())
+#[cfg(feature = "std")]
+fn validate_origin(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
+	if tx.auth_info.signer_infos.is_empty() {
+		return Err(DecodeTxError::EmptySigners)
 	}
+	if tx.body.messages.is_empty() {
+		return Err(DecodeTxError::EmptyMessages)
+	}
+	if tx.signatures.is_empty() {
+		return Err(DecodeTxError::EmptySignatures)
+	}
+	if tx.auth_info.fee.amount.is_empty() {
+		return Err(DecodeTxError::EmptyFeeAmount)
+	}
+	Ok(())
+}
 
-	fn validate_extras(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
-		if tx.auth_info.signer_infos.len() > 1 {
-			return Err(DecodeTxError::TooManySigners)
-		}
-		if tx.body.messages.len() > 1 {
-			return Err(DecodeTxError::TooManyMessages)
-		}
-		if tx.signatures.len() > 1 {
-			return Err(DecodeTxError::TooManySignatures)
-		}
-		if tx.auth_info.fee.amount.len() > 1 {
-			return Err(DecodeTxError::TooManyFeeAmount)
-		}
-		Ok(())
+#[cfg(feature = "std")]
+fn validate_extras(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
+	if tx.auth_info.signer_infos.len() > 1 {
+		return Err(DecodeTxError::TooManySigners)
 	}
+	if tx.body.messages.len() > 1 {
+		return Err(DecodeTxError::TooManyMessages)
+	}
+	if tx.signatures.len() > 1 {
+		return Err(DecodeTxError::TooManySignatures)
+	}
+	if tx.auth_info.fee.amount.len() > 1 {
+		return Err(DecodeTxError::TooManyFeeAmount)
+	}
+	Ok(())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
