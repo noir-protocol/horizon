@@ -233,14 +233,13 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight(tx.auth_info.fee.gas_limit)]
 		pub fn transact(origin: OriginFor<T>, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
+			let source = ensure_cosmos_transaction(origin)?;
 			if !tx.is_valid() {
 				return Err(DispatchErrorWithPostInfo {
 					post_info: Default::default(),
 					error: Error::<T>::InvalidTx.into(),
 				})
 			}
-
-			let source = ensure_cosmos_transaction(origin)?;
 			Self::apply_validated_transaction(source, tx)
 		}
 	}
