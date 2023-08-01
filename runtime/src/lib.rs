@@ -146,7 +146,7 @@ impl frame_support::traits::OnNewAccount<AccountId> for OnNewAccount {
 	fn on_new_account(who: &AccountId) {
 		if let Some(address) = who.to_cosm_address() {
 			let _ = Runtime::migrate_cosm_account(&address, who);
-			let _ = pallet_cosmos_accounts::Pallet::<Runtime>::add_account(who);
+			let _ = pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(who);
 		}
 	}
 }

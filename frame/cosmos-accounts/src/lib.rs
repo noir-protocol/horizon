@@ -50,17 +50,17 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// An cosmos account added.
-		CosmosAccountAdded { who: T::AccountId, address: H160 },
+		/// An cosmos account connected.
+		Connected { address: H160, who: T::AccountId },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		DeriveAddressFailed,
+		DeriveFailed,
 	}
 
 	#[pallet::storage]
-	pub type CosmosAccounts<T: Config> = StorageMap<_, Blake2_128Concat, H160, T::AccountId>;
+	pub type Connections<T: Config> = StorageMap<_, Blake2_128Concat, H160, T::AccountId>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
@@ -81,7 +81,7 @@ pub mod pallet {
 	{
 		fn build(&self) {
 			for account in self.accounts.iter() {
-				let _ = Pallet::<T>::add_account(account);
+				let _ = Pallet::<T>::connect_account(account);
 			}
 		}
 	}
@@ -92,10 +92,10 @@ pub mod pallet {
 		T::AccountId: EcdsaExt,
 	{
 		#[pallet::call_index(0)]
-		#[pallet::weight(T::WeightInfo::add())]
-		pub fn add(origin: OriginFor<T>) -> DispatchResult {
+		#[pallet::weight(T::WeightInfo::connect())]
+		pub fn connect(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let _ = Self::add_account(&who)?;
+			let _ = Self::connect_account(&who)?;
 			Ok(())
 		}
 	}
@@ -104,10 +104,10 @@ pub mod pallet {
 	where
 		T::AccountId: EcdsaExt,
 	{
-		pub fn add_account(who: &T::AccountId) -> Result<(), DispatchError> {
-			let address = who.to_cosm_address().ok_or(Error::<T>::DeriveAddressFailed)?;
-			CosmosAccounts::<T>::insert(&address, &who);
-			Self::deposit_event(Event::<T>::CosmosAccountAdded { who: who.clone(), address });
+		pub fn connect_account(who: &T::AccountId) -> Result<(), DispatchError> {
+			let address = who.to_cosm_address().ok_or(Error::<T>::DeriveFailed)?;
+			Connections::<T>::insert(&address, &who);
+			Self::deposit_event(Event::<T>::Connected { address, who: who.clone() });
 			Ok(())
 		}
 	}

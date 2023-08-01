@@ -25,13 +25,13 @@ use frame_support::{traits::Get, weights::Weight};
 
 /// Weight functions needed for pallet_cosmos_accounts.
 pub trait WeightInfo {
-	fn add() -> Weight;
+	fn connect() -> Weight;
 }
 
 /// Weights for pallet_cosmos_accounts using the Horizon node and recommended hardware.
 pub struct HorizonWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for HorizonWeight<T> {
-	fn add() -> Weight {
+	fn connect() -> Weight {
 		Weight::from_ref_time(50_000_000)
 			.saturating_add(T::DbWeight::get().writes(1 as u64))
 		}
