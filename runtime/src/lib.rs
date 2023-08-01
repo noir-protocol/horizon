@@ -191,7 +191,7 @@ impl frame_system::Config for Runtime {
 	/// The data to be stored in an account.
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// What to do if a new account is created.
-	type OnNewAccount = ();
+	type OnNewAccount = OnNewAccount;
 	/// What to do if an account is fully reaped from the system.
 	type OnKilledAccount = ();
 	/// Weight information for the extrinsics of this pallet.
