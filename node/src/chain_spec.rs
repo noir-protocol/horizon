@@ -22,7 +22,7 @@ use horizon_runtime::{
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{Pair, Public};
+use sp_core::{Pair, Public, ecdsa};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
 
 // The URL for the telemetry server.
@@ -45,12 +45,14 @@ pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 
 pub fn development_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
-	let mut public_key = [0u8; 33];
-	let raw_key =
-		hex::decode("029e1f50dd20843035b1a8274ed04228583b38c8ec5523fb996afbac85ba1de5df").unwrap();
-	public_key.copy_from_slice(&raw_key[..]);
-	let genesis_key: hp_account::CosmosSigner = public_key.into();
-	log::info!("{}", genesis_key);
+
+	let rawkey = hex::decode("deadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeaf").unwrap();
+	let mut privkey = [0u8; 32];
+	privkey.copy_from_slice(&rawkey[..]);
+	let pair = ecdsa::Pair::from_seed(&privkey);
+	let pubkey = pair.public();
+	let genesis_key: hp_account::CosmosSigner = pubkey.into();
+
 	Ok(ChainSpec::from_genesis(
 		// Name
 		"Development",
@@ -85,11 +87,13 @@ pub fn development_config() -> Result<ChainSpec, String> {
 
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
-	let mut public_key = [0u8; 33];
-	let raw_key =
-		hex::decode("029e1f50dd20843035b1a8274ed04228583b38c8ec5523fb996afbac85ba1de5df").unwrap();
-	public_key.copy_from_slice(&raw_key[..]);
-	let genesis_key: hp_account::CosmosSigner = public_key.into();
+
+	let rawkey = hex::decode("deadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeaf").unwrap();
+	let mut privkey = [0u8; 32];
+	privkey.copy_from_slice(&rawkey[..]);
+	let pair = ecdsa::Pair::from_seed(&privkey);
+	let pubkey = pair.public();
+	let genesis_key: hp_account::CosmosSigner = pubkey.into();
 
 	Ok(ChainSpec::from_genesis(
 		// Name

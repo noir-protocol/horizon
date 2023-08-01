@@ -37,6 +37,12 @@ impl IdentifyAccount for CosmosSigner {
 	}
 }
 
+impl From<ecdsa::Public> for CosmosSigner {
+	fn from(value: ecdsa::Public) -> Self {
+		CosmosSigner(value)
+	}
+}
+
 impl From<[u8; 33]> for CosmosSigner {
 	fn from(value: [u8; 33]) -> Self {
 		CosmosSigner(ecdsa::Public(value))
