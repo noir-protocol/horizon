@@ -18,12 +18,13 @@
 
 use horizon_runtime::{
 	AccountId, AuraConfig, BalancesConfig, CosmosAccountsConfig, GenesisConfig, GrandpaConfig,
-	SudoConfig, SystemConfig, WASM_BINARY,
+	Signature, SudoConfig, SystemConfig, WASM_BINARY,
 };
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{Pair, Public, ecdsa};
+use sp_core::{ecdsa, Pair, Public};
 use sp_finality_grandpa::AuthorityId as GrandpaId;
+use sp_runtime::traits::{IdentifyAccount, Verify};
 
 // The URL for the telemetry server.
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
@@ -38,6 +39,16 @@ pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Pu
 		.public()
 }
 
+type AccountPublic = <Signature as Verify>::Signer;
+
+/// Generate an account ID from seed.
+pub fn get_account_id_from_seed<TPublic: Public>(seed: &str) -> AccountId
+where
+	AccountPublic: From<<TPublic::Pair as Pair>::Public>,
+{
+	AccountPublic::from(get_from_seed::<TPublic>(seed)).into_account()
+}
+
 /// Generate an Aura authority key.
 pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 	(get_from_seed::<AuraId>(s), get_from_seed::<GrandpaId>(s))
@@ -45,13 +56,6 @@ pub fn authority_keys_from_seed(s: &str) -> (AuraId, GrandpaId) {
 
 pub fn development_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
-
-	let rawkey = hex::decode("deadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeaf").unwrap();
-	let mut privkey = [0u8; 32];
-	privkey.copy_from_slice(&rawkey[..]);
-	let pair = ecdsa::Pair::from_seed(&privkey);
-	let pubkey = pair.public();
-	let genesis_key: hp_account::CosmosSigner = pubkey.into();
 
 	Ok(ChainSpec::from_genesis(
 		// Name
@@ -65,9 +69,14 @@ pub fn development_config() -> Result<ChainSpec, String> {
 				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice")],
 				// Sudo account
-				genesis_key.clone(),
+				get_account_id_from_seed::<ecdsa::Public>("Alice"),
 				// Pre-funded accounts
-				vec![genesis_key],
+				vec![
+					get_account_id_from_seed::<ecdsa::Public>("Alice"),
+					get_account_id_from_seed::<ecdsa::Public>("Bob"),
+					get_account_id_from_seed::<ecdsa::Public>("Alice//stash"),
+					get_account_id_from_seed::<ecdsa::Public>("Bob//stash"),
+				],
 				true,
 			)
 		},
@@ -88,13 +97,6 @@ pub fn development_config() -> Result<ChainSpec, String> {
 pub fn local_testnet_config() -> Result<ChainSpec, String> {
 	let wasm_binary = WASM_BINARY.ok_or_else(|| "Development wasm not available".to_string())?;
 
-	let rawkey = hex::decode("deadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeafdeadbeaf").unwrap();
-	let mut privkey = [0u8; 32];
-	privkey.copy_from_slice(&rawkey[..]);
-	let pair = ecdsa::Pair::from_seed(&privkey);
-	let pubkey = pair.public();
-	let genesis_key: hp_account::CosmosSigner = pubkey.into();
-
 	Ok(ChainSpec::from_genesis(
 		// Name
 		"Local Testnet",
@@ -107,9 +109,14 @@ pub fn local_testnet_config() -> Result<ChainSpec, String> {
 				// Initial PoA authorities
 				vec![authority_keys_from_seed("Alice"), authority_keys_from_seed("Bob")],
 				// Sudo account
-				genesis_key.clone(),
+				get_account_id_from_seed::<ecdsa::Public>("Alice"),
 				// Pre-funded accounts
-				vec![genesis_key],
+				vec![
+					get_account_id_from_seed::<ecdsa::Public>("Alice"),
+					get_account_id_from_seed::<ecdsa::Public>("Bob"),
+					get_account_id_from_seed::<ecdsa::Public>("Alice//stash"),
+					get_account_id_from_seed::<ecdsa::Public>("Bob//stash"),
+				],
 				true,
 			)
 		},
