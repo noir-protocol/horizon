@@ -1,0 +1,42 @@
+[package]
+name = "hp-account"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/noir-protocol/horizon/"
+
+[dependencies]
+array-bytes = { workspace = true, optional = true }
+hex = { workspace = true, optional = true }
+serde = { workspace = true, features = ["derive"], optional = true }
+
+codec = { package = "parity-scale-codec", workspace = true }
+scale-info = { workspace = true }
+
+# Substrate
+sp-core = { workspace = true }
+sp-io = { workspace = true }
+sp-runtime = { workspace = true }
+sp-std = { workspace = true }
+
+# Horizon
+hp-crypto = { workspace = true }
+hp-io = { workspace = true }
+
+[dev-dependencies]
+
+[features]
+default = ["std"]
+std = [
+	"array-bytes",
+	"hex",
+	"serde",
+	"codec/std",
+	"scale-info/std",
+	"sp-core/std",
+	"sp-io/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"hp-crypto/std",
+	"hp-io/std",
+]
