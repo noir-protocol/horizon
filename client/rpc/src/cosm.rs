@@ -70,13 +70,13 @@ where
 
 		let chain_id = self.chain_spec.id();
 		let tx = hp_cosmos::Tx::decode(&tx_bytes, chain_id)
-			.map_err(|_| internal_err("Invalid transaction."))?;
+			.map_err(|e| internal_err(format!("invalid transaction error: {}", e)))?;
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = self
 			.client
 			.runtime_api()
 			.convert_tx(block_hash, tx.clone())
-			.map_err(|_| internal_err("Cannot access runtime api."))?;
+			.map_err(|_| internal_err("cannot access runtime api"))?;
 		self.pool
 			.submit_one(&BlockId::Hash(block_hash), TransactionSource::Local, extrinsic)
 			.map_ok(move |_| tx.hash.into())

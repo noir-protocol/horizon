@@ -97,7 +97,7 @@ impl Tx {
 impl Tx {
 	pub fn decode(tx_bytes: &Bytes, chain_id: &str) -> Result<Self, DecodeTxError> {
 		if tx_bytes.is_empty() {
-			return Err(DecodeTxError::InvalidTxData)
+			return Err(DecodeTxError::EmptyTxBytes)
 		}
 
 		let tx_origin =
