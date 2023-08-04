@@ -57,10 +57,10 @@ pub struct Tx {
 
 impl Tx {
 	pub fn is_valid(&self) -> bool {
-		return self.validate_origin() && self.validate_extra()
+		return self.validate_basic() && self.validate_extras()
 	}
 
-	fn validate_origin(&self) -> bool {
+	fn validate_basic(&self) -> bool {
 		if self.auth_info.signer_infos.is_empty() {
 			return false
 		}
@@ -76,7 +76,7 @@ impl Tx {
 		return true
 	}
 
-	fn validate_extra(&self) -> bool {
+	fn validate_extras(&self) -> bool {
 		if self.auth_info.signer_infos.len() > 1 {
 			return false
 		}
@@ -102,7 +102,7 @@ impl Tx {
 
 		let tx_origin =
 			cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeTxError::InvalidTxData)?;
-		let _ = validate_origin(&tx_origin)?;
+		let _ = validate_basic(&tx_origin)?;
 		let _ = validate_extras(&tx_origin)?;
 
 		let signatures =
@@ -125,7 +125,7 @@ impl Tx {
 			},
 			_ => return Err(DecodeTxError::UnsupportedSignMode),
 		};
-		let len = tx_bytes.len().try_into().map_err(|_| DecodeTxError::InvalidTxData)?;
+		let len = tx_bytes.len().try_into().map_err(|_| DecodeTxError::TooLongTxBytes)?;
 		Ok(Self {
 			body: tx_origin.body.try_into()?,
 			auth_info: tx_origin.auth_info.try_into()?,
@@ -137,7 +137,7 @@ impl Tx {
 }
 
 #[cfg(feature = "std")]
-fn validate_origin(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
+fn validate_basic(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
 	if tx.auth_info.signer_infos.is_empty() {
 		return Err(DecodeTxError::EmptySigners)
 	}

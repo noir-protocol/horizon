@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::internal_err;
+use crate::{internal_err, request_err};
 use futures::future::TryFutureExt;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
@@ -69,8 +69,9 @@ where
 		use hp_rpc::ConvertTxRuntimeApi;
 
 		let chain_id = self.chain_spec.id();
-		let tx = hp_cosmos::Tx::decode(&tx_bytes, chain_id)
-			.map_err(|e| internal_err(format!("invalid transaction error: {}", e)))?;
+		let tx = hp_cosmos::Tx::decode(&tx_bytes, chain_id).map_err(|e| {
+			request_err(format!("invalid transaction error; code: {}, message: {}", e as u8, e))
+		})?;
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = self
 			.client

@@ -35,10 +35,10 @@ pub fn err<T: ToString>(code: i32, message: T, data: Option<&[u8]>) -> jsonrpsee
 	))
 }
 
-pub fn internal_err<T: ToString>(message: T) -> jsonrpsee::core::Error {
-	err(jsonrpsee::types::error::INTERNAL_ERROR_CODE, message, None)
+pub fn request_err<T: ToString>(message: T) -> jsonrpsee::core::Error {
+	err(jsonrpsee::types::error::INVALID_REQUEST_CODE, message, None)
 }
 
-pub fn internal_err_with_data<T: ToString>(message: T, data: &[u8]) -> jsonrpsee::core::Error {
-	err(jsonrpsee::types::error::INTERNAL_ERROR_CODE, message, Some(data))
+pub fn internal_err<T: ToString>(message: T) -> jsonrpsee::core::Error {
+	err(jsonrpsee::types::error::INTERNAL_ERROR_CODE, message, None)
 }

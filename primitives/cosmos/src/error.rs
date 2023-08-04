@@ -17,7 +17,7 @@
 
 use core::fmt::Display;
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum DecodeTxError {
 	EmptyFeeAmount,
 	EmptyMessages,
@@ -28,6 +28,7 @@ pub enum DecodeTxError {
 	InvalidMsgData,
 	InvalidSignDoc,
 	InvalidTxData,
+	TooLongTxBytes,
 	TooManyFeeAmount,
 	TooManyMsgSendAmount,
 	TooManyMessages,
@@ -41,23 +42,24 @@ pub enum DecodeTxError {
 impl Display for DecodeTxError {
 	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		match self {
-			DecodeTxError::EmptyFeeAmount => write!(f, "{}", "EMPTY_FEE_AMOUNT"),
-			DecodeTxError::EmptyMessages => write!(f, "{}", "EMPTY_MESSAGES"),
-			DecodeTxError::EmptyMsgSendAmount => write!(f, "{}", "EMPTY_MSG_SEND_AMOUNT"),
-			DecodeTxError::EmptySignatures => write!(f, "{}", "EMPTY_SIGNATURES"),
-			DecodeTxError::EmptySigners => write!(f, "{}", "EMPTY_SIGNERS"),
-			DecodeTxError::EmptyTxBytes => write!(f, "{}", "EMPTY_TX_BYTES"),
-			DecodeTxError::InvalidMsgData => write!(f, "{}", "INVALID_MSG_DATA"),
-			DecodeTxError::InvalidSignDoc => write!(f, "{}", "INVALID_SIGN_DOC"),
-			DecodeTxError::InvalidTxData => write!(f, "{}", "INVALID_TX_DATA"),
-			DecodeTxError::TooManyFeeAmount => write!(f, "{}", "TOO_MANY_FEE_AMOUNT"),
-			DecodeTxError::TooManyMessages => write!(f, "{}", "TOO_MANY_MESSAGES"),
-			DecodeTxError::TooManyMsgSendAmount => write!(f, "{}", "TOO_MANY_MSG_SEND_AMOUNT"),
-			DecodeTxError::TooManySignatures => write!(f, "{}", "TOO_MANY_SIGNATURES"),
-			DecodeTxError::TooManySigners => write!(f, "{}", "TOO_MANY_SIGNERS"),
-			DecodeTxError::UnsupportedMsgType => write!(f, "{}", "UNSUPPORTED_MSG_TYPE"),
-			DecodeTxError::UnsupportedSignerType => write!(f, "{}", "UNSUPPORTED_SIGNER_TYPE"),
-			DecodeTxError::UnsupportedSignMode => write!(f, "{}", "UNSUPPORTED_SIGN_MODE"),
+			DecodeTxError::EmptyFeeAmount => write!(f, "{}", "empty fee amount"),
+			DecodeTxError::EmptyMessages => write!(f, "{}", "empty messages"),
+			DecodeTxError::EmptyMsgSendAmount => write!(f, "{}", "empty message send amount"),
+			DecodeTxError::EmptySignatures => write!(f, "{}", "empty signatures"),
+			DecodeTxError::EmptySigners => write!(f, "{}", "empty signers"),
+			DecodeTxError::EmptyTxBytes => write!(f, "{}", "empty tx bytes"),
+			DecodeTxError::InvalidMsgData => write!(f, "{}", "invalid message data"),
+			DecodeTxError::InvalidSignDoc => write!(f, "{}", "invalid sign doc"),
+			DecodeTxError::InvalidTxData => write!(f, "{}", "invalid tx data"),
+			DecodeTxError::TooLongTxBytes => write!(f, "{}", "too long tx bytes"),
+			DecodeTxError::TooManyFeeAmount => write!(f, "{}", "too many fee amount"),
+			DecodeTxError::TooManyMessages => write!(f, "{}", "too many messages"),
+			DecodeTxError::TooManyMsgSendAmount => write!(f, "{}", "too many message send amount"),
+			DecodeTxError::TooManySignatures => write!(f, "{}", "too many signatures"),
+			DecodeTxError::TooManySigners => write!(f, "{}", "too many signers"),
+			DecodeTxError::UnsupportedMsgType => write!(f, "{}", "unsupported message type"),
+			DecodeTxError::UnsupportedSignerType => write!(f, "{}", "unsupported signer type"),
+			DecodeTxError::UnsupportedSignMode => write!(f, "{}", "unsupported sign mode"),
 		}
 	}
 }
