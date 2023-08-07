@@ -21,8 +21,10 @@
 #![deny(unused_crate_dependencies)]
 
 pub mod errors;
+pub mod handler;
 pub mod weights;
 
+pub use self::{handler::MsgHandler, pallet::*};
 use crate::errors::{CosmosError, CosmosErrorCode};
 use frame_support::{
 	codec::{Decode, Encode, MaxEncodedLen},
@@ -34,7 +36,6 @@ use frame_support::{
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::{Account, Msg};
-pub use pallet::*;
 use sp_core::H160;
 use sp_runtime::{
 	traits::{BadOrigin, Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
@@ -183,6 +184,8 @@ pub mod pallet {
 		type AddressMapping: AddressMapping<Self::AccountId>;
 		/// Currency type for withdraw and balance storage.
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
+		/// Handle cosmos messages.
+		type MsgHandler: MsgHandler<Self>;
 		/// Convert a length value into a deductible fee based on the currency type.
 		type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
 		/// The overarching event type.
@@ -210,18 +213,6 @@ pub mod pallet {
 		OutOfGas,
 		InsufficientFee,
 		InvalidType,
-	}
-
-	impl<T> From<CosmosErrorCode> for Error<T> {
-		fn from(error: CosmosErrorCode) -> Self {
-			match error {
-				CosmosErrorCode::ErrUnauthorized => Error::<T>::Unauthorized,
-				CosmosErrorCode::ErrInsufficientFunds => Error::<T>::InsufficientFunds,
-				CosmosErrorCode::ErrOutOfGas => Error::<T>::OutOfGas,
-				CosmosErrorCode::ErrInsufficientFee => Error::<T>::InsufficientFee,
-				CosmosErrorCode::ErrInvalidType => Error::<T>::InvalidType,
-			}
-		}
 	}
 
 	#[pallet::call]
@@ -364,12 +355,10 @@ impl<T: Config> Pallet<T> {
 						error: CosmosErrorCode::ErrUnauthorized,
 					})
 				}
-				let weight =
-					Self::msg_send(from_address, to_address, amount[0].amount).map_err(|e| {
-						CosmosError {
-							weight: total_weight.saturating_add(e.weight),
-							error: e.error,
-						}
+				let weight = T::MsgHandler::msg_send(from_address, to_address, amount[0].amount)
+					.map_err(|e| CosmosError {
+						weight: total_weight.saturating_add(e.weight),
+						error: e.error,
 					})?;
 				total_weight = total_weight.saturating_add(weight);
 			},
@@ -435,25 +424,5 @@ impl<T: Config> Pallet<T> {
 		// `Bounded` maximum of its data type, which is not desired.
 		let capped_weight = weight.min(T::BlockWeights::get().max_block);
 		T::WeightToFee::weight_to_fee(&capped_weight)
-	}
-
-	fn msg_send(
-		from_address: &H160,
-		to_address: &H160,
-		amount: u128,
-	) -> Result<Weight, CosmosError> {
-		let source = T::AddressMapping::into_account_id(*from_address);
-		let target = T::AddressMapping::into_account_id(*to_address);
-		let amount = amount.try_into().map_err(|_| CosmosError {
-			weight: T::DbWeight::get().reads(2u64),
-			error: CosmosErrorCode::ErrInvalidType,
-		})?;
-		T::Currency::transfer(&source, &target, amount, ExistenceRequirement::AllowDeath).map_err(
-			|_| CosmosError {
-				weight: T::DbWeight::get().reads(2u64),
-				error: CosmosErrorCode::ErrInsufficientFunds,
-			},
-		)?;
-		Ok(<T as pallet::Config>::WeightInfo::msg_send())
 	}
 }

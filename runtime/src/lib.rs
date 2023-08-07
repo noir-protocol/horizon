@@ -37,6 +37,7 @@ use frame_support::{
 	},
 };
 use hp_crypto::EcdsaExt;
+use pallet_cosmos::handler::cosm::MsgHandler;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -301,6 +302,8 @@ impl pallet_cosmos::Config for Runtime {
 	type AddressMapping = compat::cosm::HashedAddressMapping<Self, BlakeTwo256>;
 	/// Currency type for withdraw and balance storage.
 	type Currency = Balances;
+	/// Handle cosmos messages.
+	type MsgHandler = MsgHandler<Self>;
 	/// Convert a length value into a deductible fee based on the currency type.
 	type LengthToFee = IdentityFee<Balance>;
 	/// The overarching event type.
