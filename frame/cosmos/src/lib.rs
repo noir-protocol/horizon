@@ -246,10 +246,10 @@ impl<T: Config> Pallet<T> {
 		tx: &hp_cosmos::Tx,
 	) -> Result<(), TransactionValidityError> {
 		let (who, _) = Self::account(&origin);
-		if who.sequence < tx.auth_info.signer_infos[0].sequence {
+		if tx.auth_info.signer_infos[0].sequence < who.sequence {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale))
 		}
-		if who.sequence > tx.auth_info.signer_infos[0].sequence {
+		if tx.auth_info.signer_infos[0].sequence > who.sequence {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Future))
 		}
 
