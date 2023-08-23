@@ -33,18 +33,18 @@ use cosmrs::{self, tx::MessageExt};
 use error::DecodeTxError;
 #[cfg(feature = "std")]
 use legacy::SignAminoDoc;
-#[cfg(feature = "std")]
-use sp_core::hashing::sha2_256;
-#[cfg(feature = "std")]
-use sp_core::Bytes;
-use sp_core::{H160, H256};
-use sp_std::vec::Vec;
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
 #[cfg(feature = "with-serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "std")]
+use sp_core::hashing::sha2_256;
+#[cfg(feature = "std")]
+use sp_core::Bytes;
+use sp_core::{H160, H256};
+use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;
 pub type SignatureBytes = Vec<u8>;

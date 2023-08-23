@@ -9,9 +9,9 @@ repository = "https://github.com/NoirHQ/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-parity-scale-codec = { workspace = true, features = ["derive"], optional = true }
 cosmrs = { workspace = true, optional = true }
 num_enum = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["derive"], optional = true }
 scale-info = { workspace = true, features = ["derive"], optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde_json = { workspace = true, optional = true }
@@ -26,9 +26,9 @@ base64ct = { workspace = true }
 [features]
 default = ["std"]
 std = [
-  "parity-scale-codec/std",
   "cosmrs",
   "num_enum/std",
+  "parity-scale-codec/std",
   "scale-info/std",
   "serde",
   "serde_json",
