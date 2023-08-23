@@ -109,7 +109,7 @@ export class NoirAccountService implements IAccountService {
   public async origin(address: string): Promise<Codec> {
     const { data } = fromBech32(address);
     const addressRaw = Buffer.concat([Buffer.from([0x02]), data]);
-    return this.chainApi.query["accountAliasRegistry"]["accountAliases"](
+    return this.chainApi.query["alias"]["accountIdOf"](
       addressRaw
     );
   }
