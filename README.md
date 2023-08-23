@@ -1,6 +1,6 @@
 # Horizon
 
-[![GitHub License](https://img.shields.io/badge/license-GPL3%2FApache2-blue)](#LICENSE) [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/noir-protocol/horizon/ci.yml?event=push)](https://github.com/noir-protocol/horizon)
+[![GitHub License](https://img.shields.io/badge/license-GPL3%2FApache2-blue)](#LICENSE) [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/NoirHQ/horizon/ci.yml?event=push)](https://github.com/NoirHQ/horizon)
 
 ## License
 
