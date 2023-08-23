@@ -1,0 +1,34 @@
+[package]
+name = "pallet-cosmos-accounts"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/noir-protocol/horizon/"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", workspace = true }
+scale-info = { workspace = true }
+
+# Substrate FRAME
+frame-support = { workspace = true }
+frame-system = { workspace = true }
+
+# Substrate
+sp-core = { workspace = true }
+
+# Horizon
+hp-crypto = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"scale-info/std",
+	"frame-support/std",
+	"frame-system/std",
+	"sp-core/std",
+	"hp-crypto/std",
+]

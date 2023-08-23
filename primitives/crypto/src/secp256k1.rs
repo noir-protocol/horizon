@@ -15,23 +15,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! I/O host interface for Horizon runtime.
+#[cfg(feature = "std")]
+use secp256k1::{ecdsa::Signature, Message, PublicKey};
 
-#![warn(missing_docs)]
-#![cfg_attr(not(feature = "std"), no_std)]
+/// Verify a secp256k1 ECDSA signature.
+#[cfg(feature = "std")]
+pub fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
+	let sig = match Signature::from_compact(sig) {
+		Ok(v) => v,
+		Err(_) => return false,
+	};
+	let msg = match Message::from_slice(msg) {
+		Ok(v) => v,
+		Err(_) => return false,
+	};
+	let pub_key = match PublicKey::from_slice(pub_key) {
+		Ok(v) => v,
+		Err(_) => return false,
+	};
 
-use sp_runtime_interface::runtime_interface;
-
-/// Interfaces for working with crypto related types from within the runtime.
-#[runtime_interface]
-pub trait Crypto {
-	/// Hash with ripemd160.
-	fn ripemd160(msg: &[u8]) -> [u8; 20] {
-		hp_crypto::ripemd160(msg)
-	}
-
-	/// Verify with secp256k1.
-	fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
-		hp_crypto::secp256k1_ecdsa_verify(sig, msg, pub_key)
-	}
+	sig.verify(&msg, &pub_key).is_ok()
 }

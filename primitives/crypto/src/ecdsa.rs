@@ -1,4 +1,4 @@
-// This file is part of Horizon.
+// This file is part of Hrozion.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: Apache-2.0
@@ -15,23 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! I/O host interface for Horizon runtime.
+//! Simple ECDSA secp256k1 API.
 
-#![warn(missing_docs)]
-#![cfg_attr(not(feature = "std"), no_std)]
+use sp_core::H160;
 
-use sp_runtime_interface::runtime_interface;
-
-/// Interfaces for working with crypto related types from within the runtime.
-#[runtime_interface]
-pub trait Crypto {
-	/// Hash with ripemd160.
-	fn ripemd160(msg: &[u8]) -> [u8; 20] {
-		hp_crypto::ripemd160(msg)
-	}
-
-	/// Verify with secp256k1.
-	fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
-		hp_crypto::secp256k1_ecdsa_verify(sig, msg, pub_key)
-	}
+/// Extension trait to sp_core::ecdsa (alternative to frame_support::crypto::ECDSAExt)
+pub trait EcdsaExt {
+	/// Convert to cosmos address, if available.
+	fn to_cosm_address(&self) -> Option<H160>;
 }

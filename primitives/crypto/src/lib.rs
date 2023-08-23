@@ -15,23 +15,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! I/O host interface for Horizon runtime.
-
-#![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_runtime_interface::runtime_interface;
+mod ecdsa;
+mod ripmd160;
+mod secp256k1;
 
-/// Interfaces for working with crypto related types from within the runtime.
-#[runtime_interface]
-pub trait Crypto {
-	/// Hash with ripemd160.
-	fn ripemd160(msg: &[u8]) -> [u8; 20] {
-		hp_crypto::ripemd160(msg)
-	}
-
-	/// Verify with secp256k1.
-	fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
-		hp_crypto::secp256k1_ecdsa_verify(sig, msg, pub_key)
-	}
-}
+#[cfg(feature = "std")]
+pub use crate::secp256k1::secp256k1_ecdsa_verify;
+pub use ecdsa::EcdsaExt;
+pub use ripmd160::ripemd160;

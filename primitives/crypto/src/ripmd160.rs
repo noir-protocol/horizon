@@ -15,23 +15,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! I/O host interface for Horizon runtime.
+use ripemd::{Digest, Ripemd160};
 
-#![warn(missing_docs)]
-#![cfg_attr(not(feature = "std"), no_std)]
+/// Hash with ripemd160.
+pub fn ripemd160(msg: &[u8]) -> [u8; 20] {
+	Ripemd160::digest(msg).into()
+}
 
-use sp_runtime_interface::runtime_interface;
+#[cfg(test)]
+mod tests {
+	use super::*;
 
-/// Interfaces for working with crypto related types from within the runtime.
-#[runtime_interface]
-pub trait Crypto {
-	/// Hash with ripemd160.
-	fn ripemd160(msg: &[u8]) -> [u8; 20] {
-		hp_crypto::ripemd160(msg)
-	}
-
-	/// Verify with secp256k1.
-	fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
-		hp_crypto::secp256k1_ecdsa_verify(sig, msg, pub_key)
+	#[test]
+	fn test_ripemd160() {
+		let msg = b"hello world";
+		let hash = ripemd160(msg);
+		assert_eq!(
+			hash,
+			[
+				0x98, 0xc6, 0x15, 0x78, 0x4c, 0xcb, 0x5f, 0xe5, 0x93, 0x6f, 0xbc, 0x0c, 0xbe, 0x9d,
+				0xfd, 0xb4, 0x08, 0xd9, 0x2f, 0x0f,
+			]
+		);
 	}
 }
