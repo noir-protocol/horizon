@@ -33,6 +33,12 @@ use cosmrs::{self, tx::MessageExt};
 use error::DecodeTxError;
 #[cfg(feature = "std")]
 use legacy::SignAminoDoc;
+#[cfg(feature = "with-codec")]
+use parity_scale_codec::{Decode, Encode};
+#[cfg(feature = "with-codec")]
+use scale_info::TypeInfo;
+#[cfg(feature = "with-serde")]
+use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use sp_core::hashing::sha2_256;
 #[cfg(feature = "std")]
@@ -45,8 +51,8 @@ pub type SignatureBytes = Vec<u8>;
 pub type Gas = u64;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Tx {
 	pub body: Body,
 	pub auth_info: AuthInfo,
@@ -171,8 +177,8 @@ fn validate_extras(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Body {
 	pub messages: Vec<Msg>,
 }
@@ -191,8 +197,8 @@ impl TryFrom<cosmrs::tx::Body> for Body {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub enum Msg {
 	MsgSend { from_address: H160, to_address: H160, amount: Vec<Coin> },
 }
@@ -240,8 +246,8 @@ impl TryFrom<&cosmrs::Any> for Msg {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct AuthInfo {
 	pub signer_infos: Vec<SignerInfo>,
 	pub fee: Fee,
@@ -261,8 +267,8 @@ impl TryFrom<cosmrs::tx::AuthInfo> for AuthInfo {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct SignerInfo {
 	pub public_key: Option<SignerPublicKey>,
 	pub sequence: SequenceNumber,
@@ -297,24 +303,24 @@ impl TryFrom<cosmrs::tx::SignerInfo> for SignerInfo {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub enum SignerPublicKey {
 	/// Single singer.
 	Single(PublicKey),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub enum PublicKey {
 	Ed25519([u8; 32]),
 	Secp256k1([u8; 33]),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Fee {
 	pub amount: Vec<Coin>,
 	pub gas_limit: Gas,
@@ -334,16 +340,16 @@ impl TryFrom<cosmrs::tx::Fee> for Fee {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Account {
 	pub sequence: SequenceNumber,
 	pub amount: u128,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(codec::Encode, codec::Decode, scale_info::TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Coin {
 	pub denom: Vec<u8>,
 	pub amount: u128,

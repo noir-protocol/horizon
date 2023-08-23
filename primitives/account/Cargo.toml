@@ -3,14 +3,14 @@ name = "hp-account"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/noir-protocol/horizon/"
+repository = "https://github.com/NoirHQ/horizon/"
 
 [dependencies]
 array-bytes = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 
-codec = { package = "parity-scale-codec", workspace = true }
+parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 
 # Substrate
@@ -31,7 +31,7 @@ std = [
 	"array-bytes",
 	"hex",
 	"serde",
-	"codec/std",
+	"parity-scale-codec/std",
 	"scale-info/std",
 	"sp-core/std",
 	"sp-io/std",
