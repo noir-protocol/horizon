@@ -16,4 +16,8 @@ sp-core = { workspace = true }
 
 [features]
 default = ["std"]
-std = ["ripemd/std", "secp256k1/std", "sp-core/std"]
+std = [
+  "ripemd/std",
+  "secp256k1/std",
+  "sp-core/std"
+]

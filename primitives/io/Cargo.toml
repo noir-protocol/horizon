@@ -16,6 +16,6 @@ hp-crypto = { workspace = true }
 [features]
 default = ["std"]
 std = [
-    "sp-runtime-interface/std",
-    "hp-crypto/std",
+  "sp-runtime-interface/std",
+  "hp-crypto/std",
 ]

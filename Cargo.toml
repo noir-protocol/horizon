@@ -17,7 +17,7 @@ array-bytes = "4.2.0"
 base64ct = { version = "1.6.0", default-features = false }
 bech32 = { version = "0.9.1", default-features = false }
 clap = { version = "4.0.9", features = ["derive"] }
-codec = { package = "parity-scale-codec", version = "3.2.0", default-features = false }
+parity-scale-codec = { version = "3.2.0", default-features = false }
 cosmrs = "0.14.0"
 futures = "0.3.25"
 hex = "0.4.3"

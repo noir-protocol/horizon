@@ -17,7 +17,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use hp_crypto::EcdsaExt;
 use scale_info::TypeInfo;
 #[cfg(feature = "std")]
