@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use horizon_runtime::{opaque::Block, AccountId, Balance, Nonce};
+use horizon_template_runtime::{opaque::Block, AccountId, Balance, Nonce};
 use jsonrpsee::RpcModule;
 pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;

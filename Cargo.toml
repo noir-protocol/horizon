@@ -8,8 +8,8 @@ members = [
 	"primitives/cosmos",
 	"primitives/io",
 	"primitives/rpc",
-	"runtime",
-	"node",
+	"template/runtime",
+	"template/node",
 ]
 
 [workspace.dependencies]
@@ -92,7 +92,7 @@ hp-io = { path = "primitives/io", default-features = false }
 hp-rpc = { path = "primitives/rpc", default-features = false }
 pallet-cosmos = { path = "frame/cosmos", default-features = false }
 pallet-cosmos-accounts = { path = "frame/cosmos-accounts", default-features = false }
-horizon-runtime = { path = "runtime", default-features = false }
+horizon-template-runtime = { path = "template/runtime", default-features = false }
 
 [profile.release]
 panic = "unwind"

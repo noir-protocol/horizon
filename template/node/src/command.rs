@@ -21,7 +21,7 @@ use crate::{
 	cli::{Cli, Subcommand},
 	service,
 };
-use horizon_runtime::Block;
+use horizon_template_runtime::Block;
 use sc_cli::SubstrateCli;
 use sc_service::PartialComponents;
 

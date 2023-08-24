@@ -1,8 +1,8 @@
 [package]
-name = "horizon-node"
-version = "0.1.0"
+name = "horizon-temaplte-node"
+version = "0.0.0"
 edition = "2021"
-license = "GPL-3.0-or-later"
+license = "Unlicense"
 repository = "https://github.com/NoirHQ/horizon/"
 build = "build.rs"
 
@@ -58,7 +58,7 @@ hc-rpc = { workspace = true }
 hp-account = { workspace = true }
 hp-io = { workspace = true }
 hp-rpc = { workspace = true }
-horizon-runtime = { workspace = true }
+horizon-template-runtime = { workspace = true }
 
 [build-dependencies]
 substrate-build-script-utils = { workspace = true }

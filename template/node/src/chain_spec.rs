@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use horizon_runtime::{
+use horizon_template_runtime::{
 	AccountId, AuraConfig, BalancesConfig, CosmosAccountsConfig, GrandpaConfig,
 	RuntimeGenesisConfig, Signature, SudoConfig, SystemConfig, WASM_BINARY,
 };
