@@ -1,8 +1,8 @@
 [package]
-name = "horizon-runtime"
-version = "0.1.0"
+name = "horizon-template-runtime"
+version = "0.0.0"
 edition = "2021"
-license = "GPL-3.0-or-later"
+license = "Unlicense"
 repository = "https://github.com/NoirHQ/horizon/"
 build = "build.rs"
 
