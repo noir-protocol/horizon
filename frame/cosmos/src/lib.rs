@@ -31,7 +31,7 @@ use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchClass, DispatchResultWithPostInfo, Pays},
 	scale_info::TypeInfo,
-	traits::{tokens::fungible::Inspect, Currency, ExistenceRequirement, Get, WithdrawReasons},
+	traits::{tokens::{fungible::Inspect, Fortitude, Preservation}, Currency, ExistenceRequirement, Get, WithdrawReasons},
 	weights::{Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
@@ -167,7 +167,6 @@ pub mod pallet {
 	use frame_support::pallet_prelude::*;
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
@@ -393,7 +392,7 @@ impl<T: Config> Pallet<T> {
 		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
 		// keepalive `true` takes into account ExistentialDeposit as part of what's considered
 		// liquid balance.
-		let balance = T::Currency::reducible_balance(&account_id, true);
+		let balance = T::Currency::reducible_balance(&account_id, Preservation::Preserve, Fortitude::Polite);
 
 		(
 			Account {
@@ -414,7 +413,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Compute the length portion of a fee by invoking the configured `LengthToFee` impl.
 	pub fn length_to_fee(length: u32) -> BalanceOf<T> {
-		T::LengthToFee::weight_to_fee(&Weight::from_ref_time(length as u64))
+		T::LengthToFee::weight_to_fee(&Weight::from_parts(length as u64, 0))
 	}
 
 	/// Compute the unadjusted portion of the weight fee by invoking the configured `WeightToFee`

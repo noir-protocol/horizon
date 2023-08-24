@@ -18,6 +18,7 @@ frame-system = { workspace = true }
 
 # Substrate
 sp-core = { workspace = true }
+sp-std = { workspace = true }
 
 # Horizon
 hp-crypto = { workspace = true }
