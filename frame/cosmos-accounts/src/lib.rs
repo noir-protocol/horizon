@@ -24,10 +24,11 @@ pub mod weights;
 
 use crate::weights::WeightInfo;
 #[cfg(feature = "std")]
-use frame_support::traits::GenesisBuild;
+use frame_support::{sp_runtime, traits::BuildGenesisConfig};
 use hp_crypto::EcdsaExt;
 pub use pallet::*;
 use sp_core::H160;
+use sp_std::vec::Vec;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -36,7 +37,6 @@ pub mod pallet {
 	use frame_system::pallet_prelude::*;
 
 	#[pallet::pallet]
-	#[pallet::generate_store(pub(super) trait Store)]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::config]
@@ -67,7 +67,6 @@ pub mod pallet {
 		pub accounts: Vec<T::AccountId>,
 	}
 
-	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
 			Self { accounts: Default::default() }
@@ -75,7 +74,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T>
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T>
 	where
 		T::AccountId: EcdsaExt,
 	{

@@ -30,7 +30,10 @@ mod compat;
 
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{tokens::fungible, ConstU32, ConstU8, KeyOwnerProofSystem, OnTimestampSet},
+	traits::{
+		tokens::{fungible, Fortitude, Preservation},
+		ConstBool, ConstU32, ConstU8, OnTimestampSet,
+	},
 	weights::{
 		constants::{RocksDbWeight as RuntimeDbWeight, WEIGHT_REF_TIME_PER_MILLIS},
 		IdentityFee, Weight,
@@ -76,7 +79,7 @@ pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::Account
 pub type Balance = u128;
 
 /// Index of a transaction in the chain.
-pub type Index = u32;
+pub type Nonce = u32;
 
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
@@ -105,6 +108,7 @@ pub mod opaque {
 	}
 }
 
+#[sp_version::runtime_version]
 pub const VERSION: RuntimeVersion = RuntimeVersion {
 	spec_name: create_runtime_str!("horizon-template"),
 	impl_name: create_runtime_str!("horizon-template"),
@@ -164,9 +168,7 @@ impl frame_system::Config for Runtime {
 	/// The aggregated dispatch type that is available for extrinsics.
 	type RuntimeCall = RuntimeCall;
 	/// The index type for storing how many extrinsics an account has signed.
-	type Index = Index;
-	/// The index type for blocks.
-	type BlockNumber = BlockNumber;
+	type Nonce = Nonce;
 	/// The type for hashing blocks and tries.
 	type Hash = Hash;
 	/// The hashing algorithm used.
@@ -175,8 +177,8 @@ impl frame_system::Config for Runtime {
 	type AccountId = AccountId;
 	/// The lookup mechanism to get account ID from whatever is passed in dispatchers.
 	type Lookup = AccountIdLookup<AccountId, ()>;
-	/// The header type.
-	type Header = generic::Header<BlockNumber, BlakeTwo256>;
+	/// The block type.
+	type Block = Block;
 	/// The ubiquitous event type.
 	type RuntimeEvent = RuntimeEvent;
 	/// Maximum number of block number to block hash mappings to keep (oldest pruned first).
@@ -212,30 +214,22 @@ impl pallet_aura::Config for Runtime {
 	type AuthorityId = AuraId;
 	type MaxAuthorities = MaxAuthorities;
 	type DisabledValidators = ();
+	type AllowMultipleBlocksPerSlot = ConstBool<false>;
 }
 
 impl pallet_grandpa::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 
-	type KeyOwnerProof =
-		<Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(KeyTypeId, GrandpaId)>>::Proof;
-
-	type KeyOwnerIdentification = <Self::KeyOwnerProofSystem as KeyOwnerProofSystem<(
-		KeyTypeId,
-		GrandpaId,
-	)>>::IdentificationTuple;
-
-	type KeyOwnerProofSystem = ();
-
-	type HandleEquivocation = ();
-
 	type WeightInfo = ();
 	type MaxAuthorities = ConstU32<32>;
 	type MaxSetIdSessionEntries = ();
+
+	type KeyOwnerProof = sp_core::Void;
+	type EquivocationReportSystem = ();
 }
 
 parameter_types! {
-	pub const ExistentialDeposit: u128 = 0;
+	pub const ExistentialDeposit: u128 = 500;
 	// For weight estimation, we assume that the most locks on an individual account will be 50.
 	// This number may need to be adjusted in the future if this assumption no longer holds true.
 	pub const MaxLocks: u32 = 50;
@@ -253,6 +247,10 @@ impl pallet_balances::Config for Runtime {
 	type MaxLocks = MaxLocks;
 	type MaxReserves = ();
 	type ReserveIdentifier = [u8; 8];
+	type RuntimeHoldReason = ();
+	type FreezeIdentifier = ();
+	type MaxHolds = ();
+	type MaxFreezes = ();
 }
 
 parameter_types! {
@@ -326,15 +324,12 @@ impl pallet_cosmos_accounts::Config for Runtime {
 impl pallet_sudo::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	type RuntimeCall = RuntimeCall;
+	type WeightInfo = pallet_sudo::weights::SubstrateWeight<Self>;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
-	pub enum Runtime where
-		Block = Block,
-		NodeBlock = opaque::Block,
-		UncheckedExtrinsic = UncheckedExtrinsic
-	{
+	pub enum Runtime {
 		Aura: pallet_aura,
 		Balances: pallet_balances,
 		Cosmos: pallet_cosmos,
@@ -498,18 +493,21 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 
 impl Runtime {
 	fn migrate_cosm_account(address: &H160, who: &AccountId) -> Result<Balance, ()> {
-		use fungible::{Inspect, Transfer};
+		use fungible::{Inspect, Mutate};
 		use pallet_cosmos::AddressMapping;
 
 		let interim_account =
 			<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(*address);
-		let balance =
-			pallet_balances::Pallet::<Runtime>::reducible_balance(&interim_account, false);
-		<pallet_balances::Pallet<Runtime> as Transfer<AccountId>>::transfer(
+		let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
+			&interim_account,
+			Preservation::Expendable,
+			Fortitude::Polite,
+		);
+		<pallet_balances::Pallet<Runtime> as Mutate<AccountId>>::transfer(
 			&interim_account,
 			who,
 			balance,
-			false,
+			Preservation::Expendable,
 		)
 		.map_err(|_| ())
 		.map(|_| balance)
@@ -542,6 +540,14 @@ impl_runtime_apis! {
 	impl sp_api::Metadata<Block> for Runtime {
 		fn metadata() -> OpaqueMetadata {
 			OpaqueMetadata::new(Runtime::metadata().into())
+		}
+
+		fn metadata_at_version(version: u32) -> Option<OpaqueMetadata> {
+			Runtime::metadata_at_version(version)
+		}
+
+		fn metadata_versions() -> Vec<u32> {
+			Runtime::metadata_versions()
 		}
 	}
 
@@ -592,8 +598,8 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Index> for Runtime {
-		fn account_nonce(account: AccountId) -> Index {
+	impl frame_system_rpc_runtime_api::AccountNonceApi<Block, AccountId, Nonce> for Runtime {
+		fn account_nonce(account: AccountId) -> Nonce {
 			System::account_nonce(account)
 		}
 	}

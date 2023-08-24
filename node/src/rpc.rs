@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use horizon_runtime::{opaque::Block, AccountId, Balance, Index};
+use horizon_runtime::{opaque::Block, AccountId, Balance, Nonce};
 use jsonrpsee::RpcModule;
 pub use sc_rpc_api::DenyUnsafe;
 use sc_transaction_pool_api::TransactionPool;
@@ -35,7 +35,7 @@ where
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + HeaderMetadata<Block, Error = BlockChainError> + 'static,
 	C: Send + Sync + 'static,
-	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Index>,
+	C::Api: substrate_frame_rpc_system::AccountNonceApi<Block, AccountId, Nonce>,
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool<Block = Block> + 'static,

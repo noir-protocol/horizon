@@ -40,7 +40,7 @@ pallet-transaction-payment-rpc-runtime-api = { workspace = true }
 pallet-timestamp = { workspace = true }
 
 # Frontier
-fp-self-contained = { workspace = true }
+fp-self-contained = { workspace = true, features = ["serde"] }
 
 # Horizon
 hp-account = { workspace = true }
