@@ -20,13 +20,26 @@
 use hp_crypto::EcdsaExt;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use serde::{de, Deserializer, Serializer};
+use serde::{Deserialize, Serialize};
 use sp_core::{ecdsa, H160};
 use sp_runtime::traits::IdentifyAccount;
 
-#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, MaxEncodedLen, TypeInfo, Serialize, Deserialize)]
+#[derive(
+	Copy,
+	Clone,
+	Eq,
+	PartialEq,
+	Ord,
+	PartialOrd,
+	Encode,
+	Decode,
+	MaxEncodedLen,
+	TypeInfo,
+	Serialize,
+	Deserialize,
+)]
 pub struct CosmosSigner(pub ecdsa::Public);
 
 impl IdentifyAccount for CosmosSigner {

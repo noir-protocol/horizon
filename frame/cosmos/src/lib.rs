@@ -31,7 +31,10 @@ use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchClass, DispatchResultWithPostInfo, Pays},
 	scale_info::TypeInfo,
-	traits::{tokens::{fungible::Inspect, Fortitude, Preservation}, Currency, ExistenceRequirement, Get, WithdrawReasons},
+	traits::{
+		tokens::{fungible::Inspect, Fortitude, Preservation},
+		Currency, ExistenceRequirement, Get, WithdrawReasons,
+	},
 	weights::{Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
@@ -392,7 +395,8 @@ impl<T: Config> Pallet<T> {
 		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
 		// keepalive `true` takes into account ExistentialDeposit as part of what's considered
 		// liquid balance.
-		let balance = T::Currency::reducible_balance(&account_id, Preservation::Preserve, Fortitude::Polite);
+		let balance =
+			T::Currency::reducible_balance(&account_id, Preservation::Preserve, Fortitude::Polite);
 
 		(
 			Account {

@@ -30,7 +30,10 @@ mod compat;
 
 use frame_support::{
 	construct_runtime, parameter_types,
-	traits::{tokens::{fungible, Fortitude, Preservation}, ConstBool, ConstU32, ConstU8, OnTimestampSet},
+	traits::{
+		tokens::{fungible, Fortitude, Preservation},
+		ConstBool, ConstU32, ConstU8, OnTimestampSet,
+	},
 	weights::{
 		constants::{RocksDbWeight as RuntimeDbWeight, WEIGHT_REF_TIME_PER_MILLIS},
 		IdentityFee, Weight,
@@ -495,13 +498,16 @@ impl Runtime {
 
 		let interim_account =
 			<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(*address);
-		let balance =
-			pallet_balances::Pallet::<Runtime>::reducible_balance(&interim_account, Preservation::Expendable, Fortitude::Polite);
+		let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
+			&interim_account,
+			Preservation::Expendable,
+			Fortitude::Polite,
+		);
 		<pallet_balances::Pallet<Runtime> as Mutate<AccountId>>::transfer(
 			&interim_account,
 			who,
 			balance,
-			Preservation::Expendable
+			Preservation::Expendable,
 		)
 		.map_err(|_| ())
 		.map(|_| balance)
