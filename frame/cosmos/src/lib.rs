@@ -272,10 +272,12 @@ impl<T: Config> Pallet<T> {
 	// Controls that must be performed by the pool.
 	fn validate_transaction_in_pool(origin: H160, tx: &hp_cosmos::Tx) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		if who.sequence < tx.auth_info.signer_infos[0].sequence {
+		let transaction_nonce = tx.auth_info.signer_infos[0].sequence;
+
+		if transaction_nonce < who.sequence {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale))
 		}
-		if who.sequence > tx.auth_info.signer_infos[0].sequence {
+		if transaction_nonce > who.sequence {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Future))
 		}
 		let mut total_payment = 0u128;
@@ -289,7 +291,6 @@ impl<T: Config> Pallet<T> {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment))
 		}
 
-		let transaction_nonce = tx.auth_info.signer_infos[0].sequence;
 		let mut builder =
 			ValidTransactionBuilder::default().and_provides((origin, transaction_nonce));
 
