@@ -250,8 +250,7 @@ impl<T: Config> Pallet<T> {
 		let (who, _) = Self::account(&origin);
 		if tx.auth_info.signer_infos[0].sequence < who.sequence {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale))
-		}
-		if tx.auth_info.signer_infos[0].sequence > who.sequence {
+		} else if tx.auth_info.signer_infos[0].sequence > who.sequence {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Future))
 		}
 
@@ -276,8 +275,7 @@ impl<T: Config> Pallet<T> {
 
 		if transaction_nonce < who.sequence {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale))
-		}
-		if transaction_nonce > who.sequence {
+		} else if transaction_nonce > who.sequence {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Future))
 		}
 		let mut total_payment = 0u128;
