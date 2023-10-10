@@ -27,10 +27,8 @@ pub mod weights;
 pub use self::{handler::MsgHandler, pallet::*};
 use crate::errors::{CosmosError, CosmosErrorCode};
 use frame_support::{
-	codec::{Decode, Encode, MaxEncodedLen},
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchClass, DispatchResultWithPostInfo, Pays},
-	scale_info::TypeInfo,
 	traits::{
 		tokens::{fungible::Inspect, Fortitude, Preservation},
 		Currency, ExistenceRequirement, Get, WithdrawReasons,
@@ -38,6 +36,8 @@ use frame_support::{
 	weights::{Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use scale_info::TypeInfo;
 use hp_cosmos::{Account, Msg};
 use sp_core::H160;
 use sp_runtime::{
