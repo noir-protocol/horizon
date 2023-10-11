@@ -36,9 +36,9 @@ use frame_support::{
 	weights::{Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
+use hp_cosmos::{Account, Msg};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
-use hp_cosmos::{Account, Msg};
 use sp_core::H160;
 use sp_runtime::{
 	traits::{BadOrigin, Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
