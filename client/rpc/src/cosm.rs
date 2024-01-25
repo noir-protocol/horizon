@@ -26,9 +26,7 @@ use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::{Bytes, H256};
-use sp_runtime::{
-	generic::BlockId, traits::Block as BlockT, transaction_validity::TransactionSource,
-};
+use sp_runtime::{traits::Block as BlockT, transaction_validity::TransactionSource};
 use std::{marker::PhantomData, sync::Arc};
 
 #[rpc(server)]
@@ -79,7 +77,7 @@ where
 			.convert_tx(block_hash, tx.clone())
 			.map_err(|_| internal_err("cannot access runtime api"))?;
 		self.pool
-			.submit_one(&BlockId::Hash(block_hash), TransactionSource::Local, extrinsic)
+			.submit_one(block_hash, TransactionSource::Local, extrinsic)
 			.map_ok(move |_| tx.hash.into())
 			.map_err(|e| internal_err(e.to_string()))
 			.await

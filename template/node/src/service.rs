@@ -174,9 +174,10 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 		&config.chain_spec,
 	);
 
-	net_config.add_notification_protocol(sc_consensus_grandpa::grandpa_peers_set_config(
-		grandpa_protocol_name.clone(),
-	));
+	let (grandpa_protocol_config, grandpa_notification_service) =
+		sc_consensus_grandpa::grandpa_peers_set_config(grandpa_protocol_name.clone());
+	net_config.add_notification_protocol(grandpa_protocol_config);
+
 	let warp_sync = Arc::new(sc_consensus_grandpa::warp_proof::NetworkProvider::new(
 		backend.clone(),
 		grandpa_link.shared_authority_set().clone(),
@@ -193,6 +194,7 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 			import_queue,
 			block_announce_validator_builder: None,
 			warp_sync_params: Some(WarpSyncParams::WithProvider(warp_sync)),
+			block_relay: None,
 		})?;
 
 	if config.offchain_worker.enabled {
@@ -329,6 +331,7 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 			link: grandpa_link,
 			network,
 			sync: sync_service,
+			notification_service: grandpa_notification_service,
 			voting_rule: sc_consensus_grandpa::VotingRulesBuilder::default().build(),
 			prometheus_registry,
 			shared_voter_state: SharedVoterState::empty(),

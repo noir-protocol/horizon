@@ -3,7 +3,7 @@ name = "horizon-template-runtime"
 version = "0.0.0"
 edition = "2021"
 license = "Unlicense"
-repository = "https://github.com/NoirHQ/horizon/"
+repository = "https://github.com/noirhq/horizon/"
 build = "build.rs"
 
 [package.metadata.docs.rs]

@@ -3,7 +3,7 @@ name = "hp-account"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/NoirHQ/horizon/"
+repository = "https://github.com/noirhq/horizon/"
 
 [dependencies]
 array-bytes = { workspace = true, optional = true }
