@@ -18,7 +18,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
-#![deny(unused_crate_dependencies)]
 
 pub mod errors;
 pub mod handler;
@@ -378,11 +377,16 @@ impl<T: Config> Pallet<T> {
 			})
 		}
 		let origin = T::AddressMapping::into_account_id(*source);
-		T::Currency::withdraw(&origin, fee, WithdrawReasons::FEE, ExistenceRequirement::AllowDeath)
-			.map_err(|_| CosmosError {
-				weight: total_weight,
-				error: CosmosErrorCode::ErrInsufficientFee,
-			})?;
+		let _ = T::Currency::withdraw(
+			&origin,
+			fee,
+			WithdrawReasons::FEE,
+			ExistenceRequirement::AllowDeath,
+		)
+		.map_err(|_| CosmosError {
+			weight: total_weight,
+			error: CosmosErrorCode::ErrInsufficientFee,
+		})?;
 		frame_system::Pallet::<T>::inc_account_nonce(origin);
 		Ok(total_weight)
 	}

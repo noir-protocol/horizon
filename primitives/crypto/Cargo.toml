@@ -3,7 +3,7 @@ name = "hp-crypto"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
-repository = "https://github.com/NoirHQ/horizon/"
+repository = "https://github.com/noirhq/horizon/"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
@@ -19,5 +19,6 @@ default = ["std"]
 std = [
   "ripemd/std",
   "secp256k1/std",
+  "secp256k1/global-context",
   "sp-core/std"
 ]

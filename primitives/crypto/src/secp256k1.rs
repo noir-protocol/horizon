@@ -25,7 +25,7 @@ pub fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
 		Ok(v) => v,
 		Err(_) => return false,
 	};
-	let msg = match Message::from_slice(msg) {
+	let msg = match Message::from_digest_slice(msg) {
 		Ok(v) => v,
 		Err(_) => return false,
 	};

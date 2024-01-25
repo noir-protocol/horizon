@@ -18,13 +18,12 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
-#![deny(unused_crate_dependencies)]
 
 pub mod weights;
 
 use crate::weights::WeightInfo;
 #[cfg(feature = "std")]
-use frame_support::{sp_runtime, traits::BuildGenesisConfig};
+use frame_support::traits::BuildGenesisConfig;
 use hp_crypto::EcdsaExt;
 pub use pallet::*;
 use sp_core::H160;
