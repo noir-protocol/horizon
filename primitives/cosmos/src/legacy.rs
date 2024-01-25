@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use crate::error::DecodeTxError;
-use cosmrs::{proto::cosmos::bank::v1beta1::MsgSend, tx::MessageExt};
+use cosmrs::proto::cosmos::bank::v1beta1::MsgSend;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -63,7 +63,8 @@ impl TryFrom<&cosmrs::Any> for Msg {
 
 	fn try_from(msg: &cosmrs::Any) -> Result<Self, Self::Error> {
 		if msg.type_url == "/cosmos.bank.v1beta1.MsgSend" {
-			let msg_send = MsgSend::from_any(msg).map_err(|_| DecodeTxError::InvalidMsgData)?;
+			let msg_send: MsgSend =
+				cosmrs::Any::to_msg(msg).map_err(|_| DecodeTxError::InvalidMsgData)?;
 			let amount = msg_send.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
 			Ok(Self {
 				r#type: "cosmos-sdk/MsgSend".to_string(),

@@ -22,13 +22,7 @@ pub mod error;
 mod legacy;
 
 #[cfg(feature = "std")]
-use core::str::FromStr;
-#[cfg(feature = "std")]
-use cosmrs::tendermint::chain;
-#[cfg(feature = "std")]
-use cosmrs::tx::SignMode;
-#[cfg(feature = "std")]
-use cosmrs::{self, tx::MessageExt};
+use cosmrs::{tendermint::chain, tx::SignMode};
 #[cfg(feature = "std")]
 use error::DecodeTxError;
 #[cfg(feature = "std")]
@@ -40,11 +34,11 @@ use scale_info::TypeInfo;
 #[cfg(feature = "with-serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
-use sp_core::hashing::sha2_256;
-#[cfg(feature = "std")]
-use sp_core::Bytes;
+use sp_core::{hashing::sha2_256, Bytes};
 use sp_core::{H160, H256};
 use sp_std::vec::Vec;
+#[cfg(feature = "std")]
+use std::str::FromStr;
 
 pub type SequenceNumber = u64;
 pub type SignatureBytes = Vec<u8>;
@@ -217,9 +211,10 @@ impl TryFrom<&cosmrs::Any> for Msg {
 	type Error = DecodeTxError;
 
 	fn try_from(any: &cosmrs::Any) -> Result<Self, Self::Error> {
+		use cosmrs::proto::cosmos::bank::v1beta1::MsgSend;
 		if any.type_url == "/cosmos.bank.v1beta1.MsgSend" {
-			let typed_msg = cosmrs::proto::cosmos::bank::v1beta1::MsgSend::from_any(any)
-				.map_err(|_| DecodeTxError::InvalidMsgData)?;
+			let typed_msg: MsgSend =
+				cosmrs::Any::to_msg(any).map_err(|_| DecodeTxError::InvalidMsgData)?;
 			let typed_msg: cosmrs::bank::MsgSend =
 				typed_msg.try_into().map_err(|_| DecodeTxError::InvalidMsgData)?;
 			if typed_msg.amount.is_empty() {
