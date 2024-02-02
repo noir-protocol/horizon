@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use horizon_template_runtime::{AccountId, RuntimeGenesisConfig, Signature, WASM_BINARY};
+use sc_chain_spec::NoExtension;
 use sc_service::ChainType;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_consensus_grandpa::AuthorityId as GrandpaId;
@@ -27,7 +28,8 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 // const STAGING_TELEMETRY_URL: &str = "wss://telemetry.polkadot.io/submit/";
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
-pub type ChainSpec = sc_service::GenericChainSpec<RuntimeGenesisConfig>;
+pub type ChainSpec =
+	sc_service::GenericChainSpec<RuntimeGenesisConfig, NoExtension, hp_io::crypto::HostFunctions>;
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -107,15 +109,10 @@ fn testnet_genesis(
 	_enable_println: bool,
 ) -> serde_json::Value {
 	serde_json::json!({
-		// Configure endowed accounts with initial balance of (1 << 52) - (1 << 50).
 		"balances": {
-			"balances": endowed_accounts
-			.iter()
-			.cloned()
-			.map(|k| (k, (1u64 << 52) - (1u64 << 50)))
-			.collect::<Vec<_>>(),
+			"balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 60)).collect::<Vec<_>>(),
 		},
-		"cosmos_accounts": {
+		"cosmosAccounts": {
 			"accounts": endowed_accounts.iter().cloned().map(|k| k.clone()).collect::<Vec<_>>(),
 		},
 		"aura": {
