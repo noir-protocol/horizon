@@ -36,6 +36,7 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
 use sp_core::{hashing::sha2_256, Bytes};
 use sp_core::{H160, H256};
+#[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
 #[cfg(feature = "std")]
 use std::str::FromStr;
