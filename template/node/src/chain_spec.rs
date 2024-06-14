@@ -113,7 +113,7 @@ fn testnet_genesis(
 			"balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 60)).collect::<Vec<_>>(),
 		},
 		"cosmosAccounts": {
-			"accounts": endowed_accounts.iter().cloned().map(|k| k.clone()).collect::<Vec<_>>(),
+			"accounts": endowed_accounts.to_vec(),
 		},
 		"aura": {
 			"authorities": initial_authorities.iter().map(|x| (x.0.clone())).collect::<Vec<_>>(),

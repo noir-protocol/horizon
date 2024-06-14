@@ -58,7 +58,7 @@ pub struct Tx {
 
 impl Tx {
 	pub fn is_valid(&self) -> bool {
-		return self.validate_basic() && self.validate_extras();
+		self.validate_basic() && self.validate_extras()
 	}
 
 	fn validate_basic(&self) -> bool {
@@ -74,7 +74,7 @@ impl Tx {
 		if self.auth_info.fee.amount.is_empty() {
 			return false;
 		}
-		return true;
+		true
 	}
 
 	fn validate_extras(&self) -> bool {
@@ -90,7 +90,7 @@ impl Tx {
 		if self.auth_info.fee.amount.len() > 1 {
 			return false;
 		}
-		return true;
+		true
 	}
 }
 
@@ -103,11 +103,10 @@ impl Tx {
 
 		let tx_origin =
 			cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeTxError::InvalidTxData)?;
-		let _ = validate_basic(&tx_origin)?;
-		let _ = validate_extras(&tx_origin)?;
+		validate_basic(&tx_origin)?;
+		validate_extras(&tx_origin)?;
 
-		let signatures =
-			tx_origin.signatures.iter().map(|s| s.clone()).collect::<Vec<SignatureBytes>>();
+		let signatures = tx_origin.signatures.to_vec();
 
 		let chain_id = std::str::from_utf8(chain_id).unwrap();
 		let sign_doc = match tx_origin.auth_info.signer_infos[0].mode_info {

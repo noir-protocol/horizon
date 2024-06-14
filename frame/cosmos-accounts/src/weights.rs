@@ -33,6 +33,6 @@ pub struct HorizonWeight<T>(PhantomData<T>);
 impl<T: frame_system::Config> WeightInfo for HorizonWeight<T> {
 	fn connect() -> Weight {
 		Weight::from_parts(50_000_000, 0)
-			.saturating_add(T::DbWeight::get().writes(1 as u64))
+			.saturating_add(T::DbWeight::get().writes(1u64))
 		}
 }

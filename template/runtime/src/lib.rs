@@ -285,7 +285,7 @@ pub struct ConsensusOnTimestampSet<T>(PhantomData<T>);
 impl<T: pallet_aura::Config> OnTimestampSet<T::Moment> for ConsensusOnTimestampSet<T> {
 	fn on_timestamp_set(moment: T::Moment) {
 		if EnableManualSeal::get() {
-			return
+			return;
 		}
 		<pallet_aura::Pallet<T> as OnTimestampSet<T::Moment>>::on_timestamp_set(moment)
 	}
@@ -393,7 +393,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 
 	fn check_self_contained(&self) -> Option<Result<Self::SignedInfo, TransactionValidityError>> {
 		match self {
-			RuntimeCall::Cosmos(call) =>
+			RuntimeCall::Cosmos(call) => {
 				if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = call {
 					let tx = hp_io::decode_tx::decode(tx_bytes, chain_id).unwrap();
 
@@ -424,7 +424,8 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 					Some(check())
 				} else {
 					None
-				},
+				}
+			},
 			_ => None,
 		}
 	}
@@ -440,14 +441,13 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 				if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = &call {
 					let tx = hp_io::decode_tx::decode(tx_bytes, chain_id).unwrap();
 
-					if tx.auth_info.signer_infos[0].sequence == 0 {
-						if Runtime::migrate_cosm_account(&info.to_cosm_address().unwrap(), info)
+					if tx.auth_info.signer_infos[0].sequence == 0 &&
+						Runtime::migrate_cosm_account(&info.to_cosm_address().unwrap(), info)
 							.is_err()
-						{
-							return Some(Err(TransactionValidityError::Unknown(
-								UnknownTransaction::CannotLookup,
-							)))
-						}
+					{
+						return Some(Err(TransactionValidityError::Unknown(
+							UnknownTransaction::CannotLookup,
+						)));
 					}
 				}
 				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len)
@@ -466,14 +466,13 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 			RuntimeCall::Cosmos(call) => {
 				if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = &call {
 					let tx = hp_io::decode_tx::decode(tx_bytes, chain_id).unwrap();
-					if tx.auth_info.signer_infos[0].sequence == 0 {
-						if Runtime::migrate_cosm_account(&info.to_cosm_address().unwrap(), info)
+					if tx.auth_info.signer_infos[0].sequence == 0 &&
+						Runtime::migrate_cosm_account(&info.to_cosm_address().unwrap(), info)
 							.is_err()
-						{
-							return Some(Err(TransactionValidityError::Unknown(
-								UnknownTransaction::CannotLookup,
-							)))
-						}
+					{
+						return Some(Err(TransactionValidityError::Unknown(
+							UnknownTransaction::CannotLookup,
+						)));
 					}
 				}
 				call.pre_dispatch_self_contained(

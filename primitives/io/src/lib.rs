@@ -22,7 +22,7 @@
 
 use sp_runtime_interface::runtime_interface;
 
-/// Interfaces for working with crypto related types from within the runtime.
+/// Interface for working with crypto related types from within the runtime.
 #[runtime_interface]
 pub trait Crypto {
 	/// Hash with ripemd160.
@@ -36,9 +36,11 @@ pub trait Crypto {
 	}
 }
 
+/// Interface for decoding raw type cosmos transaction to cosmos tx.
 #[runtime_interface]
 pub trait DecodeTx {
+	/// Decode raw type cosmos transaction
 	fn decode(&self, tx_bytes: &[u8], chain_id: &[u8]) -> Option<hp_cosmos::Tx> {
-		hp_cosmos::Tx::decode(&tx_bytes, chain_id).ok()
+		hp_cosmos::Tx::decode(tx_bytes, chain_id).ok()
 	}
 }

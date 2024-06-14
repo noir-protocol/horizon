@@ -236,7 +236,7 @@ pub mod pallet {
 				return Err(DispatchErrorWithPostInfo {
 					post_info: Default::default(),
 					error: Error::<T>::InvalidTx.into(),
-				})
+				});
 			}
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -250,8 +250,8 @@ impl<T: Config> Pallet<T> {
 	/// (just before applying the extrinsic).
 	pub fn validate_transaction_in_block(
 		origin: H160,
-		tx_bytes: &Vec<u8>,
-		chain_id: &Vec<u8>,
+		tx_bytes: &[u8],
+		chain_id: &[u8],
 	) -> Result<(), TransactionValidityError> {
 		let (who, _) = Self::account(&origin);
 		let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)
@@ -278,7 +278,11 @@ impl<T: Config> Pallet<T> {
 	}
 
 	// Controls that must be performed by the pool.
-	fn validate_transaction_in_pool(origin: H160, tx_bytes: &Vec<u8>, chain_id: &Vec<u8>) -> TransactionValidity {
+	fn validate_transaction_in_pool(
+		origin: H160,
+		tx_bytes: &[u8],
+		chain_id: &[u8],
+	) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
 		let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
@@ -336,12 +340,14 @@ impl<T: Config> Pallet<T> {
 				});
 				let origin = T::AddressMapping::into_account_id(source);
 				let fee = Self::compute_fee(tx.len, e.weight);
-				if let Ok(_) = T::Currency::withdraw(
+				if T::Currency::withdraw(
 					&origin,
 					fee,
 					WithdrawReasons::FEE,
 					ExistenceRequirement::AllowDeath,
-				) {
+				)
+				.is_ok()
+				{
 					Ok(PostDispatchInfo { actual_weight: Some(e.weight), pays_fee: Pays::No })
 				} else {
 					Err(DispatchErrorWithPostInfo {
@@ -427,8 +433,7 @@ impl<T: Config> Pallet<T> {
 		// Base fee is already included.
 		let adjusted_weight_fee = T::WeightPrice::convert(weight);
 		let length_fee = Self::length_to_fee(len);
-		let inclusion_fee = length_fee + adjusted_weight_fee;
-		inclusion_fee
+		length_fee + adjusted_weight_fee
 	}
 
 	/// Compute the length portion of a fee by invoking the configured `LengthToFee` impl.

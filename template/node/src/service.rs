@@ -44,6 +44,7 @@ type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 /// imported and generated.
 const GRANDPA_JUSTIFICATION_PERIOD: u32 = 512;
 
+#[allow(clippy::type_complexity)]
 pub fn new_partial(
 	config: &Configuration,
 ) -> Result<

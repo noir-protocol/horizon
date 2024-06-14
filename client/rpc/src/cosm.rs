@@ -78,7 +78,7 @@ where
 			.map_err(|_| internal_err("cannot access runtime api"))?;
 		self.pool
 			.submit_one(block_hash, TransactionSource::Local, extrinsic)
-			.map_ok(move |_| tx.hash.into())
+			.map_ok(move |_| tx.hash)
 			.map_err(|e| internal_err(e.to_string()))
 			.await
 	}
