@@ -35,3 +35,10 @@ pub trait Crypto {
 		hp_crypto::secp256k1_ecdsa_verify(sig, msg, pub_key)
 	}
 }
+
+#[runtime_interface]
+pub trait DecodeTx {
+	fn decode(&self, tx_bytes: &[u8], chain_id: &[u8]) -> Option<hp_cosmos::Tx> {
+		hp_cosmos::Tx::decode(&tx_bytes, chain_id).ok()
+	}
+}

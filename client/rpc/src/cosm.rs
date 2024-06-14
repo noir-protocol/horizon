@@ -67,14 +67,14 @@ where
 		use hp_rpc::ConvertTxRuntimeApi;
 
 		let chain_id = self.chain_spec.id();
-		let tx = hp_cosmos::Tx::decode(&tx_bytes, chain_id).map_err(|e| {
+		let tx = hp_cosmos::Tx::decode(&tx_bytes, chain_id.as_bytes()).map_err(|e| {
 			request_err(format!("invalid transaction error; code: {}, message: {}", e as u8, e))
 		})?;
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = self
 			.client
 			.runtime_api()
-			.convert_tx(block_hash, tx.clone())
+			.convert_tx(block_hash, tx_bytes.to_vec(), chain_id.as_bytes().to_vec())
 			.map_err(|_| internal_err("cannot access runtime api"))?;
 		self.pool
 			.submit_one(block_hash, TransactionSource::Local, extrinsic)

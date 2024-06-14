@@ -50,7 +50,7 @@
 		"config": "^3.3.9",
 		"cosmjs-types": "^0.8.0",
 		"ethereum-cryptography": "^2.0.0",
-		"fastify": "^4.17.0",
+		"fastify": "4.17.0",
 		"json-rpc-2.0": "^1.6.0",
 		"lmdb": "^2.8.3",
 		"protobufjs": "^7.2.4"

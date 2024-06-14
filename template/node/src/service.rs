@@ -31,7 +31,11 @@ use std::{sync::Arc, time::Duration};
 pub(crate) type FullClient = sc_service::TFullClient<
 	Block,
 	RuntimeApi,
-	WasmExecutor<(sp_io::SubstrateHostFunctions, hp_io::crypto::HostFunctions)>,
+	WasmExecutor<(
+		sp_io::SubstrateHostFunctions,
+		hp_io::crypto::HostFunctions,
+		hp_io::decode_tx::HostFunctions,
+	)>,
 >;
 type FullBackend = sc_service::TFullBackend<Block>;
 type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;

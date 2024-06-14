@@ -15,7 +15,7 @@ scale-info = { workspace = true }
 # Substrate
 sp-api = { workspace = true }
 sp-block-builder = { workspace = true }
-sp-consensus-aura = { workspace = true }
+sp-consensus-aura = { workspace = true, features = ["serde"] }
 sp-core = { workspace = true }
 sp-genesis-builder = { workspace = true }
 sp-inherents = { workspace = true }

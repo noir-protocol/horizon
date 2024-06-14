@@ -34,7 +34,7 @@ use scale_info::TypeInfo;
 #[cfg(feature = "with-serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "std")]
-use sp_core::{hashing::sha2_256, Bytes};
+use sp_core::hashing::sha2_256;
 use sp_core::{H160, H256};
 #[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
@@ -58,47 +58,47 @@ pub struct Tx {
 
 impl Tx {
 	pub fn is_valid(&self) -> bool {
-		return self.validate_basic() && self.validate_extras()
+		return self.validate_basic() && self.validate_extras();
 	}
 
 	fn validate_basic(&self) -> bool {
 		if self.auth_info.signer_infos.is_empty() {
-			return false
+			return false;
 		}
 		if self.body.messages.is_empty() {
-			return false
+			return false;
 		}
 		if self.signatures.is_empty() {
-			return false
+			return false;
 		}
 		if self.auth_info.fee.amount.is_empty() {
-			return false
+			return false;
 		}
-		return true
+		return true;
 	}
 
 	fn validate_extras(&self) -> bool {
 		if self.auth_info.signer_infos.len() > 1 {
-			return false
+			return false;
 		}
 		if self.body.messages.len() > 1 {
-			return false
+			return false;
 		}
 		if self.signatures.len() > 1 {
-			return false
+			return false;
 		}
 		if self.auth_info.fee.amount.len() > 1 {
-			return false
+			return false;
 		}
-		return true
+		return true;
 	}
 }
 
 #[cfg(feature = "std")]
 impl Tx {
-	pub fn decode(tx_bytes: &Bytes, chain_id: &str) -> Result<Self, DecodeTxError> {
+	pub fn decode(tx_bytes: &[u8], chain_id: &[u8]) -> Result<Self, DecodeTxError> {
 		if tx_bytes.is_empty() {
-			return Err(DecodeTxError::EmptyTxBytes)
+			return Err(DecodeTxError::EmptyTxBytes);
 		}
 
 		let tx_origin =
@@ -108,6 +108,8 @@ impl Tx {
 
 		let signatures =
 			tx_origin.signatures.iter().map(|s| s.clone()).collect::<Vec<SignatureBytes>>();
+
+		let chain_id = std::str::from_utf8(chain_id).unwrap();
 		let sign_doc = match tx_origin.auth_info.signer_infos[0].mode_info {
 			cosmrs::tx::ModeInfo::Single(single) => match single.mode {
 				SignMode::Direct => {
@@ -140,16 +142,16 @@ impl Tx {
 #[cfg(feature = "std")]
 fn validate_basic(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
 	if tx.auth_info.signer_infos.is_empty() {
-		return Err(DecodeTxError::EmptySigners)
+		return Err(DecodeTxError::EmptySigners);
 	}
 	if tx.body.messages.is_empty() {
-		return Err(DecodeTxError::EmptyMessages)
+		return Err(DecodeTxError::EmptyMessages);
 	}
 	if tx.signatures.is_empty() {
-		return Err(DecodeTxError::EmptySignatures)
+		return Err(DecodeTxError::EmptySignatures);
 	}
 	if tx.auth_info.fee.amount.is_empty() {
-		return Err(DecodeTxError::EmptyFeeAmount)
+		return Err(DecodeTxError::EmptyFeeAmount);
 	}
 	Ok(())
 }
@@ -157,16 +159,16 @@ fn validate_basic(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
 #[cfg(feature = "std")]
 fn validate_extras(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
 	if tx.auth_info.signer_infos.len() > 1 {
-		return Err(DecodeTxError::TooManySigners)
+		return Err(DecodeTxError::TooManySigners);
 	}
 	if tx.body.messages.len() > 1 {
-		return Err(DecodeTxError::TooManyMessages)
+		return Err(DecodeTxError::TooManyMessages);
 	}
 	if tx.signatures.len() > 1 {
-		return Err(DecodeTxError::TooManySignatures)
+		return Err(DecodeTxError::TooManySignatures);
 	}
 	if tx.auth_info.fee.amount.len() > 1 {
-		return Err(DecodeTxError::TooManyFeeAmount)
+		return Err(DecodeTxError::TooManyFeeAmount);
 	}
 	Ok(())
 }
@@ -219,10 +221,10 @@ impl TryFrom<&cosmrs::Any> for Msg {
 			let typed_msg: cosmrs::bank::MsgSend =
 				typed_msg.try_into().map_err(|_| DecodeTxError::InvalidMsgData)?;
 			if typed_msg.amount.is_empty() {
-				return Err(DecodeTxError::EmptyMsgSendAmount)
+				return Err(DecodeTxError::EmptyMsgSendAmount);
 			}
 			if typed_msg.amount.len() > 1 {
-				return Err(DecodeTxError::TooManyMsgSendAmount)
+				return Err(DecodeTxError::TooManyMsgSendAmount);
 			}
 			let amount = typed_msg.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
 			let mut from_address: [u8; 20] = [0u8; 20];
@@ -328,7 +330,7 @@ impl TryFrom<cosmrs::tx::Fee> for Fee {
 
 	fn try_from(fee: cosmrs::tx::Fee) -> Result<Self, Self::Error> {
 		if fee.amount.is_empty() {
-			return Err(DecodeTxError::EmptyFeeAmount)
+			return Err(DecodeTxError::EmptyFeeAmount);
 		}
 		let amount = fee.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
 		Ok(Self { amount, gas_limit: fee.gas_limit })
