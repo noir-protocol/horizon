@@ -76,10 +76,10 @@ where
 			.runtime_api()
 			.convert_tx(block_hash, tx_bytes.to_vec(), chain_id.as_bytes().to_vec())
 			.map_err(|_| internal_err("cannot access runtime api"))?;
-		let tx_hash = sha2_256(&tx_bytes);
+		let tx_hash = H256(sha2_256(&tx_bytes));
 		self.pool
 			.submit_one(block_hash, TransactionSource::Local, extrinsic)
-			.map_ok(move |_| H256(tx_hash))
+			.map_ok(move |_| tx_hash)
 			.map_err(|e| internal_err(e.to_string()))
 			.await
 	}
