@@ -334,10 +334,10 @@ export class App {
         signedBlock.block.extrinsics.forEach(
           async ({ method: { args, method, section } }, index) => {
             if (section === "cosmos" && method === "transact") {
-              const tx = JSON.parse(args.toString());
+              const txRaw = args.toString().split(',')[0];
               await this.services
                 .get<TxService>("tx")
-                .saveTransactResult(tx, index, header);
+                .saveTransactResult(txRaw, index, header);
             }
           }
         );
