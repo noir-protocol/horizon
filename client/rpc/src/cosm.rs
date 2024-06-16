@@ -25,7 +25,7 @@ use jsonrpsee::{
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
-use sp_core::{Bytes, H256};
+use sp_core::{sha2_256, Bytes, H256};
 use sp_runtime::{traits::Block as BlockT, transaction_validity::TransactionSource};
 use std::{marker::PhantomData, sync::Arc};
 
@@ -67,18 +67,19 @@ where
 		use hp_rpc::ConvertTxRuntimeApi;
 
 		let chain_id = self.chain_spec.id();
-		let tx = hp_cosmos::Tx::decode(&tx_bytes, chain_id).map_err(|e| {
+		hp_cosmos::Tx::decode(&tx_bytes, chain_id.as_bytes()).map_err(|e| {
 			request_err(format!("invalid transaction error; code: {}, message: {}", e as u8, e))
 		})?;
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = self
 			.client
 			.runtime_api()
-			.convert_tx(block_hash, tx.clone())
+			.convert_tx(block_hash, tx_bytes.to_vec(), chain_id.as_bytes().to_vec())
 			.map_err(|_| internal_err("cannot access runtime api"))?;
+		let tx_hash = sha2_256(&tx_bytes);
 		self.pool
 			.submit_one(block_hash, TransactionSource::Local, extrinsic)
-			.map_ok(move |_| tx.hash.into())
+			.map_ok(move |_| H256(tx_hash))
 			.map_err(|e| internal_err(e.to_string()))
 			.await
 	}

@@ -70,8 +70,8 @@ impl TryFrom<&cosmrs::Any> for Msg {
 				r#type: "cosmos-sdk/MsgSend".to_string(),
 				value: TypedMsg::MsgSend {
 					amount,
-					from_address: msg_send.from_address.into(),
-					to_address: msg_send.to_address.into(),
+					from_address: msg_send.from_address,
+					to_address: msg_send.to_address,
 				},
 			})
 		} else {
@@ -116,7 +116,7 @@ impl SignAminoDoc {
 			for msg in &tx.body.messages {
 				msgs.push(msg.try_into()?);
 			}
-			return Ok(Self {
+			Ok(Self {
 				account_number: "0".to_string(),
 				chain_id: chain_id.to_string(),
 				fee: tx.auth_info.fee.clone().into(),
@@ -125,7 +125,7 @@ impl SignAminoDoc {
 				sequence: tx.auth_info.signer_infos[0].sequence.to_string(),
 			})
 		} else {
-			return Err(DecodeTxError::UnsupportedSignMode)
+			Err(DecodeTxError::UnsupportedSignMode)
 		}
 	}
 }

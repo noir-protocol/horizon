@@ -93,7 +93,7 @@ pub mod pallet {
 		#[pallet::weight(T::WeightInfo::connect())]
 		pub fn connect(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
-			let _ = Self::connect_account(&who)?;
+			Self::connect_account(&who)?;
 			Ok(())
 		}
 	}
@@ -104,7 +104,7 @@ pub mod pallet {
 	{
 		pub fn connect_account(who: &T::AccountId) -> Result<(), DispatchError> {
 			let address = who.to_cosm_address().ok_or(Error::<T>::DeriveFailed)?;
-			Connections::<T>::insert(&address, &who);
+			Connections::<T>::insert(address, who);
 			Self::deposit_event(Event::<T>::Connected { address, who: who.clone() });
 			Ok(())
 		}

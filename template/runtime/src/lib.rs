@@ -285,7 +285,7 @@ pub struct ConsensusOnTimestampSet<T>(PhantomData<T>);
 impl<T: pallet_aura::Config> OnTimestampSet<T::Moment> for ConsensusOnTimestampSet<T> {
 	fn on_timestamp_set(moment: T::Moment) {
 		if EnableManualSeal::get() {
-			return
+			return;
 		}
 		<pallet_aura::Pallet<T> as OnTimestampSet<T::Moment>>::on_timestamp_set(moment)
 	}
@@ -393,8 +393,10 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 
 	fn check_self_contained(&self) -> Option<Result<Self::SignedInfo, TransactionValidityError>> {
 		match self {
-			RuntimeCall::Cosmos(call) =>
-				if let pallet_cosmos::Call::transact { tx } = call {
+			RuntimeCall::Cosmos(call) => {
+				if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = call {
+					let tx = hp_io::decode_tx::decode(tx_bytes, chain_id).unwrap();
+
 					let check = || {
 						if let Some(hp_cosmos::SignerPublicKey::Single(
 							hp_cosmos::PublicKey::Secp256k1(pk),
@@ -422,7 +424,8 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 					Some(check())
 				} else {
 					None
-				},
+				}
+			},
 			_ => None,
 		}
 	}
@@ -435,15 +438,16 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 	) -> Option<TransactionValidity> {
 		match self {
 			RuntimeCall::Cosmos(call) => {
-				if let pallet_cosmos::Call::transact { tx } = &call {
-					if tx.auth_info.signer_infos[0].sequence == 0 {
-						if Runtime::migrate_cosm_account(&info.to_cosm_address().unwrap(), info)
+				if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = &call {
+					let tx = hp_io::decode_tx::decode(tx_bytes, chain_id).unwrap();
+
+					if tx.auth_info.signer_infos[0].sequence == 0 &&
+						Runtime::migrate_cosm_account(&info.to_cosm_address().unwrap(), info)
 							.is_err()
-						{
-							return Some(Err(TransactionValidityError::Unknown(
-								UnknownTransaction::CannotLookup,
-							)))
-						}
+					{
+						return Some(Err(TransactionValidityError::Unknown(
+							UnknownTransaction::CannotLookup,
+						)));
 					}
 				}
 				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len)
@@ -460,15 +464,15 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 	) -> Option<Result<(), TransactionValidityError>> {
 		match self {
 			RuntimeCall::Cosmos(call) => {
-				if let pallet_cosmos::Call::transact { tx } = &call {
-					if tx.auth_info.signer_infos[0].sequence == 0 {
-						if Runtime::migrate_cosm_account(&info.to_cosm_address().unwrap(), info)
+				if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = &call {
+					let tx = hp_io::decode_tx::decode(tx_bytes, chain_id).unwrap();
+					if tx.auth_info.signer_infos[0].sequence == 0 &&
+						Runtime::migrate_cosm_account(&info.to_cosm_address().unwrap(), info)
 							.is_err()
-						{
-							return Some(Err(TransactionValidityError::Unknown(
-								UnknownTransaction::CannotLookup,
-							)))
-						}
+					{
+						return Some(Err(TransactionValidityError::Unknown(
+							UnknownTransaction::CannotLookup,
+						)));
 					}
 				}
 				call.pre_dispatch_self_contained(
@@ -520,9 +524,9 @@ impl Runtime {
 
 impl_runtime_apis! {
 	impl hp_rpc::ConvertTxRuntimeApi<Block> for Runtime {
-		fn convert_tx(tx: hp_cosmos::Tx) -> <Block as BlockT>::Extrinsic {
+		fn convert_tx(tx_bytes: Vec<u8>, chain_id: Vec<u8>) -> <Block as BlockT>::Extrinsic {
 			UncheckedExtrinsic::new_unsigned(
-				pallet_cosmos::Call::<Runtime>::transact { tx }.into(),
+				pallet_cosmos::Call::<Runtime>::transact { tx_bytes, chain_id }.into(),
 			)
 		}
 	}

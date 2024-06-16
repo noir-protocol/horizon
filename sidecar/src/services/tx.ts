@@ -9,6 +9,7 @@ import {
   SimulateResponse,
 } from "cosmjs-types/cosmos/tx/v1beta1/service.js";
 import Long from "long";
+import { createHash } from "crypto";
 
 type TransactResult = { code: number; gasUsed: number };
 
@@ -25,6 +26,7 @@ export class TxService implements ApiService {
     const hexTx = `0x${Buffer.from(txBytes, "base64").toString("hex")}`;
     const res = await this.chainApi.rpc["cosm"]["broadcastTx"](hexTx);
     let txhash = res.toString();
+
     if (txhash.startsWith("0x")) {
       txhash = txhash.substring(2);
     }
@@ -65,18 +67,19 @@ export class TxService implements ApiService {
   }
 
   public async saveTransactResult(
-    tx: any,
+    txRaw: string,
     extrinsicIndex: number,
     header: any
   ): Promise<void> {
-    let txHash = tx.hash;
-    if (txHash.startsWith("0x")) {
-      txHash = txHash.substring(2);
+    if (txRaw.startsWith("0x")) {
+      txRaw = txRaw.substring(2);
     }
+    const txHash = createHash('sha256').update(Buffer.from(txRaw, 'hex')).digest('hex');
+     
     const rawTx = this.db.get(`tx::origin::${txHash.toLowerCase()}`);
     const { code, gasUsed } = await this.checkResult(header, extrinsicIndex);
     const txResult: ResultTx = {
-      hash: txHash.toUpperCase(),
+      hash: `${txHash.toUpperCase()}`,
       height: header.number.toString(),
       index: extrinsicIndex,
       tx_result: {
@@ -84,7 +87,7 @@ export class TxService implements ApiService {
         data: "",
         log: "",
         info: "",
-        gas_wanted: tx.authInfo.fee.gasLimit,
+        gas_wanted: 0,
         gas_used: gasUsed,
         events: [],
         codespace: "",
@@ -98,8 +101,8 @@ export class TxService implements ApiService {
     header: any,
     extrinsicIndex: number
   ): Promise<TransactResult> {
-	  const events = (await (
-		  await this.chainApi.at(header.hash)
+    const events = (await (
+      await this.chainApi.at(header.hash)
     ).query.system.events()) as any;
     const result = events
       .filter(({ event: { section, method }, phase }) => {

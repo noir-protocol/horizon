@@ -31,7 +31,7 @@ export class BalanceService implements ApiService {
     if (account) {
       const { data } = account.toJSON() as any;
       const { free } = data;
-      amount = free;
+      amount = BigInt(free).toString();
     }
     const denom = this.config.get<string>("chain.denom");
     return {

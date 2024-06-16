@@ -91,7 +91,7 @@ impl Serialize for CosmosSignature {
 	where
 		S: Serializer,
 	{
-		serializer.serialize_str(&array_bytes::bytes2hex("", &self.0))
+		serializer.serialize_str(&array_bytes::bytes2hex("", self.0))
 	}
 }
 
@@ -115,7 +115,7 @@ impl<'de> Deserialize<'de> for CosmosSignature {
 	where
 		D: Deserializer<'de>,
 	{
-		let signature_hex = array_bytes::hex2bytes(&String::deserialize(deserializer)?)
+		let signature_hex = array_bytes::hex2bytes(String::deserialize(deserializer)?)
 			.map_err(|e| de::Error::custom(format!("{:?}", e)))?;
 		CosmosSignature::try_from(signature_hex.as_ref())
 			.map_err(|e| de::Error::custom(format!("{:?}", e)))
