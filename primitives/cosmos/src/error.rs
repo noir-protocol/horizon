@@ -63,12 +63,3 @@ impl Display for DecodeTxError {
 		}
 	}
 }
-
-#[repr(u8)]
-#[derive(num_enum::FromPrimitive, num_enum::IntoPrimitive)]
-pub enum TransactionValidationError {
-	#[allow(dead_code)]
-	#[num_enum(default)]
-	InvalidSignature = 2,
-	UnsupportedSignerType = 128,
-}

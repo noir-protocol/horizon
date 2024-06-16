@@ -89,14 +89,10 @@ where
 					) {
 						Ok(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(&pk)).into())
 					} else {
-						Err(InvalidTransaction::Custom(
-							hp_cosmos::error::TransactionValidationError::InvalidSignature as u8,
-						))?
+						Err(InvalidTransaction::BadProof)?
 					}
 				} else {
-					Err(InvalidTransaction::Custom(
-						hp_cosmos::error::TransactionValidationError::UnsupportedSignerType as u8,
-					))?
+					Err(InvalidTransaction::BadSigner)?
 				}
 			};
 
