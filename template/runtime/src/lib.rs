@@ -41,6 +41,7 @@ use frame_support::{
 		IdentityFee, Weight,
 	},
 };
+use hp_cosmos::{PublicKey, SignerPublicKey};
 use hp_crypto::EcdsaExt;
 use pallet_cosmos::handler::cosm::MsgHandler;
 use pallet_grandpa::{
@@ -58,7 +59,6 @@ use sp_runtime::{
 	},
 	transaction_validity::{
 		InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
-		UnknownTransaction,
 	},
 	ApplyExtrinsicResult, ExtrinsicInclusionMode, Perbill,
 };
@@ -393,38 +393,22 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 
 	fn check_self_contained(&self) -> Option<Result<Self::SignedInfo, TransactionValidityError>> {
 		match self {
-			RuntimeCall::Cosmos(call) => {
-				if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = call {
-					let tx = hp_io::decode_tx::decode(tx_bytes, chain_id).unwrap();
-
-					let check = || {
-						if let Some(hp_cosmos::SignerPublicKey::Single(
-							hp_cosmos::PublicKey::Secp256k1(pk),
-						)) = tx.auth_info.signer_infos[0].public_key
-						{
-							if hp_io::crypto::secp256k1_ecdsa_verify(
-								&tx.signatures[0],
-								tx.hash.as_bytes(),
-								&pk,
-							) {
-								Ok(Self::SignedInfo::from(pk))
-							} else {
-								Err(InvalidTransaction::Custom(
-									hp_cosmos::error::TransactionValidationError::InvalidSignature
-										as u8,
-								))?
-							}
+			RuntimeCall::Cosmos(call) => match call.check_self_contained()? {
+				Ok(_) =>
+					if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = call {
+						let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)?;
+						let public_key = tx.auth_info.signer_infos.first()?.clone().public_key?;
+						if let SignerPublicKey::Single(PublicKey::Secp256k1(pk)) = public_key {
+							Some(Ok(Self::SignedInfo::from(pk)))
 						} else {
-							Err(InvalidTransaction::Custom(
-								hp_cosmos::error::TransactionValidationError::UnsupportedSignerType
-									as u8,
-							))?
+							Some(Err(TransactionValidityError::Invalid(
+								InvalidTransaction::BadProof,
+							)))
 						}
-					};
-					Some(check())
-				} else {
-					None
-				}
+					} else {
+						None
+					},
+				Err(e) => Some(Err(e)),
 			},
 			_ => None,
 		}
@@ -437,21 +421,8 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		len: usize,
 	) -> Option<TransactionValidity> {
 		match self {
-			RuntimeCall::Cosmos(call) => {
-				if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = &call {
-					let tx = hp_io::decode_tx::decode(tx_bytes, chain_id).unwrap();
-
-					if tx.auth_info.signer_infos[0].sequence == 0 &&
-						Runtime::migrate_cosm_account(&info.to_cosm_address().unwrap(), info)
-							.is_err()
-					{
-						return Some(Err(TransactionValidityError::Unknown(
-							UnknownTransaction::CannotLookup,
-						)));
-					}
-				}
-				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len)
-			},
+			RuntimeCall::Cosmos(call) =>
+				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len),
 			_ => None,
 		}
 	}
@@ -463,24 +434,11 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		len: usize,
 	) -> Option<Result<(), TransactionValidityError>> {
 		match self {
-			RuntimeCall::Cosmos(call) => {
-				if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = &call {
-					let tx = hp_io::decode_tx::decode(tx_bytes, chain_id).unwrap();
-					if tx.auth_info.signer_infos[0].sequence == 0 &&
-						Runtime::migrate_cosm_account(&info.to_cosm_address().unwrap(), info)
-							.is_err()
-					{
-						return Some(Err(TransactionValidityError::Unknown(
-							UnknownTransaction::CannotLookup,
-						)));
-					}
-				}
-				call.pre_dispatch_self_contained(
-					&info.to_cosm_address().unwrap(),
-					dispatch_info,
-					len,
-				)
-			},
+			RuntimeCall::Cosmos(call) => call.pre_dispatch_self_contained(
+				&info.to_cosm_address().unwrap(),
+				dispatch_info,
+				len,
+			),
 			_ => None,
 		}
 	}

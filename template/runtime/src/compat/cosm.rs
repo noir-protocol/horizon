@@ -25,7 +25,7 @@ use sp_core::{ecdsa, Hasher, H160, H256};
 use sp_std::marker::PhantomData;
 
 /// Hashed address mapping.
-pub struct HashedAddressMapping<T, H>(PhantomData<T>, PhantomData<H>);
+pub struct HashedAddressMapping<T, H>(PhantomData<(T, H)>);
 
 impl<T, H> AddressMapping<T::AccountId> for HashedAddressMapping<T, H>
 where
