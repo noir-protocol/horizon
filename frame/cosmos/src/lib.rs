@@ -164,6 +164,7 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
+	use pallet_cosmos_decorators::AnteDecorators;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -195,6 +196,8 @@ pub mod pallet {
 		type WeightPrice: Convert<Weight, BalanceOf<Self>>;
 		/// Convert a weight value into a deductible fee based on the currency type.
 		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
+
+		type AnteDecorators: AnteDecorators<Self>;
 	}
 
 	#[pallet::event]
