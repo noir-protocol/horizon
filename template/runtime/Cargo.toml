@@ -50,6 +50,8 @@ hp-io = { workspace = true }
 hp-rpc = { workspace = true }
 pallet-cosmos = { workspace = true }
 pallet-cosmos-accounts = { workspace = true }
+pallet-cosmos-auth = { workspace = true }
+pallet-cosmos-decorators = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -88,5 +90,7 @@ std = [
   "hp-rpc/std",
   "pallet-cosmos/std",
   "pallet-cosmos-accounts/std",
+  "pallet-cosmos-auth/std",
+  "pallet-cosmos-decorators/std",
   "substrate-wasm-builder",
 ]

@@ -22,36 +22,37 @@
 use hp_cosmos::{PublicKey, SignerPublicKey, Tx};
 use pallet_cosmos_decorators::AnteDecorator;
 use sp_runtime::transaction_validity::{InvalidTransaction, TransactionValidityError};
+use sp_std::marker::PhantomData;
 
-pub struct SigVerificationDecorator;
+pub struct SigVerificationDecorator<T>(PhantomData<T>);
 
-impl<T> AnteDecorator<T> for SigVerificationDecorator
+impl<T> AnteDecorator<T> for SigVerificationDecorator<T>
 where
 	T: frame_system::Config,
 {
-	fn ante_handle(tx: Tx) -> Result<(), TransactionValidityError> {
-		let signatures = tx.signatures;
-		let signers = tx.auth_info.signer_infos;
+	fn ante_handle(tx: &Tx) -> Result<(), TransactionValidityError> {
+		let signatures = &tx.signatures;
+		let signers = &tx.auth_info.signer_infos;
 
 		if signatures.len() != signers.len() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 		}
 
-		for (i, sig) in signatures.into_iter().enumerate() {
+		for (i, sig) in signatures.iter().enumerate() {
 			let signer = signers
 				.get(i)
-				.ok_or_else(|| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
 			// TODO: Support other types of Signers as well
 			let public_key = signer
 				.public_key
 				.as_ref()
-				.ok_or_else(|| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
 			if let SignerPublicKey::Single(PublicKey::Secp256k1(public_key)) = public_key {
-                if !hp_io::crypto::secp256k1_ecdsa_verify(&sig, &tx.hash.0, public_key) {
-                    return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
-                } 
+				if !hp_io::crypto::secp256k1_ecdsa_verify(sig, &tx.hash.0, public_key) {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+				}
 			} else {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 			}

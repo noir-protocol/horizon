@@ -35,10 +35,13 @@ use frame_support::{
 	weights::{Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use hp_cosmos::{Account, Msg};
+use hp_cosmos::{Account, Msg, PublicKey, SignerPublicKey};
+use hp_io::crypto::ripemd160;
+use pallet_cosmos_decorators::AnteDecorators;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
+use sp_io::hashing::sha2_256;
 use sp_runtime::{
 	traits::{BadOrigin, Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
@@ -77,26 +80,23 @@ where
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx_bytes, chain_id } = self {
 			let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)?;
-			let check = || {
-				if let Some(hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::Secp256k1(
-					pk,
-				))) = tx.auth_info.signer_infos[0].public_key
-				{
-					if hp_io::crypto::secp256k1_ecdsa_verify(
-						&tx.signatures[0],
-						tx.hash.as_bytes(),
-						&pk,
-					) {
-						Ok(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(&pk)).into())
-					} else {
-						Err(InvalidTransaction::BadProof)?
-					}
-				} else {
-					Err(InvalidTransaction::BadSigner)?
-				}
-			};
 
-			Some(check())
+			if let Err(e) = T::AnteDecorators::ante_handle(&tx) {
+				return Some(Err(e));
+			}
+
+			if let Some(signer) = tx.auth_info.signer_infos.first() {
+				if let Some(SignerPublicKey::Single(PublicKey::Secp256k1(public_key))) =
+					signer.public_key
+				{
+					let address = ripemd160(&sha2_256(&public_key)).into();
+					Some(Ok(address))
+				} else {
+					Some(Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)))
+				}
+			} else {
+				Some(Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)))
+			}
 		} else {
 			None
 		}
@@ -196,7 +196,7 @@ pub mod pallet {
 		type WeightPrice: Convert<Weight, BalanceOf<Self>>;
 		/// Convert a weight value into a deductible fee based on the currency type.
 		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
-
+		/// Verify the validity of a Cosmos transaction
 		type AnteDecorators: AnteDecorators<Self>;
 	}
 

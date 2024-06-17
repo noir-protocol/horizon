@@ -1,4 +1,4 @@
-// This file is part of Horizon.
+// This file is part of Hrozion.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -16,16 +16,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::comparison_chain, clippy::large_enum_variant)]
-
 use frame_support::pallet_prelude::*;
-use hp_cosmos::Tx;
+use pallet_cosmos_auth::SigVerificationDecorator;
+use pallet_cosmos_decorators::AnteDecorator;
 
-pub trait AnteDecorator<T> {
-	fn ante_handle(tx: &Tx) -> Result<(), TransactionValidityError>;
-}
-
-pub trait AnteDecorators<T> {
-	fn ante_handle(tx: &Tx) -> Result<(), TransactionValidityError>;
+pub struct AnteDecorators;
+impl<T> pallet_cosmos_decorators::AnteDecorators<T> for AnteDecorators
+where
+	T: frame_system::Config,
+{
+	fn ante_handle(tx: &hp_cosmos::Tx) -> Result<(), TransactionValidityError> {
+		SigVerificationDecorator::<T>::ante_handle(tx)?;
+		Ok(())
+	}
 }

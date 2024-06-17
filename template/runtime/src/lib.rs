@@ -27,6 +27,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod compat;
+mod decorator;
 
 use frame_support::{
 	construct_runtime, derive_impl,
@@ -316,6 +317,8 @@ impl pallet_cosmos::Config for Runtime {
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	/// Convert a weight value into a deductible fee based on the currency type.
 	type WeightToFee = IdentityFee<Balance>;
+	/// Verify the validity of a Cosmos transaction
+	type AnteDecorators = decorator::AnteDecorators;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
