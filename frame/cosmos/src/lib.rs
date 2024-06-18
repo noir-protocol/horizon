@@ -231,12 +231,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
 			let tx = hp_io::decode_tx::decode(&tx_bytes, &chain_id).unwrap();
-			if !tx.is_valid() {
-				return Err(DispatchErrorWithPostInfo {
-					post_info: Default::default(),
-					error: Error::<T>::InvalidTx.into(),
-				});
-			}
+
 			Self::apply_validated_transaction(source, tx)
 		}
 	}

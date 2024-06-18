@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizon.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -16,18 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::pallet_prelude::*;
-use pallet_cosmos_auth::{SigVerificationDecorator, ValidateBasicDecorator};
+use hp_cosmos::Tx;
 use pallet_cosmos_decorators::AnteDecorator;
+use sp_runtime::transaction_validity::{InvalidTransaction, TransactionValidityError};
+use sp_std::marker::PhantomData;
 
-pub struct AnteDecorators;
-impl<T> pallet_cosmos_decorators::AnteDecorators<T> for AnteDecorators
+pub struct ValidateBasicDecorator<T>(PhantomData<T>);
+
+impl<T> AnteDecorator<T> for ValidateBasicDecorator<T>
 where
 	T: frame_system::Config,
 {
-	fn ante_handle(tx: &hp_cosmos::Tx) -> Result<(), TransactionValidityError> {
-		ValidateBasicDecorator::<T>::ante_handle(tx)?;
-		SigVerificationDecorator::<T>::ante_handle(tx)?;
+	fn ante_handle(tx: &Tx) -> Result<(), TransactionValidityError> {
+		if tx.signatures.is_empty() {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+		}
+		if tx.auth_info.signer_infos.len() != tx.signatures.len() {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+		}
 
 		Ok(())
 	}

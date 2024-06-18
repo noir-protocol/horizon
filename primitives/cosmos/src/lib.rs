@@ -56,44 +56,6 @@ pub struct Tx {
 	pub len: u32,
 }
 
-impl Tx {
-	pub fn is_valid(&self) -> bool {
-		self.validate_basic() && self.validate_extras()
-	}
-
-	fn validate_basic(&self) -> bool {
-		if self.auth_info.signer_infos.is_empty() {
-			return false;
-		}
-		if self.body.messages.is_empty() {
-			return false;
-		}
-		if self.signatures.is_empty() {
-			return false;
-		}
-		if self.auth_info.fee.amount.is_empty() {
-			return false;
-		}
-		true
-	}
-
-	fn validate_extras(&self) -> bool {
-		if self.auth_info.signer_infos.len() > 1 {
-			return false;
-		}
-		if self.body.messages.len() > 1 {
-			return false;
-		}
-		if self.signatures.len() > 1 {
-			return false;
-		}
-		if self.auth_info.fee.amount.len() > 1 {
-			return false;
-		}
-		true
-	}
-}
-
 #[cfg(feature = "std")]
 impl Tx {
 	pub fn decode(tx_bytes: &[u8], chain_id: &[u8]) -> Result<Self, DecodeTxError> {
@@ -103,13 +65,16 @@ impl Tx {
 
 		let tx_origin =
 			cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeTxError::InvalidTxData)?;
-		validate_basic(&tx_origin)?;
-		validate_extras(&tx_origin)?;
-
 		let signatures = tx_origin.signatures.to_vec();
 
 		let chain_id = std::str::from_utf8(chain_id).unwrap();
-		let sign_doc = match tx_origin.auth_info.signer_infos[0].mode_info {
+		let sign_doc = match tx_origin
+			.auth_info
+			.signer_infos
+			.first()
+			.ok_or(DecodeTxError::InvalidTxData)?
+			.mode_info
+		{
 			cosmrs::tx::ModeInfo::Single(single) => match single.mode {
 				SignMode::Direct => {
 					let chain_id = chain::Id::from_str(chain_id).unwrap();
@@ -138,45 +103,12 @@ impl Tx {
 	}
 }
 
-#[cfg(feature = "std")]
-fn validate_basic(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
-	if tx.auth_info.signer_infos.is_empty() {
-		return Err(DecodeTxError::EmptySigners);
-	}
-	if tx.body.messages.is_empty() {
-		return Err(DecodeTxError::EmptyMessages);
-	}
-	if tx.signatures.is_empty() {
-		return Err(DecodeTxError::EmptySignatures);
-	}
-	if tx.auth_info.fee.amount.is_empty() {
-		return Err(DecodeTxError::EmptyFeeAmount);
-	}
-	Ok(())
-}
-
-#[cfg(feature = "std")]
-fn validate_extras(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
-	if tx.auth_info.signer_infos.len() > 1 {
-		return Err(DecodeTxError::TooManySigners);
-	}
-	if tx.body.messages.len() > 1 {
-		return Err(DecodeTxError::TooManyMessages);
-	}
-	if tx.signatures.len() > 1 {
-		return Err(DecodeTxError::TooManySignatures);
-	}
-	if tx.auth_info.fee.amount.len() > 1 {
-		return Err(DecodeTxError::TooManyFeeAmount);
-	}
-	Ok(())
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Body {
 	pub messages: Vec<Msg>,
+	pub memo: Vec<u8>,
 }
 
 #[cfg(feature = "std")]
@@ -188,7 +120,7 @@ impl TryFrom<cosmrs::tx::Body> for Body {
 		for msg in body.messages {
 			messages.push(msg.try_into()?);
 		}
-		Ok(Self { messages })
+		Ok(Self { messages, memo: body.memo.as_bytes().to_vec() })
 	}
 }
 
