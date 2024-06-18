@@ -47,6 +47,8 @@ where
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
 			if let SignerPublicKey::Single(PublicKey::Secp256k1(public_key)) = public_key {
+				// TODO: Validate if the sequence of the account is valid
+
 				if !hp_io::crypto::secp256k1_ecdsa_verify(sig, &tx.hash.0, public_key) {
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
 				}

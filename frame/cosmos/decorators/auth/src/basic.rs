@@ -19,6 +19,7 @@
 use hp_cosmos::Tx;
 use pallet_cosmos_decorators::AnteDecorator;
 use sp_runtime::{
+	traits::Get,
 	transaction_validity::{InvalidTransaction, TransactionValidityError},
 	SaturatedConversion,
 };
@@ -54,6 +55,22 @@ where
 				tx.body.timeout_height
 		{
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
+		}
+
+		Ok(())
+	}
+}
+
+pub struct ValidateMemoDecorator<T>(PhantomData<T>);
+
+impl<T> AnteDecorator<T> for ValidateMemoDecorator<T>
+where
+	T: pallet_cosmos::Config,
+{
+	fn ante_handle(tx: &Tx) -> Result<(), TransactionValidityError> {
+		if tx.body.memo.len().saturated_into::<u64>() > T::MaxMemoCharacters::get() {
+			// TODO: Consider use InvalidTransaction::Custom
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 		}
 
 		Ok(())

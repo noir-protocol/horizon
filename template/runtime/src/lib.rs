@@ -300,6 +300,10 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const MaxMemoCharacters: u64 = 256;
+}
+
 impl pallet_cosmos::Config for Runtime {
 	/// Mapping from address to account id.
 	type AddressMapping = compat::cosm::HashedAddressMapping<Self, BlakeTwo256>;
@@ -317,8 +321,10 @@ impl pallet_cosmos::Config for Runtime {
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	/// Convert a weight value into a deductible fee based on the currency type.
 	type WeightToFee = IdentityFee<Balance>;
-	/// Verify the validity of a Cosmos transaction
+	/// Verify the validity of a Cosmos transaction.
 	type AnteDecorators = decorator::AnteDecorators;
+	/// The maximum size of the memo.
+	type MaxMemoCharacters = MaxMemoCharacters;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {

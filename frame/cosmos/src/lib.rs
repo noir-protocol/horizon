@@ -196,8 +196,10 @@ pub mod pallet {
 		type WeightPrice: Convert<Weight, BalanceOf<Self>>;
 		/// Convert a weight value into a deductible fee based on the currency type.
 		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
-		/// Verify the validity of a Cosmos transaction
+		/// Verify the validity of a Cosmos transaction.
 		type AnteDecorators: AnteDecorators<Self>;
+		/// The maximum size of the memo.
+		type MaxMemoCharacters: Get<u64>;
 	}
 
 	#[pallet::event]
