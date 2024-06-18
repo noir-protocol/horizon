@@ -21,10 +21,10 @@ use pallet_cosmos_auth::{
 	SigVerificationDecorator, TxTimeoutHeightDecorator, ValidateBasicDecorator,
 	ValidateMemoDecorator,
 };
-use pallet_cosmos_decorators::AnteDecorator;
+use pallet_cosmos_modules::AnteDecorator;
 
 pub struct AnteDecorators;
-impl<T> pallet_cosmos_decorators::AnteDecorators<T> for AnteDecorators
+impl<T> pallet_cosmos_modules::AnteDecorators<T> for AnteDecorators
 where
 	T: frame_system::Config + pallet_cosmos::Config,
 {

@@ -37,7 +37,7 @@ use frame_support::{
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::{Account, Msg, PublicKey, SignerPublicKey};
 use hp_io::crypto::ripemd160;
-use pallet_cosmos_decorators::AnteDecorators;
+use pallet_cosmos_modules::AnteDecorators;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
@@ -164,7 +164,7 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
-	use pallet_cosmos_decorators::AnteDecorators;
+	use pallet_cosmos_modules::AnteDecorators;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]

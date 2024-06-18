@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use hp_cosmos::Tx;
-use pallet_cosmos_decorators::AnteDecorator;
+use pallet_cosmos_modules::AnteDecorator;
 use sp_runtime::{
 	traits::Get,
 	transaction_validity::{InvalidTransaction, TransactionValidityError},

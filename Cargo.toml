@@ -3,8 +3,8 @@ resolver = "2"
 members = [
 	"client/rpc",
 	"frame/cosmos",
-	"frame/cosmos/decorators",
-	"frame/cosmos/decorators/auth",
+	"frame/cosmos/modules",
+	"frame/cosmos/modules/auth",
 	"frame/cosmos-accounts",
 	"primitives/account",
 	"primitives/cosmos",
@@ -98,8 +98,8 @@ pallet-cosmos = { path = "frame/cosmos", default-features = false }
 pallet-cosmos-accounts = { path = "frame/cosmos-accounts", default-features = false }
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
-pallet-cosmos-auth = { path = "frame/cosmos/decorators/auth", default-features = false}
-pallet-cosmos-decorators = { path = "frame/cosmos/decorators", default-features = false}
+pallet-cosmos-auth = { path = "frame/cosmos/modules/auth", default-features = false}
+pallet-cosmos-modules = { path = "frame/cosmos/modules", default-features = false}
 
 [profile.release]
 panic = "unwind"

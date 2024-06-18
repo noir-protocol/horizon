@@ -25,7 +25,7 @@ sp-std = { workspace = true }
 hp-cosmos = { workspace = true, features = ["with-codec"] }
 hp-io = { workspace = true }
 
-pallet-cosmos-decorators = { workspace = true }
+pallet-cosmos-modules = { workspace = true }
 
 [features]
 default = ["std"]
@@ -41,5 +41,5 @@ std = [
 	"sp-std/std",
 	"hp-cosmos/std",
 	"hp-io/std",
-	"pallet-cosmos-decorators/std"
+	"pallet-cosmos-modules/std"
 ]
