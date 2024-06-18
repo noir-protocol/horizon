@@ -22,5 +22,5 @@
 mod basic;
 mod sigverify;
 
-pub use basic::ValidateBasicDecorator;
+pub use basic::{TxTimeoutHeightDecorator, ValidateBasicDecorator};
 pub use sigverify::SigVerificationDecorator;

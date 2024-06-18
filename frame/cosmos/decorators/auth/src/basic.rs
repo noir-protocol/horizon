@@ -18,7 +18,10 @@
 
 use hp_cosmos::Tx;
 use pallet_cosmos_decorators::AnteDecorator;
-use sp_runtime::transaction_validity::{InvalidTransaction, TransactionValidityError};
+use sp_runtime::{
+	transaction_validity::{InvalidTransaction, TransactionValidityError},
+	SaturatedConversion,
+};
 use sp_std::marker::PhantomData;
 
 pub struct ValidateBasicDecorator<T>(PhantomData<T>);
@@ -33,6 +36,24 @@ where
 		}
 		if tx.auth_info.signer_infos.len() != tx.signatures.len() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+		}
+
+		Ok(())
+	}
+}
+
+pub struct TxTimeoutHeightDecorator<T>(PhantomData<T>);
+
+impl<T> AnteDecorator<T> for TxTimeoutHeightDecorator<T>
+where
+	T: frame_system::Config,
+{
+	fn ante_handle(tx: &Tx) -> Result<(), TransactionValidityError> {
+		if tx.body.timeout_height > 0 &&
+			frame_system::Pallet::<T>::block_number().saturated_into::<u64>() >
+				tx.body.timeout_height
+		{
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
 		}
 
 		Ok(())

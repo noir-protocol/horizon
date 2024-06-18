@@ -17,7 +17,9 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::pallet_prelude::*;
-use pallet_cosmos_auth::{SigVerificationDecorator, ValidateBasicDecorator};
+use pallet_cosmos_auth::{
+	SigVerificationDecorator, TxTimeoutHeightDecorator, ValidateBasicDecorator,
+};
 use pallet_cosmos_decorators::AnteDecorator;
 
 pub struct AnteDecorators;
@@ -27,6 +29,7 @@ where
 {
 	fn ante_handle(tx: &hp_cosmos::Tx) -> Result<(), TransactionValidityError> {
 		ValidateBasicDecorator::<T>::ante_handle(tx)?;
+		TxTimeoutHeightDecorator::<T>::ante_handle(tx)?;
 		SigVerificationDecorator::<T>::ante_handle(tx)?;
 
 		Ok(())

@@ -109,6 +109,7 @@ impl Tx {
 pub struct Body {
 	pub messages: Vec<Msg>,
 	pub memo: Vec<u8>,
+	pub timeout_height: u64,
 }
 
 #[cfg(feature = "std")]
@@ -120,7 +121,11 @@ impl TryFrom<cosmrs::tx::Body> for Body {
 		for msg in body.messages {
 			messages.push(msg.try_into()?);
 		}
-		Ok(Self { messages, memo: body.memo.as_bytes().to_vec() })
+		Ok(Self {
+			messages,
+			memo: body.memo.as_bytes().to_vec(),
+			timeout_height: body.timeout_height.into(),
+		})
 	}
 }
 
