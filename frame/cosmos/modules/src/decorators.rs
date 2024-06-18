@@ -16,9 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::comparison_chain, clippy::large_enum_variant)]
+use frame_support::pallet_prelude::*;
+use hp_cosmos::Tx;
 
-mod decorators;
+pub trait AnteDecorator<T> {
+	fn ante_handle(tx: &Tx) -> Result<(), TransactionValidityError>;
+}
 
-pub use decorators::{AnteDecorator, AnteDecorators};
+pub trait AnteDecorators<T> {
+	fn ante_handle(tx: &Tx) -> Result<(), TransactionValidityError>;
+}
