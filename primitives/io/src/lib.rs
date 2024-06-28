@@ -21,6 +21,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_runtime_interface::runtime_interface;
+use sp_std::vec::Vec;
 
 /// Interface for working with crypto related types from within the runtime.
 #[runtime_interface]
@@ -40,7 +41,14 @@ pub trait Crypto {
 #[runtime_interface]
 pub trait DecodeTx {
 	/// Decode raw type cosmos transaction
-	fn decode(&self, tx_bytes: &[u8], chain_id: &[u8]) -> Option<hp_cosmos::Tx> {
+	fn decode(tx_bytes: &[u8], chain_id: &[u8]) -> Option<hp_cosmos::Tx> {
 		hp_cosmos::Tx::decode(tx_bytes, chain_id).ok()
+	}
+}
+
+#[runtime_interface]
+pub trait ProtobufToScale {
+	fn to_scale(type_url: &[u8], value: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
+		hp_cosmos::msgs::to_scale(type_url, value)
 	}
 }

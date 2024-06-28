@@ -5,6 +5,7 @@ members = [
 	"frame/cosmos",
 	"frame/cosmos/modules",
 	"frame/cosmos/modules/auth",
+	"frame/cosmos/modules/bank",
 	"frame/cosmos-accounts",
 	"primitives/account",
 	"primitives/cosmos",
@@ -99,6 +100,7 @@ pallet-cosmos-accounts = { path = "frame/cosmos-accounts", default-features = fa
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
 pallet-cosmos-auth = { path = "frame/cosmos/modules/auth", default-features = false}
+pallet-cosmos-bank = { path = "frame/cosmos/modules/bank", default-features = false}
 pallet-cosmos-modules = { path = "frame/cosmos/modules", default-features = false}
 
 [profile.release]

@@ -35,6 +35,7 @@ pub(crate) type FullClient = sc_service::TFullClient<
 		sp_io::SubstrateHostFunctions,
 		hp_io::crypto::HostFunctions,
 		hp_io::decode_tx::HostFunctions,
+		hp_io::protobuf_to_scale::HostFunctions,
 	)>,
 >;
 type FullBackend = sc_service::TFullBackend<Block>;

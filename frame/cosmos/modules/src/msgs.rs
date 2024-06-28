@@ -16,16 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod cosm;
-
-use crate::{errors::CosmosError, Config};
 use frame_support::weights::Weight;
-use sp_core::H160;
 
-pub trait MsgHandler<T: Config> {
-	fn msg_send(
-		from_address: &H160,
-		to_address: &H160,
-		amount: u128,
-	) -> Result<Weight, CosmosError>;
+pub trait MsgServiceRouter<T> {
+	type Error;
+
+	fn route(
+		type_url: &[u8],
+		value: &[u8],
+	) -> Result<Weight, Self::Error>;
 }

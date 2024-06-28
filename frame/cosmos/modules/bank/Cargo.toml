@@ -1,0 +1,25 @@
+[package]
+name = "pallet-cosmos-bank"
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+repository = "https://github.com/noirhq/horizon/"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+frame-support = { workspace = true }
+sp-runtime = { workspace = true }
+
+hp-cosmos = { workspace = true }
+pallet-cosmos = { workspace = true }
+
+[features]
+default = ["std"]
+std = [
+	"frame-support/std",
+	"sp-runtime/std",
+	"hp-cosmos/std",
+	"pallet-cosmos/std",
+]

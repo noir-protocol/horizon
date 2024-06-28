@@ -27,7 +27,8 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod compat;
-mod decorator;
+mod decorators;
+mod msgs;
 
 use frame_support::{
 	construct_runtime, derive_impl,
@@ -44,7 +45,7 @@ use frame_support::{
 };
 use hp_cosmos::{PublicKey, SignerPublicKey};
 use hp_crypto::EcdsaExt;
-use pallet_cosmos::handler::cosm::MsgHandler;
+use msgs::MsgServiceRouter;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -53,15 +54,12 @@ use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys,
-	traits::{
+	create_runtime_str, generic, impl_opaque_keys, traits::{
 		AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable,
 		IdentifyAccount, NumberFor, One, PostDispatchInfoOf, Verify,
-	},
-	transaction_validity::{
+	}, transaction_validity::{
 		InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
-	},
-	ApplyExtrinsicResult, ExtrinsicInclusionMode, Perbill,
+	}, ApplyExtrinsicResult, BoundedVec, ExtrinsicInclusionMode, Perbill
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -302,6 +300,8 @@ impl pallet_timestamp::Config for Runtime {
 
 parameter_types! {
 	pub const MaxMemoCharacters: u64 = 256;
+	pub const DenomMaxLen: u32 = 10;
+	pub const NativeDenom: BoundedVec<u8, DenomMaxLen> = (*b"uatom").to_vec().try_into().unwrap();
 }
 
 impl pallet_cosmos::Config for Runtime {
@@ -309,8 +309,6 @@ impl pallet_cosmos::Config for Runtime {
 	type AddressMapping = compat::cosm::HashedAddressMapping<Self, BlakeTwo256>;
 	/// Currency type for withdraw and balance storage.
 	type Currency = Balances;
-	/// Handle cosmos messages.
-	type MsgHandler = MsgHandler<Self>;
 	/// Convert a length value into a deductible fee based on the currency type.
 	type LengthToFee = IdentityFee<Balance>;
 	/// The overarching event type.
@@ -322,9 +320,15 @@ impl pallet_cosmos::Config for Runtime {
 	/// Convert a weight value into a deductible fee based on the currency type.
 	type WeightToFee = IdentityFee<Balance>;
 	/// Verify the validity of a Cosmos transaction.
-	type AnteDecorators = decorator::AnteDecorators;
+	type AnteDecorators = decorators::AnteDecorators;
 	/// The maximum size of the memo.
 	type MaxMemoCharacters = MaxMemoCharacters;
+
+	type NativeDenom = NativeDenom;
+
+	type DenomMaxLen = DenomMaxLen;
+
+	type MsgServiceRouter = MsgServiceRouter<Self>;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
@@ -403,7 +407,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 	fn check_self_contained(&self) -> Option<Result<Self::SignedInfo, TransactionValidityError>> {
 		match self {
 			RuntimeCall::Cosmos(call) => match call.check_self_contained()? {
-				Ok(_) =>
+				Ok(_) => {
 					if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = call {
 						let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)?;
 						let public_key = tx.auth_info.signer_infos.first()?.clone().public_key?;
@@ -416,7 +420,8 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 						}
 					} else {
 						None
-					},
+					}
+				},
 				Err(e) => Some(Err(e)),
 			},
 			_ => None,
@@ -430,8 +435,9 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		len: usize,
 	) -> Option<TransactionValidity> {
 		match self {
-			RuntimeCall::Cosmos(call) =>
-				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len),
+			RuntimeCall::Cosmos(call) => {
+				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len)
+			},
 			_ => None,
 		}
 	}
@@ -457,10 +463,11 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		info: Self::SignedInfo,
 	) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
 		match self {
-			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) =>
+			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) => {
 				Some(call.dispatch(RuntimeOrigin::from(
 					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosm_address().unwrap()),
-				))),
+				)))
+			},
 			_ => None,
 		}
 	}

@@ -20,6 +20,7 @@
 pub mod error;
 #[cfg(feature = "std")]
 mod legacy;
+pub mod msgs;
 
 #[cfg(feature = "std")]
 use cosmrs::{tendermint::chain, tx::SignMode};
@@ -107,7 +108,7 @@ impl Tx {
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Body {
-	pub messages: Vec<Msg>,
+	pub messages: Vec<Any>,
 	pub memo: Vec<u8>,
 	pub timeout_height: u64,
 }
@@ -117,9 +118,9 @@ impl TryFrom<cosmrs::tx::Body> for Body {
 	type Error = DecodeTxError;
 
 	fn try_from(body: cosmrs::tx::Body) -> Result<Self, Self::Error> {
-		let mut messages: Vec<Msg> = Vec::new();
+		let mut messages: Vec<Any> = Vec::new();
 		for msg in body.messages {
-			messages.push(msg.try_into()?);
+			messages.push(msg.into());
 		}
 		Ok(Self {
 			messages,
@@ -132,50 +133,15 @@ impl TryFrom<cosmrs::tx::Body> for Body {
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
-pub enum Msg {
-	MsgSend { from_address: H160, to_address: H160, amount: Vec<Coin> },
+pub struct Any {
+	pub type_url: Vec<u8>,
+	pub value: Vec<u8>,
 }
 
 #[cfg(feature = "std")]
-impl TryFrom<cosmrs::Any> for Msg {
-	type Error = DecodeTxError;
-
-	fn try_from(any: cosmrs::Any) -> Result<Self, Self::Error> {
-		Self::try_from(&any)
-	}
-}
-
-#[cfg(feature = "std")]
-impl TryFrom<&cosmrs::Any> for Msg {
-	type Error = DecodeTxError;
-
-	fn try_from(any: &cosmrs::Any) -> Result<Self, Self::Error> {
-		use cosmrs::proto::cosmos::bank::v1beta1::MsgSend;
-		if any.type_url == "/cosmos.bank.v1beta1.MsgSend" {
-			let typed_msg: MsgSend =
-				cosmrs::Any::to_msg(any).map_err(|_| DecodeTxError::InvalidMsgData)?;
-			let typed_msg: cosmrs::bank::MsgSend =
-				typed_msg.try_into().map_err(|_| DecodeTxError::InvalidMsgData)?;
-			if typed_msg.amount.is_empty() {
-				return Err(DecodeTxError::EmptyMsgSendAmount);
-			}
-			if typed_msg.amount.len() > 1 {
-				return Err(DecodeTxError::TooManyMsgSendAmount);
-			}
-			let amount = typed_msg.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
-			let mut from_address: [u8; 20] = [0u8; 20];
-			from_address.copy_from_slice(&typed_msg.from_address.to_bytes()[..]);
-			let mut to_address: [u8; 20] = [0u8; 20];
-			to_address.copy_from_slice(&typed_msg.to_address.to_bytes()[..]);
-
-			Ok(Msg::MsgSend {
-				from_address: from_address.into(),
-				to_address: to_address.into(),
-				amount,
-			})
-		} else {
-			Err(DecodeTxError::UnsupportedMsgType)
-		}
+impl From<cosmrs::Any> for Any {
+	fn from(any: cosmrs::Any) -> Self {
+		Any { type_url: any.type_url.as_bytes().to_vec(), value: any.value }
 	}
 }
 
@@ -294,6 +260,23 @@ impl From<&cosmrs::Coin> for Coin {
 	fn from(coin: &cosmrs::Coin) -> Self {
 		let denom = coin.denom.as_ref().as_bytes().to_vec();
 		Self { denom, amount: coin.amount }
+	}
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+pub struct AccountId {
+	pub hrp: Vec<u8>,
+	pub address: H160,
+}
+
+#[cfg(feature = "std")]
+impl From<cosmrs::AccountId> for AccountId {
+	fn from(account_id: cosmrs::AccountId) -> Self {
+		let hrp = account_id.prefix().as_bytes().to_vec();
+		let address = H160::from_slice(&account_id.to_bytes());
+		Self { hrp, address }
 	}
 }
 
