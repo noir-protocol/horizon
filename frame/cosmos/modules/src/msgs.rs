@@ -21,8 +21,5 @@ use frame_support::weights::Weight;
 pub trait MsgServiceRouter<T> {
 	type Error;
 
-	fn route(
-		type_url: &[u8],
-		value: &[u8],
-	) -> Result<Weight, Self::Error>;
+	fn route(type_url: &[u8], value: &[u8]) -> Result<Weight, Self::Error>;
 }

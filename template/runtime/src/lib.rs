@@ -54,12 +54,15 @@ use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys, traits::{
+	create_runtime_str, generic, impl_opaque_keys,
+	traits::{
 		AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable,
 		IdentifyAccount, NumberFor, One, PostDispatchInfoOf, Verify,
-	}, transaction_validity::{
+	},
+	transaction_validity::{
 		InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
-	}, ApplyExtrinsicResult, BoundedVec, ExtrinsicInclusionMode, Perbill
+	},
+	ApplyExtrinsicResult, BoundedVec, ExtrinsicInclusionMode, Perbill,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -407,7 +410,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 	fn check_self_contained(&self) -> Option<Result<Self::SignedInfo, TransactionValidityError>> {
 		match self {
 			RuntimeCall::Cosmos(call) => match call.check_self_contained()? {
-				Ok(_) => {
+				Ok(_) =>
 					if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = call {
 						let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)?;
 						let public_key = tx.auth_info.signer_infos.first()?.clone().public_key?;
@@ -420,8 +423,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 						}
 					} else {
 						None
-					}
-				},
+					},
 				Err(e) => Some(Err(e)),
 			},
 			_ => None,
@@ -435,9 +437,8 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		len: usize,
 	) -> Option<TransactionValidity> {
 		match self {
-			RuntimeCall::Cosmos(call) => {
-				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len)
-			},
+			RuntimeCall::Cosmos(call) =>
+				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len),
 			_ => None,
 		}
 	}
@@ -463,11 +464,10 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		info: Self::SignedInfo,
 	) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
 		match self {
-			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) => {
+			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) =>
 				Some(call.dispatch(RuntimeOrigin::from(
 					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosm_address().unwrap()),
-				)))
-			},
+				))),
 			_ => None,
 		}
 	}
