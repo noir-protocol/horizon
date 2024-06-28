@@ -301,7 +301,7 @@ impl pallet_timestamp::Config for Runtime {
 parameter_types! {
 	pub const MaxMemoCharacters: u64 = 256;
 	pub const DenomMaxLen: u32 = 10;
-	pub const NativeDenom: BoundedVec<u8, DenomMaxLen> = (*b"uatom").to_vec().try_into().unwrap();
+	pub NativeDenom: BoundedVec<u8, DenomMaxLen> = (*b"uatom").to_vec().try_into().unwrap();
 }
 
 impl pallet_cosmos::Config for Runtime {
