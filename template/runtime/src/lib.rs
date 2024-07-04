@@ -303,8 +303,9 @@ impl pallet_timestamp::Config for Runtime {
 
 parameter_types! {
 	pub const MaxMemoCharacters: u64 = 256;
-	pub const MaxDenomLen: u32 = 128;
-	pub NativeDenom: BoundedVec<u8, MaxDenomLen> = (*b"acdt").to_vec().try_into().unwrap();
+	pub const StringLimit: u32 = 128;
+	pub NativeDenom: BoundedVec<u8, StringLimit> = (*b"acdt").to_vec().try_into().unwrap();
+	pub ChainId: BoundedVec<u8, StringLimit> = (*b"dev").to_vec().try_into().unwrap();
 }
 
 impl pallet_cosmos::Config for Runtime {
@@ -328,10 +329,12 @@ impl pallet_cosmos::Config for Runtime {
 	type MaxMemoCharacters = MaxMemoCharacters;
 	/// The native denomination for the currency.
 	type NativeDenom = NativeDenom;
-	/// The maximum length of the denomination.
-	type MaxDenomLen = MaxDenomLen;
+	/// The maximum length of string value.
+	type StringLimit = StringLimit;
 	/// Router for message service handling.
 	type MsgServiceRouter = MsgServiceRouter<Self>;
+	/// The chain ID.
+	type ChainId = ChainId;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
@@ -411,8 +414,9 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		match self {
 			RuntimeCall::Cosmos(call) => match call.check_self_contained()? {
 				Ok(_) =>
-					if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = call {
-						let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)?;
+					if let pallet_cosmos::Call::transact { tx_bytes } = call {
+						let chain_id = <Runtime as pallet_cosmos::Config>::ChainId::get();
+						let tx = hp_io::decode_tx::decode(tx_bytes, &chain_id)?;
 						let public_key = tx.auth_info.signer_infos.first()?.clone().public_key?;
 						if let SignerPublicKey::Single(PublicKey::Secp256k1(pk)) = public_key {
 							Some(Ok(Self::SignedInfo::from(pk)))
@@ -498,9 +502,9 @@ impl Runtime {
 
 impl_runtime_apis! {
 	impl hp_rpc::ConvertTxRuntimeApi<Block> for Runtime {
-		fn convert_tx(tx_bytes: Vec<u8>, chain_id: Vec<u8>) -> <Block as BlockT>::Extrinsic {
+		fn convert_tx(tx_bytes: Vec<u8>) -> <Block as BlockT>::Extrinsic {
 			UncheckedExtrinsic::new_unsigned(
-				pallet_cosmos::Call::<Runtime>::transact { tx_bytes, chain_id }.into(),
+				pallet_cosmos::Call::<Runtime>::transact { tx_bytes }.into(),
 			)
 		}
 	}

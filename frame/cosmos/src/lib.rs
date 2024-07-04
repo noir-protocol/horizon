@@ -76,8 +76,9 @@ where
 	}
 
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
-		if let Call::transact { tx_bytes, chain_id } = self {
-			let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)?;
+		if let Call::transact { tx_bytes } = self {
+			let chain_id = T::ChainId::get();
+			let tx = hp_io::decode_tx::decode(tx_bytes, &chain_id)?;
 
 			if let Err(e) = T::AnteHandler::handle(&tx) {
 				return Some(Err(e));
@@ -106,12 +107,12 @@ where
 		dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
 		len: usize,
 	) -> Option<Result<(), TransactionValidityError>> {
-		if let Call::transact { tx_bytes, chain_id } = self {
+		if let Call::transact { tx_bytes } = self {
 			if let Err(e) = CheckWeight::<T>::do_pre_dispatch(dispatch_info, len) {
 				return Some(Err(e));
 			}
 
-			Some(Pallet::<T>::validate_transaction_in_block(*origin, tx_bytes, chain_id))
+			Some(Pallet::<T>::validate_transaction_in_block(*origin, tx_bytes))
 		} else {
 			None
 		}
@@ -123,12 +124,12 @@ where
 		dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
 		len: usize,
 	) -> Option<TransactionValidity> {
-		if let Call::transact { tx_bytes, chain_id } = self {
+		if let Call::transact { tx_bytes } = self {
 			if let Err(e) = CheckWeight::<T>::do_validate(dispatch_info, len) {
 				return Some(Err(e));
 			}
 
-			Some(Pallet::<T>::validate_transaction_in_pool(*origin, tx_bytes, chain_id))
+			Some(Pallet::<T>::validate_transaction_in_pool(*origin, tx_bytes))
 		} else {
 			None
 		}
@@ -200,12 +201,15 @@ pub mod pallet {
 		type MaxMemoCharacters: Get<u64>;
 		/// The native denomination for the currency.
 		#[pallet::constant]
-		type NativeDenom: Get<BoundedVec<u8, Self::MaxDenomLen>>;
-		/// The maximum length of the denomination.
+		type NativeDenom: Get<BoundedVec<u8, Self::StringLimit>>;
+		/// The maximum length of string value.
 		#[pallet::constant]
-		type MaxDenomLen: Get<u32>;
+		type StringLimit: Get<u32>;
 		/// Router for message service handling.
 		type MsgServiceRouter: MsgServiceRouter;
+		/// The chain ID.
+		#[pallet::constant]
+		type ChainId: Get<BoundedVec<u8, Self::StringLimit>>;
 	}
 
 	#[pallet::event]
@@ -232,12 +236,9 @@ pub mod pallet {
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
 		#[pallet::weight({ 0 })]
-		pub fn transact(
-			origin: OriginFor<T>,
-			tx_bytes: Vec<u8>,
-			chain_id: Vec<u8>,
-		) -> DispatchResultWithPostInfo {
+		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
+			let chain_id = T::ChainId::get();
 			let tx = hp_io::decode_tx::decode(&tx_bytes, &chain_id).unwrap();
 
 			Self::apply_validated_transaction(source, tx)
@@ -253,10 +254,10 @@ impl<T: Config> Pallet<T> {
 	pub fn validate_transaction_in_block(
 		origin: H160,
 		tx_bytes: &[u8],
-		chain_id: &[u8],
 	) -> Result<(), TransactionValidityError> {
 		let (_who, _) = Self::account(&origin);
-		let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)
+		let chain_id = T::ChainId::get();
+		let tx = hp_io::decode_tx::decode(tx_bytes, &chain_id)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::handle(&tx)?;
@@ -265,13 +266,10 @@ impl<T: Config> Pallet<T> {
 	}
 
 	// Controls that must be performed by the pool.
-	fn validate_transaction_in_pool(
-		origin: H160,
-		tx_bytes: &[u8],
-		chain_id: &[u8],
-	) -> TransactionValidity {
+	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)
+		let chain_id = T::ChainId::get();
+		let tx = hp_io::decode_tx::decode(tx_bytes, &chain_id)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::handle(&tx)?;

@@ -74,7 +74,7 @@ where
 		let extrinsic = self
 			.client
 			.runtime_api()
-			.convert_tx(block_hash, tx_bytes.to_vec(), chain_id.as_bytes().to_vec())
+			.convert_tx(block_hash, tx_bytes.to_vec())
 			.map_err(|_| internal_err("cannot access runtime api"))?;
 		let tx_hash = H256(sha2_256(&tx_bytes));
 		self.pool
