@@ -18,21 +18,19 @@
 
 use frame_support::pallet_prelude::*;
 use pallet_cosmos_auth::{
-	SigVerificationDecorator, TxTimeoutHeightDecorator, ValidateBasicDecorator,
-	ValidateMemoDecorator,
+	SigVerificationHandler, TxTimeoutHeightHandler, ValidateBasicHandler, ValidateMemoHandler,
 };
-use pallet_cosmos_modules::AnteDecorator;
 
-pub struct AnteDecorators;
-impl<T> pallet_cosmos_modules::AnteDecorators<T> for AnteDecorators
+pub struct AnteHandlers<T>(sp_std::marker::PhantomData<T>);
+impl<T> pallet_cosmos_modules::ante::AnteHandler for AnteHandlers<T>
 where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
-	fn ante_handle(tx: &hp_cosmos::Tx) -> Result<(), TransactionValidityError> {
-		ValidateBasicDecorator::<T>::ante_handle(tx)?;
-		TxTimeoutHeightDecorator::<T>::ante_handle(tx)?;
-		ValidateMemoDecorator::<T>::ante_handle(tx)?;
-		SigVerificationDecorator::<T>::ante_handle(tx)?;
+	fn handle(tx: &hp_cosmos::Tx) -> Result<(), TransactionValidityError> {
+		ValidateBasicHandler::<T>::handle(tx)?;
+		TxTimeoutHeightHandler::<T>::handle(tx)?;
+		ValidateMemoHandler::<T>::handle(tx)?;
+		SigVerificationHandler::<T>::handle(tx)?;
 
 		Ok(())
 	}

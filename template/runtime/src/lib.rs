@@ -26,8 +26,8 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod ante;
 mod compat;
-mod decorators;
 mod msgs;
 
 use frame_support::{
@@ -303,8 +303,8 @@ impl pallet_timestamp::Config for Runtime {
 
 parameter_types! {
 	pub const MaxMemoCharacters: u64 = 256;
-	pub const DenomMaxLen: u32 = 10;
-	pub NativeDenom: BoundedVec<u8, DenomMaxLen> = (*b"uatom").to_vec().try_into().unwrap();
+	pub const MaxDenomLen: u32 = 128;
+	pub NativeDenom: BoundedVec<u8, MaxDenomLen> = (*b"acdt").to_vec().try_into().unwrap();
 }
 
 impl pallet_cosmos::Config for Runtime {
@@ -323,14 +323,14 @@ impl pallet_cosmos::Config for Runtime {
 	/// Convert a weight value into a deductible fee based on the currency type.
 	type WeightToFee = IdentityFee<Balance>;
 	/// Verify the validity of a Cosmos transaction.
-	type AnteDecorators = decorators::AnteDecorators;
+	type AnteHandler = ante::AnteHandlers<Self>;
 	/// The maximum size of the memo.
 	type MaxMemoCharacters = MaxMemoCharacters;
-
+	/// The native denomination for the currency.
 	type NativeDenom = NativeDenom;
-
-	type DenomMaxLen = DenomMaxLen;
-
+	/// The maximum length of the denomination.
+	type MaxDenomLen = MaxDenomLen;
+	/// Router for message service handling.
 	type MsgServiceRouter = MsgServiceRouter<Self>;
 }
 

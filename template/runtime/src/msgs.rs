@@ -16,27 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::weights::Weight;
-use hp_cosmos::msgs::MsgSend;
-use parity_scale_codec::Decode;
-use sp_std::marker::PhantomData;
+use pallet_cosmos_bank::msgs::MsgSendHandler;
+use pallet_cosmos_modules::msgs::MsgHandler;
 
-pub struct MsgServiceRouter<T>(PhantomData<T>);
-impl<T> pallet_cosmos_modules::MsgServiceRouter<T> for MsgServiceRouter<T>
+pub struct MsgServiceRouter<T>(sp_std::marker::PhantomData<T>);
+impl<T> pallet_cosmos_modules::msgs::MsgServiceRouter for MsgServiceRouter<T>
 where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
-	type Error = ();
-
-	fn route(type_url: &[u8], value: &[u8]) -> Result<Weight, Self::Error> {
-		match core::str::from_utf8(type_url).map_err(|_| ())? {
-			"/cosmos.bank.v1beta1.MsgSend" => {
-				let (type_url, value) =
-					hp_io::protobuf_to_scale::to_scale(type_url, value).unwrap();
-				let msg: MsgSend = Decode::decode(&mut &value[..]).unwrap();
-				pallet_cosmos_bank::msgs::MsgServer::<T>::send(msg)
-			},
-			_ => Err(()),
+	fn route(type_url: &[u8]) -> Option<sp_std::boxed::Box<dyn MsgHandler>> {
+		match core::str::from_utf8(type_url).unwrap() {
+			"/cosmos.bank.v1beta1.MsgSend" =>
+				Some(sp_std::boxed::Box::<MsgSendHandler<T>>::default()),
+			_ => None,
 		}
 	}
 }

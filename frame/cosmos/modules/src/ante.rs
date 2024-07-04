@@ -19,10 +19,6 @@
 use frame_support::pallet_prelude::*;
 use hp_cosmos::Tx;
 
-pub trait AnteDecorator<T> {
-	fn ante_handle(tx: &Tx) -> Result<(), TransactionValidityError>;
-}
-
-pub trait AnteDecorators<T> {
-	fn ante_handle(tx: &Tx) -> Result<(), TransactionValidityError>;
+pub trait AnteHandler {
+	fn handle(tx: &Tx) -> Result<(), TransactionValidityError>;
 }

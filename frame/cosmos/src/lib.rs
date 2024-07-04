@@ -24,18 +24,18 @@ pub mod weights;
 
 pub use self::pallet::*;
 use frame_support::{
-	dispatch::{DispatchInfo, PostDispatchInfo},
+	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchResultWithPostInfo, Pays},
 	traits::{
 		tokens::{fungible::Inspect, Fortitude, Preservation},
 		Currency, Get,
 	},
-	weights::{Weight, WeightToFee},
+	weights::{constants::ExtrinsicBaseWeight, Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::{Account, PublicKey, SignerPublicKey};
 use hp_io::crypto::ripemd160;
-use pallet_cosmos_modules::{AnteDecorators, MsgServiceRouter};
+use pallet_cosmos_modules::{ante::AnteHandler, msgs::MsgServiceRouter};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
@@ -45,10 +45,12 @@ use sp_runtime::{
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	RuntimeDebug,
+	DispatchError, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
 pub use weights::*;
+
+const LOG: &str = "runtime::cosmos";
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum RawOrigin {
@@ -79,7 +81,7 @@ where
 		if let Call::transact { tx_bytes, chain_id } = self {
 			let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)?;
 
-			if let Err(e) = T::AnteDecorators::ante_handle(&tx) {
+			if let Err(e) = T::AnteHandler::handle(&tx) {
 				return Some(Err(e));
 			}
 
@@ -163,7 +165,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use hp_cosmos::Any;
-	use pallet_cosmos_modules::{AnteDecorators, MsgServiceRouter};
+	use pallet_cosmos_modules::{ante::AnteHandler, msgs::MsgServiceRouter};
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -194,24 +196,24 @@ pub mod pallet {
 		/// Convert a weight value into a deductible fee based on the currency type.
 		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
 		/// Verify the validity of a Cosmos transaction.
-		type AnteDecorators: AnteDecorators<Self>;
+		type AnteHandler: AnteHandler;
 		/// The maximum size of the memo.
 		#[pallet::constant]
 		type MaxMemoCharacters: Get<u64>;
-
+		/// The native denomination for the currency.
 		#[pallet::constant]
-		type NativeDenom: Get<BoundedVec<u8, Self::DenomMaxLen>>;
-
+		type NativeDenom: Get<BoundedVec<u8, Self::MaxDenomLen>>;
+		/// The maximum length of the denomination.
 		#[pallet::constant]
-		type DenomMaxLen: Get<u32>;
-
-		type MsgServiceRouter: MsgServiceRouter<Self>;
+		type MaxDenomLen: Get<u32>;
+		/// Router for message service handling.
+		type MsgServiceRouter: MsgServiceRouter;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event {
-		Executed { code: u32, gas_used: Weight, messages: Vec<Any> },
+		Executed { gas_used: Weight, messages: Vec<Any> },
 	}
 
 	#[pallet::error]
@@ -259,7 +261,7 @@ impl<T: Config> Pallet<T> {
 		let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-		T::AnteDecorators::ante_handle(&tx)?;
+		T::AnteHandler::handle(&tx)?;
 
 		Ok(())
 	}
@@ -274,7 +276,7 @@ impl<T: Config> Pallet<T> {
 		let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-		T::AnteDecorators::ante_handle(&tx)?;
+		T::AnteHandler::handle(&tx)?;
 
 		let transaction_nonce = tx
 			.auth_info
@@ -298,11 +300,31 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
-		let mut total_weight = Weight::zero();
+		let mut total_weight = ExtrinsicBaseWeight::get();
+
 		for msg in tx.body.messages.iter() {
-			let result = T::MsgServiceRouter::route(&msg.type_url, &msg.value);
+			let handler = T::MsgServiceRouter::route(&msg.type_url).unwrap();
+			match handler.handle(msg) {
+				Ok(weight) => {
+					total_weight = total_weight.saturating_add(weight);
+				},
+				Err(e) => {
+					total_weight = total_weight.saturating_add(e.weight);
+
+					return Err(DispatchErrorWithPostInfo {
+						post_info: PostDispatchInfo {
+							actual_weight: Some(total_weight),
+							pays_fee: Pays::Yes,
+						},
+						error: DispatchError::Other("Invalid msg"),
+					});
+				},
+			}
 		}
-		Ok(PostDispatchInfo { actual_weight: Some(Weight::zero()), pays_fee: Pays::Yes })
+
+		Self::deposit_event(Event::Executed { gas_used: total_weight, messages: tx.body.messages });
+
+		Ok(PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes })
 	}
 
 	/// Get the base account info.

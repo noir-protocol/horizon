@@ -288,14 +288,14 @@ mod tests {
 
 	#[test]
 	fn test_sign_amino_doc_hash() {
-		let tx_bytes =  "Cp0BCpgBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEngKLWNvc21vczFwdnJhbjRkbDl1NzNxNXo0dzNtY2xnbDUzMGtsdHdxY2EwMnk4ZBItY29zbW9zMThwd3ZxajB0ZG5oZ20zM241bG4wMjBqdnk4MjBmcjI5aDJtc213GhgKBHVjZHQSEDEwMDAwMDAwMDAwMDAwMDASABJkClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiED9ZPCan9HZlZbW/+hDSWLfy6cW+aPzrjSILmLmCSnUUcSBAoCCH8YABIQCgoKBHVjZHQSAjI1EKCNBhpA0YAS1zXHInFcdO2w/tZjTEWa9fNs53mTsitzpx21mxRVaJv8lJ2eErg+/IWvCWLHfsh71fMxOY2AJ7DrQIzTxg==";
+		let tx_bytes =  "CpoBCpcBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEncKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMW41amd4NjR6dzM4c3M3Nm16dXU0dWM3amV5cXcydmZqazYwZmR6GhcKBGFjZHQSDzEwMDAwMDAwMDAwMDAwMBJsCk4KRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECChCRNB/lZkv6F4LV4Ed5aJBoyRawTLNl7DFTdVaE2aESBAoCCH8SGgoSCgRhY2R0EgoxMDQwMDAwMDAwEIDa8esEGkBgXIiPoBpecG7QpKDJPaztFogqvmxjDHF5ORfWBrOoSzf0+AAmch1CXrG4OmiKL0y8v9ITx0QzWYUc7ueXcdIm";
 		let tx_bytes = Base64::decode_vec(tx_bytes).unwrap();
 		let tx = cosmrs::Tx::from_bytes(&tx_bytes).unwrap();
-		let sign_doc = SignAminoDoc::new(&tx, "noir").unwrap();
+		let sign_doc = SignAminoDoc::new(&tx, "dev").unwrap();
 		let hash = sha2_256(&sign_doc.to_bytes().unwrap());
 		assert_eq!(
 			array_bytes::bytes2hex("", &hash),
-			"c853e81f04e499cb842c67b8c75a1e23d60bdc02ee51ff9f5e28925f5d9706a8"
+			"714d4bdfdbd0bd630ebdf93b1f6eba7d3c752e92bbab6c9d3d9c93e1777348bb"
 		);
 	}
 }

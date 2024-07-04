@@ -17,9 +17,25 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::weights::Weight;
+use hp_cosmos::Any;
+use sp_runtime::RuntimeString;
 
-pub trait MsgServiceRouter<T> {
-	type Error;
+pub struct MsgHandlerErrorInfo {
+	pub weight: Weight,
+	pub error: MsgHandlerError,
+}
 
-	fn route(type_url: &[u8], value: &[u8]) -> Result<Weight, Self::Error>;
+#[derive(Debug)]
+pub enum MsgHandlerError {
+	InvalidMsg,
+	Unsupported,
+	Custom(RuntimeString),
+}
+
+pub trait MsgHandler {
+	fn handle(&self, msg: &Any) -> Result<Weight, MsgHandlerErrorInfo>;
+}
+
+pub trait MsgServiceRouter {
+	fn route(type_url: &[u8]) -> Option<sp_std::boxed::Box<dyn MsgHandler>>;
 }
