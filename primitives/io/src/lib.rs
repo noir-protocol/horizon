@@ -20,6 +20,7 @@
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use hp_cosmos::AccountId;
 use sp_runtime_interface::runtime_interface;
 use sp_std::vec::Vec;
 
@@ -52,5 +53,14 @@ pub trait ProtobufToScale {
 	/// Converting a message from Protobuf encoding to Scale encoding
 	fn to_scale(type_url: &[u8], value: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
 		hp_cosmos::msgs::to_scale(type_url, value).ok()
+	}
+}
+
+/// Interface for decoding Msg encoded with Protobuf and then re-encoding it with Scale
+#[runtime_interface]
+pub trait Signers {
+	/// Converting a message from Protobuf encoding to Scale encoding
+	fn get_msg_any_signers(type_url: &[u8], value: &[u8]) -> Option<Vec<AccountId>> {
+		hp_cosmos::msgs::get_msg_any_signers(type_url, value).ok()
 	}
 }

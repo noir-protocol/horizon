@@ -224,6 +224,8 @@ pub enum PublicKey {
 pub struct Fee {
 	pub amount: Vec<Coin>,
 	pub gas_limit: Gas,
+	pub payer: Option<AccountId>,
+	pub granter: Option<AccountId>,
 }
 
 #[cfg(feature = "std")]
@@ -235,7 +237,10 @@ impl TryFrom<cosmrs::tx::Fee> for Fee {
 			return Err(DecodeTxError::EmptyFeeAmount);
 		}
 		let amount = fee.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
-		Ok(Self { amount, gas_limit: fee.gas_limit })
+		let payer = fee.payer.map(Into::into);
+		let granter = fee.granter.map(Into::into);
+
+		Ok(Self { amount, gas_limit: fee.gas_limit, payer, granter })
 	}
 }
 

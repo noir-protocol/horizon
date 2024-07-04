@@ -26,7 +26,6 @@ use pallet_cosmos::AddressMapping;
 use pallet_cosmos_modules::msgs::{MsgHandlerError, MsgHandlerErrorInfo};
 use sp_runtime::{format_runtime_string, SaturatedConversion};
 
-const LOG: &str = "runtime::x-bank";
 pub struct MsgSendHandler<T>(PhantomData<T>);
 
 impl<T> Default for MsgSendHandler<T> {

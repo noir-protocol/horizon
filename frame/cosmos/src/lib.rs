@@ -50,8 +50,6 @@ use sp_runtime::{
 use sp_std::{marker::PhantomData, vec::Vec};
 pub use weights::*;
 
-const LOG: &str = "runtime::cosmos";
-
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum RawOrigin {
 	CosmosTransaction(H160),

@@ -17,7 +17,7 @@
 
 use crate::{error::DecodeMsgError, AccountId, Any, Coin};
 #[cfg(feature = "std")]
-use cosmrs::tx::Msg;
+use cosmrs::tx::Msg as _;
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
@@ -27,6 +27,10 @@ use serde::{Deserialize, Serialize};
 #[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
 
+pub trait Msg {
+	fn get_signers(&self) -> Vec<AccountId>;
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
@@ -34,6 +38,13 @@ pub struct MsgSend {
 	pub from_address: AccountId,
 	pub to_address: AccountId,
 	pub amount: Vec<Coin>,
+}
+
+#[cfg(feature = "std")]
+impl Msg for MsgSend {
+	fn get_signers(&self) -> Vec<AccountId> {
+		vec![self.from_address.clone()]
+	}
 }
 
 #[cfg(feature = "std")]
@@ -66,6 +77,21 @@ pub fn to_scale(type_url: &[u8], value: &[u8]) -> Result<(Vec<u8>, Vec<u8>), Dec
 			let any = Any { type_url: type_url.to_vec(), value: value.to_vec() };
 			let msg_send: MsgSend = any.try_into()?;
 			Ok((type_url.to_vec(), msg_send.encode()))
+		},
+		_ => Err(DecodeMsgError::InvalidTypeUrl),
+	}
+}
+
+#[cfg(all(feature = "std", feature = "with-codec"))]
+pub fn get_msg_any_signers(
+	type_url: &[u8],
+	value: &[u8],
+) -> Result<Vec<AccountId>, DecodeMsgError> {
+	match core::str::from_utf8(type_url).map_err(|_| DecodeMsgError::InvalidTypeUrl)? {
+		"/cosmos.bank.v1beta1.MsgSend" => {
+			let any = Any { type_url: type_url.to_vec(), value: value.to_vec() };
+			let msg_send: MsgSend = any.try_into()?;
+			Ok(msg_send.get_signers())
 		},
 		_ => Err(DecodeMsgError::InvalidTypeUrl),
 	}
