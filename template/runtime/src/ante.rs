@@ -18,7 +18,8 @@
 
 use frame_support::pallet_prelude::*;
 use pallet_cosmos_auth::{
-	SigVerificationHandler, TxTimeoutHeightHandler, ValidateBasicHandler, ValidateMemoHandler,
+	basic::{TxTimeoutHeightHandler, ValidateBasicHandler, ValidateMemoHandler},
+	sigverify::SigVerificationHandler,
 };
 
 pub struct AnteHandlers<T>(sp_std::marker::PhantomData<T>);

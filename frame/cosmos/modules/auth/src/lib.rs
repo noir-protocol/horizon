@@ -19,8 +19,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
-mod basic;
-mod sigverify;
-
-pub use basic::{TxTimeoutHeightHandler, ValidateBasicHandler, ValidateMemoHandler};
-pub use sigverify::SigVerificationHandler;
+pub mod basic;
+pub mod sigverify;
