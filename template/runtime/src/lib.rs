@@ -43,9 +43,9 @@ use frame_support::{
 		IdentityFee, Weight,
 	},
 };
-use hp_cosmos::{PublicKey, SignerPublicKey};
 use hp_crypto::EcdsaExt;
 use msgs::MsgServiceRouter;
+use pallet_cosmos::AddressMapping;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -59,9 +59,7 @@ use sp_runtime::{
 		AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable,
 		IdentifyAccount, NumberFor, One, PostDispatchInfoOf, Verify,
 	},
-	transaction_validity::{
-		InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
-	},
+	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
 	ApplyExtrinsicResult, BoundedVec, ExtrinsicInclusionMode, Perbill,
 };
 use sp_std::{marker::PhantomData, prelude::*};
@@ -413,21 +411,9 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 	fn check_self_contained(&self) -> Option<Result<Self::SignedInfo, TransactionValidityError>> {
 		match self {
 			RuntimeCall::Cosmos(call) => match call.check_self_contained()? {
-				Ok(_) =>
-					if let pallet_cosmos::Call::transact { tx_bytes } = call {
-						let chain_id = <Runtime as pallet_cosmos::Config>::ChainId::get();
-						let tx = hp_io::decode_tx::decode(tx_bytes, &chain_id)?;
-						let public_key = tx.auth_info.signer_infos.first()?.clone().public_key?;
-						if let SignerPublicKey::Single(PublicKey::Secp256k1(pk)) = public_key {
-							Some(Ok(Self::SignedInfo::from(pk)))
-						} else {
-							Some(Err(TransactionValidityError::Invalid(
-								InvalidTransaction::BadProof,
-							)))
-						}
-					} else {
-						None
-					},
+				Ok(address) => Some(Ok(
+					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(address),
+				)),
 				Err(e) => Some(Err(e)),
 			},
 			_ => None,
@@ -480,7 +466,6 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 impl Runtime {
 	fn migrate_cosm_account(address: &H160, who: &AccountId) -> Result<Balance, ()> {
 		use fungible::{Inspect, Mutate};
-		use pallet_cosmos::AddressMapping;
 
 		let interim_account =
 			<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(*address);
