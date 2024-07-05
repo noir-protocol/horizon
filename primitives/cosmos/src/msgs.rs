@@ -22,8 +22,6 @@ use cosmrs::tx::Msg as _;
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
-#[cfg(feature = "with-serde")]
-use serde::{Deserialize, Serialize};
 #[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
 
@@ -33,7 +31,6 @@ pub trait Msg {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct MsgSend {
 	pub from_address: AccountId,
 	pub to_address: AccountId,
@@ -98,6 +95,7 @@ pub fn get_msg_any_signers(
 }
 
 #[cfg(test)]
+#[cfg(feature = "with-codec")]
 mod tests {
 	use super::{to_scale, MsgSend};
 	use crate::{Coin, Tx};
@@ -107,7 +105,6 @@ mod tests {
 	use sp_core::H160;
 
 	#[test]
-	#[cfg(feature = "with-codec")]
 	fn test_msg_to_scale_and_decode() {
 		let tx_bytes =  "CpoBCpcBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEncKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMW41amd4NjR6dzM4c3M3Nm16dXU0dWM3amV5cXcydmZqazYwZmR6GhcKBGFjZHQSDzEwMDAwMDAwMDAwMDAwMBJsCk4KRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECChCRNB/lZkv6F4LV4Ed5aJBoyRawTLNl7DFTdVaE2aESBAoCCH8SGgoSCgRhY2R0EgoxMDQwMDAwMDAwEIDa8esEGkBgXIiPoBpecG7QpKDJPaztFogqvmxjDHF5ORfWBrOoSzf0+AAmch1CXrG4OmiKL0y8v9ITx0QzWYUc7ueXcdIm";
 		let tx_bytes = Base64::decode_vec(tx_bytes).unwrap();

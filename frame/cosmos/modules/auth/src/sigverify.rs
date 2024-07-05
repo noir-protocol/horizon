@@ -84,9 +84,10 @@ where
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
 				}
 
-				if !secp256k1_ecdsa_verify(sig, &tx.hash.0, &public_key) {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
-				}
+			// TODO: Get transaction SignDoc
+			// if !secp256k1_ecdsa_verify(sig, &tx.hash.0, &public_key) {
+			// 	return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+			// }
 			} else {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 			}

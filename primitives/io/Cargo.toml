@@ -13,7 +13,7 @@ cosmrs = { workspace = true, optional = true }
 sp-std = { workspace = true }
 sp-runtime-interface = { workspace = true }
 
-hp-cosmos = { workspace = true, features = ["with-codec"] }
+hp-cosmos = { workspace = true, features = ["with-codec", "with-serde"] }
 hp-crypto = { workspace = true }
 
 [features]
