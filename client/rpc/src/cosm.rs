@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{internal_err, request_err};
+use crate::internal_err;
 use futures::future::TryFutureExt;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
@@ -37,19 +37,14 @@ pub trait CosmApi {
 }
 
 pub struct Cosm<B: BlockT, C, P> {
-	chain_spec: Box<dyn sc_chain_spec::ChainSpec>,
 	pool: Arc<P>,
 	client: Arc<C>,
 	_marker: PhantomData<B>,
 }
 
 impl<B: BlockT, C, P> Cosm<B, C, P> {
-	pub fn new(
-		chain_spec: Box<dyn sc_chain_spec::ChainSpec>,
-		pool: Arc<P>,
-		client: Arc<C>,
-	) -> Self {
-		Self { chain_spec, pool, client, _marker: Default::default() }
+	pub fn new(pool: Arc<P>, client: Arc<C>) -> Self {
+		Self { pool, client, _marker: Default::default() }
 	}
 }
 
@@ -66,10 +61,6 @@ where
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256> {
 		use hp_rpc::ConvertTxRuntimeApi;
 
-		let chain_id = self.chain_spec.id();
-		hp_cosmos::Tx::decode(&tx_bytes, chain_id.as_bytes()).map_err(|e| {
-			request_err(format!("invalid transaction error; code: {}, message: {}", e as u8, e))
-		})?;
 		let block_hash = self.client.info().best_hash;
 		let extrinsic = self
 			.client

@@ -32,6 +32,8 @@ where
 		TxTimeoutHeightHandler::<T>::handle(tx)?;
 		ValidateMemoHandler::<T>::handle(tx)?;
 		SigVerificationHandler::<T>::handle(tx)?;
+		// TODO: Check fee
+		// TODO: Increase account nonce
 
 		Ok(())
 	}

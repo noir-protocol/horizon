@@ -78,7 +78,7 @@ where
 					&from,
 					&to,
 					amt.amount.saturated_into(),
-					ExistenceRequirement::AllowDeath,
+					ExistenceRequirement::KeepAlive,
 				)
 				.map_err(|_| MsgHandlerErrorInfo {
 					weight: total_weight,
