@@ -15,10 +15,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{error::DecodeTxError, SequenceNumber};
+#[cfg(feature = "with-serde")]
+use crate::error::DecodeTxError;
+#[cfg(feature = "with-serde")]
+use crate::SequenceNumber;
 #[cfg(feature = "with-serde")]
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+#[cfg(feature = "with-serde")]
 use sp_core::hashing::sha2_256;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

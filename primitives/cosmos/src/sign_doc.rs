@@ -15,9 +15,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::error::DecodeTxError;
 #[cfg(feature = "with-serde")]
-use crate::legacy::AminoSignDoc;
-use crate::{error::DecodeTxError, SequenceNumber};
+use crate::{legacy::AminoSignDoc, SequenceNumber};
 use core::str::FromStr;
 use cosmrs::tendermint::chain;
 use sp_core::sha2_256;
@@ -52,4 +52,25 @@ pub fn get_amino_signer_doc_bytes(
 		.bytes()?;
 
 	Ok(sha2_256(&sign_doc_bytes))
+}
+
+#[cfg(test)]
+mod tests {
+	use super::get_signer_doc_bytes;
+	use base64ct::{Base64, Encoding};
+	use sp_core::sha2_256;
+
+	#[test]
+	fn test_get_signer_doc_bytes() {
+		let tx_raw = "CpMBCpABChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEnAKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMWdtajJleGFnMDN0dGdhZnBya2RjM3Q4ODBncm1hOW53ZWZjZDJ3GhAKBXVhdG9tEgcxMDAwMDAwEnEKTgpGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQIKEJE0H+VmS/oXgtXgR3lokGjJFrBMs2XsMVN1VoTZoRIECgIIARIfChUKBXVhdG9tEgw4ODY4ODAwMDAwMDAQgMDxxZSVFBpA9+DRmMYoIcxYF8jpNfUjMIMB4pgZ9diC8ySbnhc6YU84AA3b/0RsCr+nx9AZ27FwcrKJM/yBh8lz+/A9BFn3bg==";
+
+		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+		let expected_hash =
+			get_signer_doc_bytes(&tx_bytes, b"theta-testnet-001", 754989u64).unwrap();
+
+		let sign_doc_raw = "CpMBCpABChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEnAKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMWdtajJleGFnMDN0dGdhZnBya2RjM3Q4ODBncm1hOW53ZWZjZDJ3GhAKBXVhdG9tEgcxMDAwMDAwEnEKTgpGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQIKEJE0H+VmS/oXgtXgR3lokGjJFrBMs2XsMVN1VoTZoRIECgIIARIfChUKBXVhdG9tEgw4ODY4ODAwMDAwMDAQgMDxxZSVFBoRdGhldGEtdGVzdG5ldC0wMDEgrYou";
+		let hash = sha2_256(&Base64::decode_vec(&sign_doc_raw).unwrap());
+
+		assert_eq!(expected_hash, hash);
+	}
 }
