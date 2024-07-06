@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::error::DecodeTxError;
+use crate::{error::DecodeTxError, SequenceNumber};
 #[cfg(feature = "with-serde")]
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -65,8 +65,9 @@ pub struct AminoSignDoc {
 impl AminoSignDoc {
 	pub fn new(
 		tx: &cosmrs::Tx,
-		signer: &cosmrs::tx::SignerInfo,
 		chain_id: String,
+		account_number: u64,
+		sequence: SequenceNumber,
 	) -> Result<Self, DecodeTxError> {
 		let fee = AminoSignFee {
 			amount: tx
@@ -104,8 +105,8 @@ impl AminoSignDoc {
 
 		Ok(Self {
 			chain_id,
-			sequence: signer.sequence.to_string(),
-			account_number: "0".to_string(),
+			sequence: sequence.to_string(),
+			account_number: account_number.to_string(),
 			fee,
 			memo: tx.body.memo.clone(),
 			msgs,
@@ -136,8 +137,8 @@ mod tests {
 		let tx_bytes =  "CpoBCpcBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEncKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMW41amd4NjR6dzM4c3M3Nm16dXU0dWM3amV5cXcydmZqazYwZmR6GhcKBGFjZHQSDzEwMDAwMDAwMDAwMDAwMBJsCk4KRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECChCRNB/lZkv6F4LV4Ed5aJBoyRawTLNl7DFTdVaE2aESBAoCCH8SGgoSCgRhY2R0EgoxMDQwMDAwMDAwEIDa8esEGkBgXIiPoBpecG7QpKDJPaztFogqvmxjDHF5ORfWBrOoSzf0+AAmch1CXrG4OmiKL0y8v9ITx0QzWYUc7ueXcdIm";
 		let tx_bytes = Base64::decode_vec(tx_bytes).unwrap();
 		let tx = cosmrs::Tx::from_bytes(&tx_bytes).unwrap();
-		let signer_info = tx.auth_info.signer_infos.first().unwrap();
-		let sign_doc = AminoSignDoc::new(&tx, signer_info, "dev".to_string()).unwrap();
+		let sequence = tx.auth_info.signer_infos.first().unwrap().sequence;
+		let sign_doc = AminoSignDoc::new(&tx, "dev".to_string(), 0u64, sequence).unwrap();
 		let hash = &sign_doc.hash().unwrap();
 		assert_eq!(
 			array_bytes::bytes2hex("", hash),

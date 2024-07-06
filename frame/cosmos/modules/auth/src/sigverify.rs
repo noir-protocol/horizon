@@ -19,9 +19,9 @@
 use hp_cosmos::{AccountId, PublicKey, SignerPublicKey, Tx};
 use hp_io::crypto::secp256k1_ecdsa_verify;
 use pallet_cosmos_modules::ante::AnteHandler;
-use sp_core::{sha2_256, H160};
+use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{InvalidTransaction, TransactionValidityError};
-use sp_std::{marker::PhantomData, vec::Vec};
+use sp_std::marker::PhantomData;
 
 pub struct SigVerificationHandler<T>(PhantomData<T>);
 
@@ -32,7 +32,7 @@ where
 	fn handle(tx: &Tx) -> Result<(), TransactionValidityError> {
 		let signatures = &tx.signatures;
 
-		let mut signers = Vec::<AccountId>::new();
+		let mut signers = sp_std::vec::Vec::<AccountId>::new();
 		for msg in &tx.body.messages {
 			if let Some(msg_signers) =
 				hp_io::signers::get_msg_any_signers(&msg.type_url, &msg.value)
@@ -84,10 +84,33 @@ where
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
 				}
 
-			// TODO: Get transaction SignDoc
-			// if !secp256k1_ecdsa_verify(sig, &tx.hash.0, &public_key) {
-			// 	return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
-			// }
+				let chain_id = T::ChainId::get();
+				let hash = match &signer_info.mode_info {
+					hp_cosmos::ModeInfo::Single(single) => match single.mode {
+						hp_cosmos::SignMode::Direct => hp_io::tx::get_signer_doc_bytes(
+							&tx.raw, &chain_id, 0u64,
+						)
+						.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?,
+						hp_cosmos::SignMode::LegacyAminoJson =>
+							hp_io::tx::get_amino_signer_doc_bytes(
+								&tx.raw,
+								&chain_id,
+								0u64,
+								signer_info.sequence,
+							)
+							.ok_or(TransactionValidityError::Invalid(
+								InvalidTransaction::BadSigner,
+							))?,
+						_ =>
+							return Err(TransactionValidityError::Invalid(
+								InvalidTransaction::BadSigner,
+							)),
+					},
+				};
+
+				if !secp256k1_ecdsa_verify(sig, &hash, &public_key) {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+				}
 			} else {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 			}

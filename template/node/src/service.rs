@@ -34,7 +34,7 @@ pub(crate) type FullClient = sc_service::TFullClient<
 	WasmExecutor<(
 		sp_io::SubstrateHostFunctions,
 		hp_io::crypto::HostFunctions,
-		hp_io::decode_tx::HostFunctions,
+		hp_io::tx::HostFunctions,
 		hp_io::protobuf_to_scale::HostFunctions,
 		hp_io::signers::HostFunctions,
 	)>,

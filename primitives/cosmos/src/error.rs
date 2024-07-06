@@ -15,8 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::fmt::Display;
-
 #[derive(Copy, Clone, Debug)]
 pub enum DecodeTxError {
 	EmptyFeeAmount,
@@ -25,27 +23,10 @@ pub enum DecodeTxError {
 	InvalidMsgData,
 	InvalidSignDoc,
 	InvalidTxData,
-	TooLongTxBytes,
+	InvalidChainId,
 	UnsupportedMsgType,
 	UnsupportedSignerType,
-	UnsupportedSignMode,
-}
-
-impl Display for DecodeTxError {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		match self {
-			DecodeTxError::EmptyFeeAmount => write!(f, "empty fee amount"),
-			DecodeTxError::EmptySigners => write!(f, "empty signers"),
-			DecodeTxError::EmptyTxBytes => write!(f, "empty tx bytes"),
-			DecodeTxError::InvalidMsgData => write!(f, "invalid message data"),
-			DecodeTxError::InvalidSignDoc => write!(f, "invalid sign doc"),
-			DecodeTxError::InvalidTxData => write!(f, "invalid tx data"),
-			DecodeTxError::TooLongTxBytes => write!(f, "too long tx bytes"),
-			DecodeTxError::UnsupportedMsgType => write!(f, "unsupported message type"),
-			DecodeTxError::UnsupportedSignerType => write!(f, "unsupported signer type"),
-			DecodeTxError::UnsupportedSignMode => write!(f, "unsupported sign mode"),
-		}
-	}
+	UnsupportedSigningMode,
 }
 
 #[derive(Copy, Clone, Debug)]

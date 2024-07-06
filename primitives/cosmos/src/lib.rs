@@ -19,8 +19,10 @@
 
 pub mod error;
 #[cfg(feature = "std")]
-mod legacy;
+pub mod legacy;
 pub mod msgs;
+#[cfg(feature = "std")]
+pub mod sign_doc;
 
 #[cfg(feature = "std")]
 use error::DecodeTxError;
@@ -42,11 +44,12 @@ pub struct Tx {
 	pub body: Body,
 	pub auth_info: AuthInfo,
 	pub signatures: Vec<SignatureBytes>,
+	pub raw: Vec<u8>,
 }
 
 #[cfg(feature = "std")]
 impl Tx {
-	pub fn decode(tx_bytes: &[u8], chain_id: &[u8]) -> Result<Self, DecodeTxError> {
+	pub fn decode(tx_bytes: &[u8]) -> Result<Self, DecodeTxError> {
 		if tx_bytes.is_empty() {
 			return Err(DecodeTxError::EmptyTxBytes);
 		}
@@ -59,6 +62,7 @@ impl Tx {
 			body: tx_origin.body.try_into()?,
 			auth_info: tx_origin.auth_info.try_into()?,
 			signatures,
+			raw: tx_bytes.to_vec(),
 		})
 	}
 }
@@ -122,10 +126,68 @@ impl TryFrom<cosmrs::tx::AuthInfo> for AuthInfo {
 	}
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[repr(i32)]
+pub enum SignMode {
+	Unspecified = 0,
+	Direct = 1,
+	Textual = 2,
+	DirectAux = 3,
+	LegacyAminoJson = 127,
+	Eip191 = 191,
+}
+
+#[cfg(feature = "std")]
+impl From<cosmrs::tx::SignMode> for SignMode {
+	fn from(sign_mode: cosmrs::tx::SignMode) -> Self {
+		match sign_mode {
+			cosmrs::tx::SignMode::Unspecified => SignMode::Unspecified,
+			cosmrs::tx::SignMode::Direct => SignMode::Direct,
+			cosmrs::tx::SignMode::Textual => SignMode::Textual,
+			cosmrs::tx::SignMode::DirectAux => SignMode::DirectAux,
+			cosmrs::tx::SignMode::LegacyAminoJson => SignMode::LegacyAminoJson,
+			cosmrs::tx::SignMode::Eip191 => SignMode::Eip191,
+		}
+	}
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+pub struct Single {
+	pub mode: SignMode,
+}
+
+#[cfg(feature = "std")]
+impl From<cosmrs::tx::mode_info::Single> for Single {
+	fn from(single: cosmrs::tx::mode_info::Single) -> Self {
+		Single { mode: single.mode.into() }
+	}
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+pub enum ModeInfo {
+	Single(Single),
+}
+
+#[cfg(feature = "std")]
+impl TryFrom<cosmrs::tx::ModeInfo> for ModeInfo {
+	type Error = DecodeTxError;
+
+	fn try_from(mode_info: cosmrs::tx::ModeInfo) -> Result<Self, Self::Error> {
+		match mode_info {
+			cosmrs::tx::ModeInfo::Single(single) => Ok(ModeInfo::Single(single.into())),
+			_ => Err(DecodeTxError::UnsupportedSigningMode),
+		}
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
 pub struct SignerInfo {
 	pub public_key: Option<SignerPublicKey>,
+	pub mode_info: ModeInfo,
 	pub sequence: SequenceNumber,
 }
 
@@ -153,7 +215,11 @@ impl TryFrom<cosmrs::tx::SignerInfo> for SignerInfo {
 			},
 			None => None,
 		};
-		Ok(Self { public_key, sequence: signer_info.sequence })
+		Ok(Self {
+			public_key,
+			mode_info: signer_info.mode_info.try_into()?,
+			sequence: signer_info.sequence,
+		})
 	}
 }
 

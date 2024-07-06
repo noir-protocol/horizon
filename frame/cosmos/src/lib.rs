@@ -77,8 +77,7 @@ where
 
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx_bytes } = self {
-			let chain_id = T::ChainId::get();
-			let tx = hp_io::decode_tx::decode(tx_bytes, &chain_id)?;
+			let tx = hp_io::tx::decode(tx_bytes)?;
 
 			if let Err(e) = T::AnteHandler::handle(&tx) {
 				return Some(Err(e));
@@ -238,8 +237,7 @@ pub mod pallet {
 		#[pallet::weight({ 0 })]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
-			let chain_id = T::ChainId::get();
-			let tx = hp_io::decode_tx::decode(&tx_bytes, &chain_id).unwrap();
+			let tx = hp_io::tx::decode(&tx_bytes).unwrap();
 
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -256,8 +254,7 @@ impl<T: Config> Pallet<T> {
 		tx_bytes: &[u8],
 	) -> Result<(), TransactionValidityError> {
 		let (_who, _) = Self::account(&origin);
-		let chain_id = T::ChainId::get();
-		let tx = hp_io::decode_tx::decode(tx_bytes, &chain_id)
+		let tx = hp_io::tx::decode(tx_bytes)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::handle(&tx)?;
@@ -268,8 +265,7 @@ impl<T: Config> Pallet<T> {
 	// Controls that must be performed by the pool.
 	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		let chain_id = T::ChainId::get();
-		let tx = hp_io::decode_tx::decode(tx_bytes, &chain_id)
+		let tx = hp_io::tx::decode(tx_bytes)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::handle(&tx)?;
