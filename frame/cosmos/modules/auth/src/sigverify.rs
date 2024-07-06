@@ -87,26 +87,20 @@ where
 				let chain_id = T::ChainId::get();
 				let hash = match &signer_info.mode_info {
 					hp_cosmos::ModeInfo::Single(single) => match single.mode {
-						hp_cosmos::SignMode::Direct => hp_io::tx::get_signer_doc_bytes(
-							&tx.raw, &chain_id, 0u64,
-						)
-						.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?,
+						hp_cosmos::SignMode::Direct =>
+							hp_io::tx::get_signer_doc_bytes(&tx.raw, &chain_id, 0u64),
+
 						hp_cosmos::SignMode::LegacyAminoJson =>
 							hp_io::tx::get_amino_signer_doc_bytes(
 								&tx.raw,
 								&chain_id,
 								0u64,
 								signer_info.sequence,
-							)
-							.ok_or(TransactionValidityError::Invalid(
-								InvalidTransaction::BadSigner,
-							))?,
-						_ =>
-							return Err(TransactionValidityError::Invalid(
-								InvalidTransaction::BadSigner,
-							)),
+							),
+						_ => None,
 					},
-				};
+				}
+				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
 				if !secp256k1_ecdsa_verify(sig, &hash, &public_key) {
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
