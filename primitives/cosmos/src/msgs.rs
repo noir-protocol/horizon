@@ -69,8 +69,8 @@ impl TryFrom<Any> for MsgSend {
 
 #[cfg(all(feature = "std", feature = "with-codec"))]
 pub fn to_scale(type_url: &[u8], value: &[u8]) -> Result<(Vec<u8>, Vec<u8>), DecodeMsgError> {
-	match core::str::from_utf8(type_url).map_err(|_| DecodeMsgError::InvalidTypeUrl)? {
-		"/cosmos.bank.v1beta1.MsgSend" => {
+	match type_url {
+		b"/cosmos.bank.v1beta1.MsgSend" => {
 			let any = Any { type_url: type_url.to_vec(), value: value.to_vec() };
 			let msg_send: MsgSend = any.try_into()?;
 			Ok((type_url.to_vec(), msg_send.encode()))
@@ -84,8 +84,8 @@ pub fn get_msg_any_signers(
 	type_url: &[u8],
 	value: &[u8],
 ) -> Result<Vec<AccountId>, DecodeMsgError> {
-	match core::str::from_utf8(type_url).map_err(|_| DecodeMsgError::InvalidTypeUrl)? {
-		"/cosmos.bank.v1beta1.MsgSend" => {
+	match type_url {
+		b"/cosmos.bank.v1beta1.MsgSend" => {
 			let any = Any { type_url: type_url.to_vec(), value: value.to_vec() };
 			let msg_send: MsgSend = any.try_into()?;
 			Ok(msg_send.get_signers())

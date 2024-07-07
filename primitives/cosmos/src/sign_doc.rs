@@ -15,9 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::error::DecodeTxError;
-#[cfg(feature = "with-serde")]
-use crate::{legacy::AminoSignDoc, SequenceNumber};
+use crate::{error::DecodeTxError, legacy::AminoSignDoc, SequenceNumber};
 use core::str::FromStr;
 use cosmrs::tendermint::chain;
 use sp_core::sha2_256;
@@ -37,7 +35,6 @@ pub fn get_signer_doc_bytes(
 	Ok(sha2_256(&sign_doc_bytes))
 }
 
-#[cfg(feature = "with-serde")]
 pub fn get_amino_signer_doc_bytes(
 	tx_bytes: &[u8],
 	chain_id: &[u8],

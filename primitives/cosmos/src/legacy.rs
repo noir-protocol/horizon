@@ -15,47 +15,37 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "with-serde")]
-use crate::error::DecodeTxError;
-#[cfg(feature = "with-serde")]
-use crate::SequenceNumber;
-#[cfg(feature = "with-serde")]
+use crate::{error::DecodeTxError, SequenceNumber};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-#[cfg(feature = "with-serde")]
 use sp_core::hashing::sha2_256;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Coin {
 	pub amount: String,
 	pub denom: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AminoSignFee {
 	pub amount: Vec<Coin>,
 	pub gas: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct MsgSend {
 	pub amount: Vec<Coin>,
 	pub from_address: String,
 	pub to_address: String,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Any {
 	pub r#type: String,
 	pub value: Value,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AminoSignDoc {
 	pub account_number: String,
 	pub chain_id: String,
@@ -65,7 +55,6 @@ pub struct AminoSignDoc {
 	pub sequence: String,
 }
 
-#[cfg(all(feature = "std", feature = "with-serde"))]
 impl AminoSignDoc {
 	pub fn new(
 		tx: &cosmrs::Tx,
@@ -131,7 +120,6 @@ impl AminoSignDoc {
 }
 
 #[cfg(test)]
-#[cfg(feature = "with-serde")]
 mod tests {
 	use super::AminoSignDoc;
 	use base64ct::{Base64, Encoding};

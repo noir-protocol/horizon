@@ -25,8 +25,8 @@ where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
 	fn route(type_url: &[u8]) -> Option<sp_std::boxed::Box<dyn MsgHandler>> {
-		match core::str::from_utf8(type_url).unwrap() {
-			"/cosmos.bank.v1beta1.MsgSend" =>
+		match type_url {
+			b"/cosmos.bank.v1beta1.MsgSend" =>
 				Some(sp_std::boxed::Box::<MsgSendHandler<T>>::default()),
 			_ => None,
 		}
