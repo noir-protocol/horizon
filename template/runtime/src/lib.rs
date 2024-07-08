@@ -26,7 +26,9 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+mod ante;
 mod compat;
+mod msgs;
 
 use frame_support::{
 	construct_runtime, derive_impl,
@@ -41,9 +43,9 @@ use frame_support::{
 		IdentityFee, Weight,
 	},
 };
-use hp_cosmos::{PublicKey, SignerPublicKey};
 use hp_crypto::EcdsaExt;
-use pallet_cosmos::handler::cosm::MsgHandler;
+use msgs::MsgServiceRouter;
+use pallet_cosmos::AddressMapping;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -57,10 +59,8 @@ use sp_runtime::{
 		AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable,
 		IdentifyAccount, NumberFor, One, PostDispatchInfoOf, Verify,
 	},
-	transaction_validity::{
-		InvalidTransaction, TransactionSource, TransactionValidity, TransactionValidityError,
-	},
-	ApplyExtrinsicResult, ExtrinsicInclusionMode, Perbill,
+	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
+	ApplyExtrinsicResult, BoundedVec, ExtrinsicInclusionMode, Perbill,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -299,13 +299,18 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
+parameter_types! {
+	pub const MaxMemoCharacters: u64 = 256;
+	pub const StringLimit: u32 = 128;
+	pub NativeDenom: BoundedVec<u8, StringLimit> = (*b"acdt").to_vec().try_into().unwrap();
+	pub ChainId: BoundedVec<u8, StringLimit> = (*b"dev").to_vec().try_into().unwrap();
+}
+
 impl pallet_cosmos::Config for Runtime {
 	/// Mapping from address to account id.
 	type AddressMapping = compat::cosm::HashedAddressMapping<Self, BlakeTwo256>;
 	/// Currency type for withdraw and balance storage.
 	type Currency = Balances;
-	/// Handle cosmos messages.
-	type MsgHandler = MsgHandler<Self>;
 	/// Convert a length value into a deductible fee based on the currency type.
 	type LengthToFee = IdentityFee<Balance>;
 	/// The overarching event type.
@@ -316,6 +321,18 @@ impl pallet_cosmos::Config for Runtime {
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	/// Convert a weight value into a deductible fee based on the currency type.
 	type WeightToFee = IdentityFee<Balance>;
+	/// Verify the validity of a Cosmos transaction.
+	type AnteHandler = ante::AnteHandlers<Self>;
+	/// The maximum size of the memo.
+	type MaxMemoCharacters = MaxMemoCharacters;
+	/// The native denomination for the currency.
+	type NativeDenom = NativeDenom;
+	/// The maximum length of string value.
+	type StringLimit = StringLimit;
+	/// Router for message service handling.
+	type MsgServiceRouter = MsgServiceRouter<Self>;
+	/// The chain ID.
+	type ChainId = ChainId;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
@@ -394,20 +411,9 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 	fn check_self_contained(&self) -> Option<Result<Self::SignedInfo, TransactionValidityError>> {
 		match self {
 			RuntimeCall::Cosmos(call) => match call.check_self_contained()? {
-				Ok(_) =>
-					if let pallet_cosmos::Call::transact { tx_bytes, chain_id } = call {
-						let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)?;
-						let public_key = tx.auth_info.signer_infos.first()?.clone().public_key?;
-						if let SignerPublicKey::Single(PublicKey::Secp256k1(pk)) = public_key {
-							Some(Ok(Self::SignedInfo::from(pk)))
-						} else {
-							Some(Err(TransactionValidityError::Invalid(
-								InvalidTransaction::BadProof,
-							)))
-						}
-					} else {
-						None
-					},
+				Ok(address) => Some(Ok(
+					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(address),
+				)),
 				Err(e) => Some(Err(e)),
 			},
 			_ => None,
@@ -460,7 +466,6 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 impl Runtime {
 	fn migrate_cosm_account(address: &H160, who: &AccountId) -> Result<Balance, ()> {
 		use fungible::{Inspect, Mutate};
-		use pallet_cosmos::AddressMapping;
 
 		let interim_account =
 			<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(*address);
@@ -482,9 +487,9 @@ impl Runtime {
 
 impl_runtime_apis! {
 	impl hp_rpc::ConvertTxRuntimeApi<Block> for Runtime {
-		fn convert_tx(tx_bytes: Vec<u8>, chain_id: Vec<u8>) -> <Block as BlockT>::Extrinsic {
+		fn convert_tx(tx_bytes: Vec<u8>) -> <Block as BlockT>::Extrinsic {
 			UncheckedExtrinsic::new_unsigned(
-				pallet_cosmos::Call::<Runtime>::transact { tx_bytes, chain_id }.into(),
+				pallet_cosmos::Call::<Runtime>::transact { tx_bytes }.into(),
 			)
 		}
 	}

@@ -3,6 +3,9 @@ resolver = "2"
 members = [
 	"client/rpc",
 	"frame/cosmos",
+	"frame/cosmos/modules",
+	"frame/cosmos/modules/auth",
+	"frame/cosmos/modules/bank",
 	"frame/cosmos-accounts",
 	"primitives/account",
 	"primitives/cosmos",
@@ -21,6 +24,7 @@ cosmrs = "0.15.0"
 futures = "0.3.28"
 hex = "0.4.3"
 jsonrpsee = "0.22.5"
+log = { version = "0.4.21", default-features = false }
 num_enum = { version = "0.7.2", default-features = false }
 parity-scale-codec = { version = "3.2.0", default-features = false }
 ripemd = { version = "0.1.3", default-features = false }
@@ -95,6 +99,10 @@ hp-rpc = { path = "primitives/rpc", default-features = false }
 pallet-cosmos = { path = "frame/cosmos", default-features = false }
 pallet-cosmos-accounts = { path = "frame/cosmos-accounts", default-features = false }
 horizon-template-runtime = { path = "template/runtime", default-features = false }
+
+pallet-cosmos-auth = { path = "frame/cosmos/modules/auth", default-features = false}
+pallet-cosmos-bank = { path = "frame/cosmos/modules/bank", default-features = false}
+pallet-cosmos-modules = { path = "frame/cosmos/modules", default-features = false}
 
 [profile.release]
 panic = "unwind"

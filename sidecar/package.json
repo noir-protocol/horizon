@@ -7,7 +7,7 @@
 		"build": "tsc",
 		"lint": "eslint ./src --ext .ts",
 		"test": "jest",
-		"start": "node --es-module-specifier-resolution=node ./dist/main.js",
+		"start": "npm run build && node --es-module-specifier-resolution=node ./dist/main.js",
 		"fmt": "eslint ./src --ext .ts --fix",
 		"prepare": "patch-package --patch-dir node_modules/@pinot/api/patches"
 	},

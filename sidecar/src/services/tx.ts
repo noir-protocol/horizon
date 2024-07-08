@@ -23,8 +23,10 @@ export class TxService implements ApiService {
   }
 
   public async broadcastTx(txBytes: string): Promise<BroadcastTxResponse> {
-    const hexTx = `0x${Buffer.from(txBytes, "base64").toString("hex")}`;
-    const res = await this.chainApi.rpc["cosm"]["broadcastTx"](hexTx);
+    const rawTx = `0x${Buffer.from(txBytes, "base64").toString("hex")}`;
+    console.debug(`raw transaction: ${rawTx} `)
+
+    const res = await this.chainApi.rpc["cosm"]["broadcastTx"](rawTx);
     let txhash = res.toString();
 
     if (txhash.startsWith("0x")) {
@@ -75,7 +77,7 @@ export class TxService implements ApiService {
       txRaw = txRaw.substring(2);
     }
     const txHash = createHash('sha256').update(Buffer.from(txRaw, 'hex')).digest('hex');
-     
+
     const rawTx = this.db.get(`tx::origin::${txHash.toLowerCase()}`);
     const { code, gasUsed } = await this.checkResult(header, extrinsicIndex);
     const txResult: ResultTx = {
@@ -120,14 +122,16 @@ export class TxService implements ApiService {
           const { refTime } = result[1];
           return { code, gasUsed: refTime };
         } else {
-          const { error } = JSON.parse(data.toString())[0]["module"];
-          const { refTime } = JSON.parse(data.toString())[1]["weight"];
-          let code = error;
-          if (code.startsWith("0x")) {
-            code = code.substring(2);
-          }
-          code = Buffer.from(code, "hex").readUint32LE();
-          return { code, gasUsed: refTime };
+          const _data = JSON.parse(data.toString());
+          console.debug({ _data });
+          // const { refTime } = JSON.parse(data.toString())[1]["weight"];
+          // let code = error;
+          // if (code.startsWith("0x")) {
+          //   code = code.substring(2);
+          // }
+          // code = Buffer.from(code, "hex").readUint32LE();
+
+          return { code: 0, gasUsed: 0 };
         }
       });
     return result[0];

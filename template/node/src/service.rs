@@ -34,7 +34,9 @@ pub(crate) type FullClient = sc_service::TFullClient<
 	WasmExecutor<(
 		sp_io::SubstrateHostFunctions,
 		hp_io::crypto::HostFunctions,
-		hp_io::decode_tx::HostFunctions,
+		hp_io::tx::HostFunctions,
+		hp_io::protobuf_to_scale::HostFunctions,
+		hp_io::signers::HostFunctions,
 	)>,
 >;
 type FullBackend = sc_service::TFullBackend<Block>;
@@ -221,15 +223,10 @@ pub fn new_full(config: Configuration) -> Result<TaskManager, ServiceError> {
 	let rpc_extensions_builder = {
 		let client = client.clone();
 		let pool = transaction_pool.clone();
-		let chain_spec = config.chain_spec.cloned_box();
 
 		Box::new(move |deny_unsafe, _| {
-			let deps = crate::rpc::FullDeps {
-				client: client.clone(),
-				pool: pool.clone(),
-				deny_unsafe,
-				chain_spec: chain_spec.cloned_box(),
-			};
+			let deps =
+				crate::rpc::FullDeps { client: client.clone(), pool: pool.clone(), deny_unsafe };
 			crate::rpc::create_full(deps).map_err(Into::into)
 		})
 	};

@@ -15,117 +15,126 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::error::DecodeTxError;
-use cosmrs::proto::cosmos::bank::v1beta1::MsgSend;
+use crate::{error::DecodeTxError, SequenceNumber};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use sp_core::hashing::sha2_256;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Fee {
-	pub amount: Vec<Coin>,
-	pub gas: String,
-}
-
-impl From<cosmrs::tx::Fee> for Fee {
-	fn from(fee: cosmrs::tx::Fee) -> Self {
-		Self {
-			amount: fee.amount.iter().map(|a| a.clone().into()).collect::<Vec<Coin>>(),
-			gas: fee.gas_limit.to_string(),
-		}
-	}
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Coin {
 	pub amount: String,
 	pub denom: String,
 }
 
-impl From<cosmrs::Coin> for Coin {
-	fn from(coin: cosmrs::Coin) -> Self {
-		Self { amount: coin.amount.to_string(), denom: coin.denom.to_string() }
-	}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AminoSignFee {
+	pub amount: Vec<Coin>,
+	pub gas: String,
 }
 
-impl From<&cosmrs::proto::cosmos::base::v1beta1::Coin> for Coin {
-	fn from(coin: &cosmrs::proto::cosmos::base::v1beta1::Coin) -> Self {
-		Self { amount: coin.amount.to_string(), denom: coin.denom.to_string() }
-	}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MsgSend {
+	pub amount: Vec<Coin>,
+	pub from_address: String,
+	pub to_address: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Msg {
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Any {
 	pub r#type: String,
-	pub value: TypedMsg,
+	pub value: Value,
 }
 
-impl TryFrom<&cosmrs::Any> for Msg {
-	type Error = DecodeTxError;
-
-	fn try_from(msg: &cosmrs::Any) -> Result<Self, Self::Error> {
-		if msg.type_url == "/cosmos.bank.v1beta1.MsgSend" {
-			let msg_send: MsgSend =
-				cosmrs::Any::to_msg(msg).map_err(|_| DecodeTxError::InvalidMsgData)?;
-			let amount = msg_send.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
-			Ok(Self {
-				r#type: "cosmos-sdk/MsgSend".to_string(),
-				value: TypedMsg::MsgSend {
-					amount,
-					from_address: msg_send.from_address,
-					to_address: msg_send.to_address,
-				},
-			})
-		} else {
-			Err(DecodeTxError::UnsupportedMsgType)
-		}
-	}
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-#[serde(untagged)]
-pub enum TypedMsg {
-	MsgSend { amount: Vec<Coin>, from_address: String, to_address: String },
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct SignAminoDoc {
-	pub chain_id: String,
-	pub sequence: String,
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AminoSignDoc {
 	pub account_number: String,
-	pub fee: Fee,
+	pub chain_id: String,
+	pub fee: AminoSignFee,
 	pub memo: String,
-	pub msgs: Vec<Msg>,
+	pub msgs: Vec<Any>,
+	pub sequence: String,
 }
 
-impl SignAminoDoc {
-	pub fn to_json(&self) -> Result<String, DecodeTxError> {
+impl AminoSignDoc {
+	pub fn new(
+		tx: &cosmrs::Tx,
+		chain_id: String,
+		account_number: u64,
+		sequence: SequenceNumber,
+	) -> Result<Self, DecodeTxError> {
+		let fee = AminoSignFee {
+			amount: tx
+				.auth_info
+				.fee
+				.amount
+				.iter()
+				.map(|amt| Coin { amount: amt.amount.to_string(), denom: amt.denom.to_string() })
+				.collect(),
+			gas: tx.auth_info.fee.gas_limit.to_string(),
+		};
+		let mut msgs = Vec::<Any>::new();
+		for msg in tx.body.messages.clone().into_iter() {
+			match msg.type_url.as_str() {
+				"/cosmos.bank.v1beta1.MsgSend" => {
+					let cosmrs::proto::cosmos::bank::v1beta1::MsgSend {
+						from_address,
+						to_address,
+						amount,
+					} = msg.to_msg().map_err(|_| DecodeTxError::InvalidMsgData)?;
+					let amount = amount
+						.iter()
+						.map(|amt| Coin { amount: amt.amount.clone(), denom: amt.denom.clone() })
+						.collect::<Vec<Coin>>();
+					let value = serde_json::to_value(MsgSend { from_address, to_address, amount })
+						.map_err(|_| DecodeTxError::InvalidMsgData)?;
+
+					msgs.push(Any { r#type: "cosmos-sdk/MsgSend".to_string(), value });
+				},
+				_ => {
+					return Err(DecodeTxError::InvalidMsgData);
+				},
+			}
+		}
+
+		Ok(Self {
+			chain_id,
+			sequence: sequence.to_string(),
+			account_number: account_number.to_string(),
+			fee,
+			memo: tx.body.memo.clone(),
+			msgs,
+		})
+	}
+
+	pub fn bytes(&self) -> Result<Vec<u8>, DecodeTxError> {
 		Ok(serde_json::to_value(self)
 			.map_err(|_| DecodeTxError::InvalidSignDoc)?
-			.to_string())
+			.to_string()
+			.as_bytes()
+			.to_vec())
 	}
 
-	pub fn to_bytes(&self) -> Result<Vec<u8>, DecodeTxError> {
-		Ok(self.to_json()?.as_bytes().to_vec())
+	pub fn hash(&self) -> Result<[u8; 32], DecodeTxError> {
+		Ok(sha2_256(&self.bytes()?))
 	}
+}
 
-	pub fn new(tx: &cosmrs::Tx, chain_id: &str) -> Result<Self, DecodeTxError> {
-		if tx.auth_info.signer_infos.is_empty() {
-			return Err(DecodeTxError::EmptySigners)
-		}
-		if let cosmrs::tx::ModeInfo::Single(_) = &tx.auth_info.signer_infos[0].mode_info {
-			let mut msgs: Vec<Msg> = Vec::new();
-			for msg in &tx.body.messages {
-				msgs.push(msg.try_into()?);
-			}
-			Ok(Self {
-				account_number: "0".to_string(),
-				chain_id: chain_id.to_string(),
-				fee: tx.auth_info.fee.clone().into(),
-				memo: tx.body.memo.clone(),
-				msgs,
-				sequence: tx.auth_info.signer_infos[0].sequence.to_string(),
-			})
-		} else {
-			Err(DecodeTxError::UnsupportedSignMode)
-		}
+#[cfg(test)]
+mod tests {
+	use super::AminoSignDoc;
+	use base64ct::{Base64, Encoding};
+
+	#[test]
+	fn test_sign_amino_doc_hash() {
+		let tx_bytes =  "CpoBCpcBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEncKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMW41amd4NjR6dzM4c3M3Nm16dXU0dWM3amV5cXcydmZqazYwZmR6GhcKBGFjZHQSDzEwMDAwMDAwMDAwMDAwMBJsCk4KRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECChCRNB/lZkv6F4LV4Ed5aJBoyRawTLNl7DFTdVaE2aESBAoCCH8SGgoSCgRhY2R0EgoxMDQwMDAwMDAwEIDa8esEGkBgXIiPoBpecG7QpKDJPaztFogqvmxjDHF5ORfWBrOoSzf0+AAmch1CXrG4OmiKL0y8v9ITx0QzWYUc7ueXcdIm";
+		let tx_bytes = Base64::decode_vec(tx_bytes).unwrap();
+		let tx = cosmrs::Tx::from_bytes(&tx_bytes).unwrap();
+		let sequence = tx.auth_info.signer_infos.first().unwrap().sequence;
+		let sign_doc = AminoSignDoc::new(&tx, "dev".to_string(), 0u64, sequence).unwrap();
+		let hash = &sign_doc.hash().unwrap();
+		assert_eq!(
+			array_bytes::bytes2hex("", hash),
+			"714d4bdfdbd0bd630ebdf93b1f6eba7d3c752e92bbab6c9d3d9c93e1777348bb"
+		);
 	}
 }

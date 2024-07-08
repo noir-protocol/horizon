@@ -19,27 +19,20 @@
 
 pub mod error;
 #[cfg(feature = "std")]
-mod legacy;
+pub mod legacy;
+pub mod msgs;
+#[cfg(feature = "std")]
+pub mod sign_doc;
 
 #[cfg(feature = "std")]
-use cosmrs::{tendermint::chain, tx::SignMode};
-#[cfg(feature = "std")]
 use error::DecodeTxError;
-#[cfg(feature = "std")]
-use legacy::SignAminoDoc;
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
-#[cfg(feature = "with-serde")]
-use serde::{Deserialize, Serialize};
-#[cfg(feature = "std")]
-use sp_core::hashing::sha2_256;
-use sp_core::{H160, H256};
+use sp_core::H160;
 #[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
-#[cfg(feature = "std")]
-use std::str::FromStr;
 
 pub type SequenceNumber = u64;
 pub type SignatureBytes = Vec<u8>;
@@ -47,136 +40,39 @@ pub type Gas = u64;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Tx {
 	pub body: Body,
 	pub auth_info: AuthInfo,
 	pub signatures: Vec<SignatureBytes>,
-	pub hash: H256,
-	pub len: u32,
-}
-
-impl Tx {
-	pub fn is_valid(&self) -> bool {
-		self.validate_basic() && self.validate_extras()
-	}
-
-	fn validate_basic(&self) -> bool {
-		if self.auth_info.signer_infos.is_empty() {
-			return false;
-		}
-		if self.body.messages.is_empty() {
-			return false;
-		}
-		if self.signatures.is_empty() {
-			return false;
-		}
-		if self.auth_info.fee.amount.is_empty() {
-			return false;
-		}
-		true
-	}
-
-	fn validate_extras(&self) -> bool {
-		if self.auth_info.signer_infos.len() > 1 {
-			return false;
-		}
-		if self.body.messages.len() > 1 {
-			return false;
-		}
-		if self.signatures.len() > 1 {
-			return false;
-		}
-		if self.auth_info.fee.amount.len() > 1 {
-			return false;
-		}
-		true
-	}
+	pub raw: Vec<u8>,
 }
 
 #[cfg(feature = "std")]
 impl Tx {
-	pub fn decode(tx_bytes: &[u8], chain_id: &[u8]) -> Result<Self, DecodeTxError> {
+	pub fn decode(tx_bytes: &[u8]) -> Result<Self, DecodeTxError> {
 		if tx_bytes.is_empty() {
 			return Err(DecodeTxError::EmptyTxBytes);
 		}
 
 		let tx_origin =
 			cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeTxError::InvalidTxData)?;
-		validate_basic(&tx_origin)?;
-		validate_extras(&tx_origin)?;
-
 		let signatures = tx_origin.signatures.to_vec();
 
-		let chain_id = std::str::from_utf8(chain_id).unwrap();
-		let sign_doc = match tx_origin.auth_info.signer_infos[0].mode_info {
-			cosmrs::tx::ModeInfo::Single(single) => match single.mode {
-				SignMode::Direct => {
-					let chain_id = chain::Id::from_str(chain_id).unwrap();
-					let sign_doc = cosmrs::tx::SignDoc::new(
-						&tx_origin.body,
-						&tx_origin.auth_info,
-						&chain_id,
-						0u64,
-					)
-					.map_err(|_| DecodeTxError::InvalidTxData)?;
-					sign_doc.into_bytes().map_err(|_| DecodeTxError::InvalidSignDoc)?
-				},
-				SignMode::LegacyAminoJson => SignAminoDoc::new(&tx_origin, chain_id)?.to_bytes()?,
-				_ => return Err(DecodeTxError::UnsupportedSignMode),
-			},
-			_ => return Err(DecodeTxError::UnsupportedSignMode),
-		};
-		let len = tx_bytes.len().try_into().map_err(|_| DecodeTxError::TooLongTxBytes)?;
 		Ok(Self {
 			body: tx_origin.body.try_into()?,
 			auth_info: tx_origin.auth_info.try_into()?,
 			signatures,
-			hash: sha2_256(&sign_doc).into(),
-			len,
+			raw: tx_bytes.to_vec(),
 		})
 	}
 }
 
-#[cfg(feature = "std")]
-fn validate_basic(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
-	if tx.auth_info.signer_infos.is_empty() {
-		return Err(DecodeTxError::EmptySigners);
-	}
-	if tx.body.messages.is_empty() {
-		return Err(DecodeTxError::EmptyMessages);
-	}
-	if tx.signatures.is_empty() {
-		return Err(DecodeTxError::EmptySignatures);
-	}
-	if tx.auth_info.fee.amount.is_empty() {
-		return Err(DecodeTxError::EmptyFeeAmount);
-	}
-	Ok(())
-}
-
-#[cfg(feature = "std")]
-fn validate_extras(tx: &cosmrs::Tx) -> Result<(), DecodeTxError> {
-	if tx.auth_info.signer_infos.len() > 1 {
-		return Err(DecodeTxError::TooManySigners);
-	}
-	if tx.body.messages.len() > 1 {
-		return Err(DecodeTxError::TooManyMessages);
-	}
-	if tx.signatures.len() > 1 {
-		return Err(DecodeTxError::TooManySignatures);
-	}
-	if tx.auth_info.fee.amount.len() > 1 {
-		return Err(DecodeTxError::TooManyFeeAmount);
-	}
-	Ok(())
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Body {
-	pub messages: Vec<Msg>,
+	pub messages: Vec<Any>,
+	pub memo: Vec<u8>,
+	pub timeout_height: u64,
 }
 
 #[cfg(feature = "std")]
@@ -184,67 +80,34 @@ impl TryFrom<cosmrs::tx::Body> for Body {
 	type Error = DecodeTxError;
 
 	fn try_from(body: cosmrs::tx::Body) -> Result<Self, Self::Error> {
-		let mut messages: Vec<Msg> = Vec::new();
+		let mut messages: Vec<Any> = Vec::new();
 		for msg in body.messages {
-			messages.push(msg.try_into()?);
+			messages.push(msg.into());
 		}
-		Ok(Self { messages })
+		Ok(Self {
+			messages,
+			memo: body.memo.as_bytes().to_vec(),
+			timeout_height: body.timeout_height.into(),
+		})
 	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
-pub enum Msg {
-	MsgSend { from_address: H160, to_address: H160, amount: Vec<Coin> },
+pub struct Any {
+	pub type_url: Vec<u8>,
+	pub value: Vec<u8>,
 }
 
 #[cfg(feature = "std")]
-impl TryFrom<cosmrs::Any> for Msg {
-	type Error = DecodeTxError;
-
-	fn try_from(any: cosmrs::Any) -> Result<Self, Self::Error> {
-		Self::try_from(&any)
-	}
-}
-
-#[cfg(feature = "std")]
-impl TryFrom<&cosmrs::Any> for Msg {
-	type Error = DecodeTxError;
-
-	fn try_from(any: &cosmrs::Any) -> Result<Self, Self::Error> {
-		use cosmrs::proto::cosmos::bank::v1beta1::MsgSend;
-		if any.type_url == "/cosmos.bank.v1beta1.MsgSend" {
-			let typed_msg: MsgSend =
-				cosmrs::Any::to_msg(any).map_err(|_| DecodeTxError::InvalidMsgData)?;
-			let typed_msg: cosmrs::bank::MsgSend =
-				typed_msg.try_into().map_err(|_| DecodeTxError::InvalidMsgData)?;
-			if typed_msg.amount.is_empty() {
-				return Err(DecodeTxError::EmptyMsgSendAmount);
-			}
-			if typed_msg.amount.len() > 1 {
-				return Err(DecodeTxError::TooManyMsgSendAmount);
-			}
-			let amount = typed_msg.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
-			let mut from_address: [u8; 20] = [0u8; 20];
-			from_address.copy_from_slice(&typed_msg.from_address.to_bytes()[..]);
-			let mut to_address: [u8; 20] = [0u8; 20];
-			to_address.copy_from_slice(&typed_msg.to_address.to_bytes()[..]);
-
-			Ok(Msg::MsgSend {
-				from_address: from_address.into(),
-				to_address: to_address.into(),
-				amount,
-			})
-		} else {
-			Err(DecodeTxError::UnsupportedMsgType)
-		}
+impl From<cosmrs::Any> for Any {
+	fn from(any: cosmrs::Any) -> Self {
+		Any { type_url: any.type_url.as_bytes().to_vec(), value: any.value }
 	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct AuthInfo {
 	pub signer_infos: Vec<SignerInfo>,
 	pub fee: Fee,
@@ -263,11 +126,68 @@ impl TryFrom<cosmrs::tx::AuthInfo> for AuthInfo {
 	}
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[repr(i32)]
+pub enum SignMode {
+	Unspecified = 0,
+	Direct = 1,
+	Textual = 2,
+	DirectAux = 3,
+	LegacyAminoJson = 127,
+	Eip191 = 191,
+}
+
+#[cfg(feature = "std")]
+impl From<cosmrs::tx::SignMode> for SignMode {
+	fn from(sign_mode: cosmrs::tx::SignMode) -> Self {
+		match sign_mode {
+			cosmrs::tx::SignMode::Unspecified => SignMode::Unspecified,
+			cosmrs::tx::SignMode::Direct => SignMode::Direct,
+			cosmrs::tx::SignMode::Textual => SignMode::Textual,
+			cosmrs::tx::SignMode::DirectAux => SignMode::DirectAux,
+			cosmrs::tx::SignMode::LegacyAminoJson => SignMode::LegacyAminoJson,
+			cosmrs::tx::SignMode::Eip191 => SignMode::Eip191,
+		}
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+pub struct Single {
+	pub mode: SignMode,
+}
+
+#[cfg(feature = "std")]
+impl From<cosmrs::tx::mode_info::Single> for Single {
+	fn from(single: cosmrs::tx::mode_info::Single) -> Self {
+		Single { mode: single.mode.into() }
+	}
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+pub enum ModeInfo {
+	Single(Single),
+}
+
+#[cfg(feature = "std")]
+impl TryFrom<cosmrs::tx::ModeInfo> for ModeInfo {
+	type Error = DecodeTxError;
+
+	fn try_from(mode_info: cosmrs::tx::ModeInfo) -> Result<Self, Self::Error> {
+		match mode_info {
+			cosmrs::tx::ModeInfo::Single(single) => Ok(ModeInfo::Single(single.into())),
+			_ => Err(DecodeTxError::UnsupportedSigningMode),
+		}
+	}
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
 pub struct SignerInfo {
 	pub public_key: Option<SignerPublicKey>,
+	pub mode_info: ModeInfo,
 	pub sequence: SequenceNumber,
 }
 
@@ -295,13 +215,16 @@ impl TryFrom<cosmrs::tx::SignerInfo> for SignerInfo {
 			},
 			None => None,
 		};
-		Ok(Self { public_key, sequence: signer_info.sequence })
+		Ok(Self {
+			public_key,
+			mode_info: signer_info.mode_info.try_into()?,
+			sequence: signer_info.sequence,
+		})
 	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub enum SignerPublicKey {
 	/// Single singer.
 	Single(PublicKey),
@@ -309,7 +232,6 @@ pub enum SignerPublicKey {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub enum PublicKey {
 	Ed25519([u8; 32]),
 	Secp256k1([u8; 33]),
@@ -317,10 +239,11 @@ pub enum PublicKey {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Fee {
 	pub amount: Vec<Coin>,
 	pub gas_limit: Gas,
+	pub payer: Option<AccountId>,
+	pub granter: Option<AccountId>,
 }
 
 #[cfg(feature = "std")]
@@ -332,13 +255,15 @@ impl TryFrom<cosmrs::tx::Fee> for Fee {
 			return Err(DecodeTxError::EmptyFeeAmount);
 		}
 		let amount = fee.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
-		Ok(Self { amount, gas_limit: fee.gas_limit })
+		let payer = fee.payer.map(Into::into);
+		let granter = fee.granter.map(Into::into);
+
+		Ok(Self { amount, gas_limit: fee.gas_limit, payer, granter })
 	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Account {
 	pub sequence: SequenceNumber,
 	pub amount: u128,
@@ -346,7 +271,6 @@ pub struct Account {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
 pub struct Coin {
 	pub denom: Vec<u8>,
 	pub amount: u128,
@@ -360,22 +284,18 @@ impl From<&cosmrs::Coin> for Coin {
 	}
 }
 
-#[cfg(test)]
-mod tests {
-	use crate::legacy::SignAminoDoc;
-	use base64ct::{Base64, Encoding};
-	use sp_core::hashing::sha2_256;
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+pub struct AccountId {
+	pub hrp: Vec<u8>,
+	pub address: H160,
+}
 
-	#[test]
-	fn test_sign_amino_doc_hash() {
-		let tx_bytes =  "Cp0BCpgBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEngKLWNvc21vczFwdnJhbjRkbDl1NzNxNXo0dzNtY2xnbDUzMGtsdHdxY2EwMnk4ZBItY29zbW9zMThwd3ZxajB0ZG5oZ20zM241bG4wMjBqdnk4MjBmcjI5aDJtc213GhgKBHVjZHQSEDEwMDAwMDAwMDAwMDAwMDASABJkClAKRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiED9ZPCan9HZlZbW/+hDSWLfy6cW+aPzrjSILmLmCSnUUcSBAoCCH8YABIQCgoKBHVjZHQSAjI1EKCNBhpA0YAS1zXHInFcdO2w/tZjTEWa9fNs53mTsitzpx21mxRVaJv8lJ2eErg+/IWvCWLHfsh71fMxOY2AJ7DrQIzTxg==";
-		let tx_bytes = Base64::decode_vec(tx_bytes).unwrap();
-		let tx = cosmrs::Tx::from_bytes(&tx_bytes).unwrap();
-		let sign_doc = SignAminoDoc::new(&tx, "noir").unwrap();
-		let hash = sha2_256(&sign_doc.to_bytes().unwrap());
-		assert_eq!(
-			array_bytes::bytes2hex("", &hash),
-			"c853e81f04e499cb842c67b8c75a1e23d60bdc02ee51ff9f5e28925f5d9706a8"
-		);
+#[cfg(feature = "std")]
+impl From<cosmrs::AccountId> for AccountId {
+	fn from(account_id: cosmrs::AccountId) -> Self {
+		let hrp = account_id.prefix().as_bytes().to_vec();
+		let address = H160::from_slice(&account_id.to_bytes());
+		Self { hrp, address }
 	}
 }

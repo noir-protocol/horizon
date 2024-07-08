@@ -1,4 +1,4 @@
-// This file is part of Horizon.
+// This file is part of Hrozion.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -16,16 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub mod cosm;
+use pallet_cosmos_bank::msgs::MsgSendHandler;
+use pallet_cosmos_modules::msgs::MsgHandler;
 
-use crate::{errors::CosmosError, Config};
-use frame_support::weights::Weight;
-use sp_core::H160;
-
-pub trait MsgHandler<T: Config> {
-	fn msg_send(
-		from_address: &H160,
-		to_address: &H160,
-		amount: u128,
-	) -> Result<Weight, CosmosError>;
+pub struct MsgServiceRouter<T>(sp_std::marker::PhantomData<T>);
+impl<T> pallet_cosmos_modules::msgs::MsgServiceRouter for MsgServiceRouter<T>
+where
+	T: frame_system::Config + pallet_cosmos::Config,
+{
+	fn route(type_url: &[u8]) -> Option<sp_std::boxed::Box<dyn MsgHandler>> {
+		match type_url {
+			b"/cosmos.bank.v1beta1.MsgSend" =>
+				Some(sp_std::boxed::Box::<MsgSendHandler<T>>::default()),
+			_ => None,
+		}
+	}
 }

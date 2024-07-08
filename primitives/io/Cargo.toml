@@ -9,15 +9,19 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+cosmrs = { workspace = true, optional = true }
+sp-std = { workspace = true }
 sp-runtime-interface = { workspace = true }
 
-hp-cosmos = { workspace = true, features = ["with-codec"] }
+hp-cosmos = { workspace = true, features = ["with-codec", "with-serde"] }
 hp-crypto = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-  "sp-runtime-interface/std", 
+  "cosmrs",
+  "sp-std/std",
+  "sp-runtime-interface/std",
   "hp-cosmos/std",
-  "hp-crypto/std"
+  "hp-crypto/std",
 ]

@@ -15,60 +15,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::fmt::Display;
-
 #[derive(Copy, Clone, Debug)]
 pub enum DecodeTxError {
 	EmptyFeeAmount,
-	EmptyMessages,
-	EmptyMsgSendAmount,
-	EmptySignatures,
-	EmptySigners,
 	EmptyTxBytes,
 	InvalidMsgData,
 	InvalidSignDoc,
 	InvalidTxData,
-	TooLongTxBytes,
-	TooManyFeeAmount,
-	TooManyMsgSendAmount,
-	TooManyMessages,
-	TooManySignatures,
-	TooManySigners,
-	UnsupportedMsgType,
+	InvalidChainId,
 	UnsupportedSignerType,
-	UnsupportedSignMode,
+	UnsupportedSigningMode,
 }
 
-impl Display for DecodeTxError {
-	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-		match self {
-			DecodeTxError::EmptyFeeAmount => write!(f, "empty fee amount"),
-			DecodeTxError::EmptyMessages => write!(f, "empty messages"),
-			DecodeTxError::EmptyMsgSendAmount => write!(f, "empty message send amount"),
-			DecodeTxError::EmptySignatures => write!(f, "empty signatures"),
-			DecodeTxError::EmptySigners => write!(f, "empty signers"),
-			DecodeTxError::EmptyTxBytes => write!(f, "empty tx bytes"),
-			DecodeTxError::InvalidMsgData => write!(f, "invalid message data"),
-			DecodeTxError::InvalidSignDoc => write!(f, "invalid sign doc"),
-			DecodeTxError::InvalidTxData => write!(f, "invalid tx data"),
-			DecodeTxError::TooLongTxBytes => write!(f, "too long tx bytes"),
-			DecodeTxError::TooManyFeeAmount => write!(f, "too many fee amount"),
-			DecodeTxError::TooManyMessages => write!(f, "too many messages"),
-			DecodeTxError::TooManyMsgSendAmount => write!(f, "too many message send amount"),
-			DecodeTxError::TooManySignatures => write!(f, "too many signatures"),
-			DecodeTxError::TooManySigners => write!(f, "too many signers"),
-			DecodeTxError::UnsupportedMsgType => write!(f, "unsupported message type"),
-			DecodeTxError::UnsupportedSignerType => write!(f, "unsupported signer type"),
-			DecodeTxError::UnsupportedSignMode => write!(f, "unsupported sign mode"),
-		}
-	}
-}
-
-#[repr(u8)]
-#[derive(num_enum::FromPrimitive, num_enum::IntoPrimitive)]
-pub enum TransactionValidationError {
-	#[allow(dead_code)]
-	#[num_enum(default)]
-	InvalidSignature = 2,
-	UnsupportedSignerType = 128,
+#[derive(Copy, Clone, Debug)]
+pub enum DecodeMsgError {
+	InvalidTypeUrl,
+	UnsupportedType,
+	InvalidValue,
 }

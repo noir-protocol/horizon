@@ -14,7 +14,6 @@ jsonrpsee = { workspace = true, features = ["server", "macros"] }
 hex = { workspace = true }
 
 # Substrate
-sc-chain-spec = { workspace = true }
 sc-transaction-pool-api = { workspace = true }
 sp-api = { workspace = true, features = ["std"] }
 sp-blockchain = { workspace = true }
@@ -22,5 +21,4 @@ sp-core = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
 
 # Horizon
-hp-cosmos = { workspace = true, features = ["std"] }
 hp-rpc = { workspace = true, features = ["std"] }

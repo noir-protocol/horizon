@@ -24,6 +24,6 @@ use sp_std::vec::Vec;
 
 sp_api::decl_runtime_apis! {
 	pub trait ConvertTxRuntimeApi {
-		fn convert_tx(tx_bytes: Vec<u8>, chain_id: Vec<u8>) -> <Block as BlockT>::Extrinsic;
+		fn convert_tx(tx_bytes: Vec<u8>) -> <Block as BlockT>::Extrinsic;
 	}
 }

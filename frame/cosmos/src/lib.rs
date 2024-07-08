@@ -20,31 +20,32 @@
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
 pub mod errors;
-pub mod handler;
 pub mod weights;
 
-pub use self::{handler::MsgHandler, pallet::*};
-use crate::errors::{CosmosError, CosmosErrorCode};
+pub use self::pallet::*;
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
-	pallet_prelude::{DispatchClass, DispatchResultWithPostInfo, Pays},
+	pallet_prelude::{DispatchResultWithPostInfo, Pays},
 	traits::{
 		tokens::{fungible::Inspect, Fortitude, Preservation},
-		Currency, ExistenceRequirement, Get, WithdrawReasons,
+		Currency, Get,
 	},
-	weights::{Weight, WeightToFee},
+	weights::{constants::ExtrinsicBaseWeight, Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use hp_cosmos::{Account, Msg};
+use hp_cosmos::{Account, PublicKey, SignerPublicKey};
+use hp_io::crypto::ripemd160;
+use pallet_cosmos_modules::{ante::AnteHandler, msgs::MsgServiceRouter};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
+use sp_io::hashing::sha2_256;
 use sp_runtime::{
 	traits::{BadOrigin, Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	RuntimeDebug,
+	DispatchError, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
 pub use weights::*;
@@ -75,32 +76,25 @@ where
 	}
 
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
-		if let Call::transact { tx_bytes, chain_id } = self {
-			let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)?;
-			let check = || {
-				if let Some(hp_cosmos::SignerPublicKey::Single(hp_cosmos::PublicKey::Secp256k1(
-					pk,
-				))) = tx.auth_info.signer_infos[0].public_key
-				{
-					if hp_io::crypto::secp256k1_ecdsa_verify(
-						&tx.signatures[0],
-						tx.hash.as_bytes(),
-						&pk,
-					) {
-						Ok(hp_io::crypto::ripemd160(&sp_io::hashing::sha2_256(&pk)).into())
-					} else {
-						Err(InvalidTransaction::Custom(
-							hp_cosmos::error::TransactionValidationError::InvalidSignature as u8,
-						))?
-					}
-				} else {
-					Err(InvalidTransaction::Custom(
-						hp_cosmos::error::TransactionValidationError::UnsupportedSignerType as u8,
-					))?
-				}
-			};
+		if let Call::transact { tx_bytes } = self {
+			let tx = hp_io::tx::decode(tx_bytes)?;
 
-			Some(check())
+			if let Err(e) = T::AnteHandler::handle(&tx) {
+				return Some(Err(e));
+			}
+
+			if let Some(signer) = tx.auth_info.signer_infos.first() {
+				if let Some(SignerPublicKey::Single(PublicKey::Secp256k1(public_key))) =
+					signer.public_key
+				{
+					let address = ripemd160(&sha2_256(&public_key)).into();
+					Some(Ok(address))
+				} else {
+					Some(Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)))
+				}
+			} else {
+				Some(Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)))
+			}
 		} else {
 			None
 		}
@@ -112,12 +106,12 @@ where
 		dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
 		len: usize,
 	) -> Option<Result<(), TransactionValidityError>> {
-		if let Call::transact { tx_bytes, chain_id } = self {
+		if let Call::transact { tx_bytes } = self {
 			if let Err(e) = CheckWeight::<T>::do_pre_dispatch(dispatch_info, len) {
 				return Some(Err(e));
 			}
 
-			Some(Pallet::<T>::validate_transaction_in_block(*origin, tx_bytes, chain_id))
+			Some(Pallet::<T>::validate_transaction_in_block(*origin, tx_bytes))
 		} else {
 			None
 		}
@@ -129,12 +123,12 @@ where
 		dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
 		len: usize,
 	) -> Option<TransactionValidity> {
-		if let Call::transact { tx_bytes, chain_id } = self {
+		if let Call::transact { tx_bytes } = self {
 			if let Err(e) = CheckWeight::<T>::do_validate(dispatch_info, len) {
 				return Some(Err(e));
 			}
 
-			Some(Pallet::<T>::validate_transaction_in_pool(*origin, tx_bytes, chain_id))
+			Some(Pallet::<T>::validate_transaction_in_pool(*origin, tx_bytes))
 		} else {
 			None
 		}
@@ -168,6 +162,8 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
+	use hp_cosmos::Any;
+	use pallet_cosmos_modules::{ante::AnteHandler, msgs::MsgServiceRouter};
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -186,8 +182,6 @@ pub mod pallet {
 		type AddressMapping: AddressMapping<Self::AccountId>;
 		/// Currency type for withdraw and balance storage.
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
-		/// Handle cosmos messages.
-		type MsgHandler: MsgHandler<Self>;
 		/// Convert a length value into a deductible fee based on the currency type.
 		type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
 		/// The overarching event type.
@@ -199,12 +193,28 @@ pub mod pallet {
 		type WeightPrice: Convert<Weight, BalanceOf<Self>>;
 		/// Convert a weight value into a deductible fee based on the currency type.
 		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
+		/// Verify the validity of a Cosmos transaction.
+		type AnteHandler: AnteHandler;
+		/// The maximum size of the memo.
+		#[pallet::constant]
+		type MaxMemoCharacters: Get<u64>;
+		/// The native denomination for the currency.
+		#[pallet::constant]
+		type NativeDenom: Get<BoundedVec<u8, Self::StringLimit>>;
+		/// The maximum length of string value.
+		#[pallet::constant]
+		type StringLimit: Get<u32>;
+		/// Router for message service handling.
+		type MsgServiceRouter: MsgServiceRouter;
+		/// The chain ID.
+		#[pallet::constant]
+		type ChainId: Get<BoundedVec<u8, Self::StringLimit>>;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event {
-		Executed { code: u32, gas_used: Weight, messages: Vec<Msg> },
+		Executed { gas_used: Weight, messages: Vec<Any> },
 	}
 
 	#[pallet::error]
@@ -225,19 +235,10 @@ pub mod pallet {
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
 		#[pallet::weight({ 0 })]
-		pub fn transact(
-			origin: OriginFor<T>,
-			tx_bytes: Vec<u8>,
-			chain_id: Vec<u8>,
-		) -> DispatchResultWithPostInfo {
+		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
-			let tx = hp_io::decode_tx::decode(&tx_bytes, &chain_id).unwrap();
-			if !tx.is_valid() {
-				return Err(DispatchErrorWithPostInfo {
-					post_info: Default::default(),
-					error: Error::<T>::InvalidTx.into(),
-				});
-			}
+			let tx = hp_io::tx::decode(&tx_bytes).unwrap();
+
 			Self::apply_validated_transaction(source, tx)
 		}
 	}
@@ -251,59 +252,30 @@ impl<T: Config> Pallet<T> {
 	pub fn validate_transaction_in_block(
 		origin: H160,
 		tx_bytes: &[u8],
-		chain_id: &[u8],
 	) -> Result<(), TransactionValidityError> {
-		let (who, _) = Self::account(&origin);
-		let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)
+		let (_who, _) = Self::account(&origin);
+		let tx = hp_io::tx::decode(tx_bytes)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-		if tx.auth_info.signer_infos[0].sequence < who.sequence {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
-		} else if tx.auth_info.signer_infos[0].sequence > who.sequence {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Future));
-		}
-
-		let mut total_payment = 0u128;
-		total_payment = total_payment.saturating_add(tx.auth_info.fee.amount[0].amount);
-		match &tx.body.messages[0] {
-			Msg::MsgSend { amount, .. } => {
-				total_payment = total_payment.saturating_add(amount[0].amount);
-			},
-		}
-		if total_payment > who.amount {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment));
-		}
+		T::AnteHandler::handle(&tx)?;
 
 		Ok(())
 	}
 
 	// Controls that must be performed by the pool.
-	fn validate_transaction_in_pool(
-		origin: H160,
-		tx_bytes: &[u8],
-		chain_id: &[u8],
-	) -> TransactionValidity {
+	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		let tx = hp_io::decode_tx::decode(tx_bytes, chain_id)
+		let tx = hp_io::tx::decode(tx_bytes)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-		let transaction_nonce = tx.auth_info.signer_infos[0].sequence;
+		T::AnteHandler::handle(&tx)?;
 
-		if transaction_nonce < who.sequence {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
-		} else if transaction_nonce > who.sequence {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Future));
-		}
-		let mut total_payment = 0u128;
-		total_payment = total_payment.saturating_add(tx.auth_info.fee.amount[0].amount);
-		match &tx.body.messages[0] {
-			Msg::MsgSend { amount, .. } => {
-				total_payment = total_payment.saturating_add(amount[0].amount);
-			},
-		}
-		if total_payment > who.amount {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment));
-		}
+		let transaction_nonce = tx
+			.auth_info
+			.signer_infos
+			.first()
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?
+			.sequence;
 
 		let mut builder =
 			ValidTransactionBuilder::default().and_provides((origin, transaction_nonce));
@@ -320,94 +292,31 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
-		sp_io::storage::start_transaction();
-		match Self::execute(&source, &tx) {
-			Ok(weight) => {
-				Self::deposit_event(Event::Executed {
-					code: 0u32,
-					gas_used: weight,
-					messages: tx.body.messages.clone(),
-				});
-				sp_io::storage::commit_transaction();
-				Ok(PostDispatchInfo { actual_weight: Some(weight), pays_fee: Pays::No })
-			},
-			Err(e) => {
-				sp_io::storage::rollback_transaction();
-				Self::deposit_event(Event::Executed {
-					code: e.error as u32,
-					gas_used: e.weight,
-					messages: tx.body.messages.clone(),
-				});
-				let origin = T::AddressMapping::into_account_id(source);
-				let fee = Self::compute_fee(tx.len, e.weight);
-				if T::Currency::withdraw(
-					&origin,
-					fee,
-					WithdrawReasons::FEE,
-					ExistenceRequirement::AllowDeath,
-				)
-				.is_ok()
-				{
-					Ok(PostDispatchInfo { actual_weight: Some(e.weight), pays_fee: Pays::No })
-				} else {
-					Err(DispatchErrorWithPostInfo {
+		let mut total_weight = ExtrinsicBaseWeight::get();
+
+		for msg in tx.body.messages.iter() {
+			let handler = T::MsgServiceRouter::route(&msg.type_url).unwrap();
+			match handler.handle(msg) {
+				Ok(weight) => {
+					total_weight = total_weight.saturating_add(weight);
+				},
+				Err(e) => {
+					total_weight = total_weight.saturating_add(e.weight);
+
+					return Err(DispatchErrorWithPostInfo {
 						post_info: PostDispatchInfo {
-							actual_weight: Some(e.weight),
-							pays_fee: Pays::No,
+							actual_weight: Some(total_weight),
+							pays_fee: Pays::Yes,
 						},
-						error: Error::<T>::InsufficientFee.into(),
-					})
-				}
-			},
-		}
-	}
-
-	fn execute(source: &H160, tx: &hp_cosmos::Tx) -> Result<Weight, CosmosError> {
-		let mut total_weight = Weight::zero();
-		total_weight = total_weight
-			.saturating_add(T::BlockWeights::get().get(DispatchClass::Normal).base_extrinsic);
-		match &tx.body.messages[0] {
-			hp_cosmos::Msg::MsgSend { from_address, to_address, amount } => {
-				if *source != *from_address {
-					return Err(CosmosError {
-						weight: total_weight,
-						error: CosmosErrorCode::ErrUnauthorized,
+						error: DispatchError::Other("Invalid msg"),
 					});
-				}
-				let weight = T::MsgHandler::msg_send(from_address, to_address, amount[0].amount)
-					.map_err(|e| CosmosError {
-						weight: total_weight.saturating_add(e.weight),
-						error: e.error,
-					})?;
-				total_weight = total_weight.saturating_add(weight);
-			},
-		};
-
-		// Includes weights of finding origin, increment account nonce, withdraw fee.
-		total_weight = total_weight.saturating_add(
-			T::DbWeight::get().reads(3).saturating_add(T::DbWeight::get().writes(2)),
-		);
-		let fee = Self::compute_fee(tx.len, total_weight);
-		let maximum_fee = tx.auth_info.fee.amount[0].amount.unique_saturated_into();
-		if fee > maximum_fee {
-			return Err(CosmosError {
-				weight: total_weight,
-				error: CosmosErrorCode::ErrInsufficientFee,
-			});
+				},
+			}
 		}
-		let origin = T::AddressMapping::into_account_id(*source);
-		let _ = T::Currency::withdraw(
-			&origin,
-			fee,
-			WithdrawReasons::FEE,
-			ExistenceRequirement::AllowDeath,
-		)
-		.map_err(|_| CosmosError {
-			weight: total_weight,
-			error: CosmosErrorCode::ErrInsufficientFee,
-		})?;
-		frame_system::Pallet::<T>::inc_account_nonce(origin);
-		Ok(total_weight)
+
+		Self::deposit_event(Event::Executed { gas_used: total_weight, messages: tx.body.messages });
+
+		Ok(PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes })
 	}
 
 	/// Get the base account info.

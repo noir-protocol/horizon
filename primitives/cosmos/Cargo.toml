@@ -11,7 +11,9 @@ targets = ["x86_64-unknown-linux-gnu"]
 [dependencies]
 cosmrs = { workspace = true, optional = true }
 num_enum = { workspace = true }
-parity-scale-codec = { workspace = true, features = ["derive"], optional = true }
+parity-scale-codec = { workspace = true, features = [
+  "derive",
+], optional = true }
 scale-info = { workspace = true, features = ["derive"], optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde_json = { workspace = true, optional = true }
