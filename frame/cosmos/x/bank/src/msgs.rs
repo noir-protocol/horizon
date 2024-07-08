@@ -23,7 +23,7 @@ use frame_support::{
 use hp_cosmos::{msgs::MsgSend, Any, Coin};
 use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_modules::msgs::{MsgHandlerError, MsgHandlerErrorInfo};
+use pallet_cosmos_x::msgs::{MsgHandlerError, MsgHandlerErrorInfo};
 use sp_runtime::{format_runtime_string, SaturatedConversion};
 
 pub struct MsgSendHandler<T>(PhantomData<T>);
@@ -34,7 +34,7 @@ impl<T> Default for MsgSendHandler<T> {
 	}
 }
 
-impl<T> pallet_cosmos_modules::msgs::MsgHandler for MsgSendHandler<T>
+impl<T> pallet_cosmos_x::msgs::MsgHandler for MsgSendHandler<T>
 where
 	T: pallet_cosmos::Config,
 {
@@ -60,7 +60,7 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn to_msg(msg: &Any) -> Result<MsgSend, MsgHandlerError> {
-		let (_, value) = hp_io::protobuf_to_scale::to_scale(&msg.type_url, &msg.value)
+		let (_, value) = hp_io::cosmos::protobuf_to_scale(&msg.type_url, &msg.value)
 			.ok_or(MsgHandlerError::InvalidMsg)?;
 		Decode::decode(&mut &value[..]).map_err(|_| MsgHandlerError::InvalidMsg)
 	}

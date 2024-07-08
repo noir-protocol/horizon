@@ -29,7 +29,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec =
-	sc_service::GenericChainSpec<RuntimeGenesisConfig, NoExtension, hp_io::crypto::HostFunctions>;
+	sc_service::GenericChainSpec<RuntimeGenesisConfig, NoExtension, hp_io::cosmos::HostFunctions>;
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {

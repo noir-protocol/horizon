@@ -24,9 +24,9 @@ use hp_cosmos::AccountId;
 use sp_runtime_interface::runtime_interface;
 use sp_std::vec::Vec;
 
-/// Interface for working with crypto related types from within the runtime.
+/// Interface for working with crypto-related, handling Cosmos transactions and messages.
 #[runtime_interface]
-pub trait Crypto {
+pub trait Cosmos {
 	/// Hash with ripemd160.
 	fn ripemd160(msg: &[u8]) -> [u8; 20] {
 		hp_crypto::ripemd160(msg)
@@ -36,13 +36,9 @@ pub trait Crypto {
 	fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
 		hp_crypto::secp256k1_ecdsa_verify(sig, msg, pub_key)
 	}
-}
 
-/// Interface for decoding raw type cosmos transaction to cosmos tx.
-#[runtime_interface]
-pub trait Tx {
 	/// Decode raw type cosmos transaction
-	fn decode(tx_bytes: &[u8]) -> Option<hp_cosmos::Tx> {
+	fn decode_tx(tx_bytes: &[u8]) -> Option<hp_cosmos::Tx> {
 		hp_cosmos::Tx::decode(tx_bytes).ok()
 	}
 
@@ -70,20 +66,12 @@ pub trait Tx {
 		)
 		.ok()
 	}
-}
 
-/// Interface for decoding Msg encoded with Protobuf and then re-encoding it with Scale
-#[runtime_interface]
-pub trait ProtobufToScale {
 	/// Converting a message from Protobuf encoding to Scale encoding
-	fn to_scale(type_url: &[u8], value: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
+	fn protobuf_to_scale(type_url: &[u8], value: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
 		hp_cosmos::msgs::to_scale(type_url, value).ok()
 	}
-}
 
-/// Interface for decoding Msg encoded with Protobuf and then re-encoding it with Scale
-#[runtime_interface]
-pub trait Signers {
 	/// Converting a message from Protobuf encoding to Scale encoding
 	fn get_msg_any_signers(type_url: &[u8], value: &[u8]) -> Option<Vec<AccountId>> {
 		hp_cosmos::msgs::get_msg_any_signers(type_url, value).ok()

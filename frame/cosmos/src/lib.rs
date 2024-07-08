@@ -34,8 +34,8 @@ use frame_support::{
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::{Account, PublicKey, SignerPublicKey};
-use hp_io::crypto::ripemd160;
-use pallet_cosmos_modules::{ante::AnteHandler, msgs::MsgServiceRouter};
+use hp_io::cosmos::ripemd160;
+use pallet_cosmos_x::{ante::AnteHandler, msgs::MsgServiceRouter};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
@@ -77,7 +77,7 @@ where
 
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx_bytes } = self {
-			let tx = hp_io::tx::decode(tx_bytes)?;
+			let tx = hp_io::cosmos::decode_tx(tx_bytes)?;
 
 			if let Err(e) = T::AnteHandler::handle(&tx) {
 				return Some(Err(e));
@@ -163,7 +163,7 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use hp_cosmos::Any;
-	use pallet_cosmos_modules::{ante::AnteHandler, msgs::MsgServiceRouter};
+	use pallet_cosmos_x::{ante::AnteHandler, msgs::MsgServiceRouter};
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -237,7 +237,7 @@ pub mod pallet {
 		#[pallet::weight({ 0 })]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
-			let tx = hp_io::tx::decode(&tx_bytes).unwrap();
+			let tx = hp_io::cosmos::decode_tx(&tx_bytes).unwrap();
 
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -254,7 +254,7 @@ impl<T: Config> Pallet<T> {
 		tx_bytes: &[u8],
 	) -> Result<(), TransactionValidityError> {
 		let (_who, _) = Self::account(&origin);
-		let tx = hp_io::tx::decode(tx_bytes)
+		let tx = hp_io::cosmos::decode_tx(tx_bytes)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::handle(&tx)?;
@@ -265,7 +265,7 @@ impl<T: Config> Pallet<T> {
 	// Controls that must be performed by the pool.
 	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		let tx = hp_io::tx::decode(tx_bytes)
+		let tx = hp_io::cosmos::decode_tx(tx_bytes)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::handle(&tx)?;

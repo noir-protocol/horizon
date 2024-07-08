@@ -78,7 +78,7 @@ impl sp_std::fmt::Debug for CosmosSigner {
 impl EcdsaExt for CosmosSigner {
 	fn to_cosm_address(&self) -> Option<H160> {
 		let hashed = sp_io::hashing::sha2_256(&self.0 .0);
-		Some(hp_io::crypto::ripemd160(&hashed).into())
+		Some(hp_io::cosmos::ripemd160(&hashed).into())
 	}
 }
 
@@ -126,6 +126,6 @@ impl sp_runtime::traits::Verify for CosmosSignature {
 	type Signer = CosmosSigner;
 
 	fn verify<L: sp_runtime::traits::Lazy<[u8]>>(&self, mut msg: L, signer: &CosmosSigner) -> bool {
-		hp_io::crypto::secp256k1_ecdsa_verify(self.0.as_ref(), msg.get(), &signer.0 .0)
+		hp_io::cosmos::secp256k1_ecdsa_verify(self.0.as_ref(), msg.get(), &signer.0 .0)
 	}
 }

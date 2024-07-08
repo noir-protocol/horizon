@@ -17,8 +17,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use hp_cosmos::{AccountId, PublicKey, SignerPublicKey, Tx};
-use hp_io::crypto::secp256k1_ecdsa_verify;
-use pallet_cosmos_modules::ante::AnteHandler;
+use hp_io::cosmos::secp256k1_ecdsa_verify;
+use pallet_cosmos_x::ante::AnteHandler;
 use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{InvalidTransaction, TransactionValidityError};
 use sp_std::marker::PhantomData;
@@ -35,7 +35,7 @@ where
 		let mut signers = sp_std::vec::Vec::<AccountId>::new();
 		for msg in &tx.body.messages {
 			if let Some(msg_signers) =
-				hp_io::signers::get_msg_any_signers(&msg.type_url, &msg.value)
+				hp_io::cosmos::get_msg_any_signers(&msg.type_url, &msg.value)
 			{
 				for msg_signer in msg_signers {
 					if !signers.contains(&msg_signer) {
@@ -72,7 +72,7 @@ where
 			if let Some(SignerPublicKey::Single(PublicKey::Secp256k1(public_key))) =
 				signer_info.public_key
 			{
-				let address: H160 = hp_io::crypto::ripemd160(&sha2_256(&public_key)).into();
+				let address: H160 = hp_io::cosmos::ripemd160(&sha2_256(&public_key)).into();
 				if signer.address != address {
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 				}
@@ -88,10 +88,10 @@ where
 				let hash = match &signer_info.mode_info {
 					hp_cosmos::ModeInfo::Single(single) => match single.mode {
 						hp_cosmos::SignMode::Direct =>
-							hp_io::tx::get_signer_doc_bytes(&tx.raw, &chain_id, 0u64),
+							hp_io::cosmos::get_signer_doc_bytes(&tx.raw, &chain_id, 0u64),
 
 						hp_cosmos::SignMode::LegacyAminoJson =>
-							hp_io::tx::get_amino_signer_doc_bytes(
+							hp_io::cosmos::get_amino_signer_doc_bytes(
 								&tx.raw,
 								&chain_id,
 								0u64,
