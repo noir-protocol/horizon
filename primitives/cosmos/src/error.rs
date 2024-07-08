@@ -18,13 +18,11 @@
 #[derive(Copy, Clone, Debug)]
 pub enum DecodeTxError {
 	EmptyFeeAmount,
-	EmptySigners,
 	EmptyTxBytes,
 	InvalidMsgData,
 	InvalidSignDoc,
 	InvalidTxData,
 	InvalidChainId,
-	UnsupportedMsgType,
 	UnsupportedSignerType,
 	UnsupportedSigningMode,
 }
