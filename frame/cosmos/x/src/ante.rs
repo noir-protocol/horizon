@@ -16,9 +16,18 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::pallet_prelude::*;
 use hp_cosmos::Tx;
+use sp_runtime::transaction_validity::{TransactionValidity, ValidTransaction};
 
-pub trait AnteHandler {
-	fn handle(tx: &Tx) -> Result<(), TransactionValidityError>;
+pub trait AnteDecorator {
+	fn ante_handle(tx: &Tx, simulate: bool) -> TransactionValidity;
+}
+
+#[impl_trait_for_tuples::impl_for_tuples(1, 12)]
+impl AnteDecorator for Tuple {
+	fn ante_handle(tx: &Tx, simulate: bool) -> TransactionValidity {
+		let valid = ValidTransaction::default();
+		for_tuples!( #( let valid = valid.combine_with(Tuple::ante_handle(tx, simulate)?); )* );
+		Ok(valid)
+	}
 }

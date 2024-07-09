@@ -322,7 +322,7 @@ impl pallet_cosmos::Config for Runtime {
 	/// Convert a weight value into a deductible fee based on the currency type.
 	type WeightToFee = IdentityFee<Balance>;
 	/// Verify the validity of a Cosmos transaction.
-	type AnteHandler = ante::AnteHandlers<Self>;
+	type AnteHandler = ante::AnteHandler<Self>;
 	/// The maximum size of the memo.
 	type MaxMemoCharacters = MaxMemoCharacters;
 	/// The native denomination for the currency.

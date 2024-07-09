@@ -16,25 +16,4 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::pallet_prelude::*;
-use pallet_cosmos_auth::{
-	basic::{TxTimeoutHeightHandler, ValidateBasicHandler, ValidateMemoHandler},
-	sigverify::SigVerificationHandler,
-};
-
-pub struct AnteHandlers<T>(sp_std::marker::PhantomData<T>);
-impl<T> pallet_cosmos_x::ante::AnteHandler for AnteHandlers<T>
-where
-	T: frame_system::Config + pallet_cosmos::Config,
-{
-	fn handle(tx: &hp_cosmos::Tx) -> Result<(), TransactionValidityError> {
-		ValidateBasicHandler::<T>::handle(tx)?;
-		TxTimeoutHeightHandler::<T>::handle(tx)?;
-		ValidateMemoHandler::<T>::handle(tx)?;
-		SigVerificationHandler::<T>::handle(tx)?;
-		// TODO: Check fee
-		// TODO: Increase account nonce
-
-		Ok(())
-	}
-}
+pub type AnteHandler<T> = (pallet_cosmos_auth::AnteDecorators<T>,);

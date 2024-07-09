@@ -21,3 +21,12 @@
 
 pub mod basic;
 pub mod sigverify;
+
+pub type AnteDecorators<T> = (
+	basic::ValidateBasicDecorator<T>,
+	basic::TxTimeoutHeightDecorator<T>,
+	basic::ValidateMemoDecorator<T>,
+	sigverify::SigVerificationDecorator<T>,
+	// TODO: Check fee
+	// TODO: Increase account nonce
+);
