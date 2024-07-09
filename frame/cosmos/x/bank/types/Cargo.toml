@@ -1,5 +1,5 @@
 [package]
-name = "hp-io"
+name = "pallet-cosmos-x-bank-types"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
@@ -10,18 +10,25 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 cosmrs = { workspace = true, optional = true }
+parity-scale-codec = { workspace = true, features = [
+    "derive",
+], optional = true }
+scale-info = { workspace = true, optional = true }
+
 sp-std = { workspace = true }
-sp-runtime-interface = { workspace = true }
 
 hp-cosmos = { workspace = true, features = ["with-codec"] }
-hp-crypto = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
-  "cosmrs",
-  "sp-std/std",
-  "sp-runtime-interface/std",
-  "hp-cosmos/std",
-  "hp-crypto/std",
+    "cosmrs",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "sp-std/std",
+    "hp-cosmos/std",
+]
+with-codec = [
+    "parity-scale-codec", 
+    "scale-info"
 ]

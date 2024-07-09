@@ -17,7 +17,7 @@
 
 use crate::{error::DecodeError, SequenceNumber};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{json, Value};
 use sp_core::hashing::sha2_256;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -30,13 +30,6 @@ pub struct Coin {
 pub struct AminoSignFee {
 	pub amount: Vec<Coin>,
 	pub gas: String,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct MsgSend {
-	pub amount: Vec<Coin>,
-	pub from_address: String,
-	pub to_address: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -85,8 +78,10 @@ impl AminoSignDoc {
 						.iter()
 						.map(|amt| Coin { amount: amt.amount.clone(), denom: amt.denom.clone() })
 						.collect::<Vec<Coin>>();
-					let value = serde_json::to_value(MsgSend { from_address, to_address, amount })
-						.map_err(|_| DecodeError::InvalidMsgData)?;
+					let value = serde_json::to_value(
+						json!({ "from_address": from_address, "to_address": to_address, "amount": amount }),
+					)
+					.map_err(|_| DecodeError::InvalidMsgData)?;
 
 					msgs.push(Any { r#type: "cosmos-sdk/MsgSend".to_string(), value });
 				},

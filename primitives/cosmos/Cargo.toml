@@ -38,4 +38,3 @@ std = [
   "sp-std/std",
 ]
 with-codec = ["parity-scale-codec", "scale-info"]
-with-serde = ["serde"]

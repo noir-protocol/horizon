@@ -20,4 +20,9 @@ hp-cosmos = { workspace = true, features = ["with-codec"] }
 
 [features]
 default = ["std"]
-std = ["frame-support/std", "sp-runtime/std", "sp-std/std", "hp-cosmos/std"]
+std = [
+    "frame-support/std", 
+    "sp-runtime/std", 
+    "sp-std/std", 
+    "hp-cosmos/std"
+]

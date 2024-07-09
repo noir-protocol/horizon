@@ -6,6 +6,7 @@ members = [
 	"frame/cosmos/x",
 	"frame/cosmos/x/auth",
 	"frame/cosmos/x/bank",
+	"frame/cosmos/x/bank/types",
 	"frame/cosmos-accounts",
 	"primitives/account",
 	"primitives/cosmos",
@@ -104,6 +105,7 @@ horizon-template-runtime = { path = "template/runtime", default-features = false
 pallet-cosmos-x = { path = "frame/cosmos/x", default-features = false}
 pallet-cosmos-x-auth = { path = "frame/cosmos/x/auth", default-features = false}
 pallet-cosmos-x-bank = { path = "frame/cosmos/x/bank", default-features = false}
+pallet-cosmos-x-bank-types = { path = "frame/cosmos/x/bank/types", default-features = false}
 
 [profile.release]
 panic = "unwind"
