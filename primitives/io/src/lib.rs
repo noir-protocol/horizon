@@ -68,8 +68,11 @@ pub trait Cosmos {
 	}
 
 	/// Converting a message from Protobuf encoding to Scale encoding
-	fn protobuf_to_scale(type_url: &[u8], value: &[u8]) -> Option<(Vec<u8>, Vec<u8>)> {
-		hp_cosmos::msgs::to_scale(type_url, value).ok()
+	fn protobuf_to_scale(type_url: &[u8], value: &[u8]) -> Option<Vec<u8>> {
+		match hp_cosmos::protobuf::TRANSCODER.get() {
+			Some(f) => f(type_url, value).ok(),
+			None => None,
+		}
 	}
 
 	/// Converting a message from Protobuf encoding to Scale encoding

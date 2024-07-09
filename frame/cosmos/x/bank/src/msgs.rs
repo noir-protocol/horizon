@@ -60,7 +60,7 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn to_msg(msg: &Any) -> Result<MsgSend, MsgHandlerError> {
-		let (_, value) = hp_io::cosmos::protobuf_to_scale(&msg.type_url, &msg.value)
+		let value = hp_io::cosmos::protobuf_to_scale(&msg.type_url, &msg.value)
 			.ok_or(MsgHandlerError::InvalidMsg)?;
 		Decode::decode(&mut &value[..]).map_err(|_| MsgHandlerError::InvalidMsg)
 	}

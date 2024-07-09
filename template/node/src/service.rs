@@ -132,6 +132,8 @@ pub fn new_partial(
 			compatibility_mode: Default::default(),
 		})?;
 
+	hp_cosmos::protobuf::register_generic_protobuf_types();
+
 	Ok(sc_service::PartialComponents {
 		client,
 		backend,

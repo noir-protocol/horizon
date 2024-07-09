@@ -22,6 +22,8 @@ pub mod error;
 pub mod legacy;
 pub mod msgs;
 #[cfg(feature = "std")]
+pub mod protobuf;
+#[cfg(feature = "std")]
 pub mod sign_doc;
 
 #[cfg(feature = "std")]

@@ -26,6 +26,8 @@ use scale_info::TypeInfo;
 use sp_std::vec::Vec;
 
 pub trait Msg {
+	const TYPE_URL: &'static [u8];
+
 	fn get_signers(&self) -> Vec<AccountId>;
 }
 
@@ -39,6 +41,8 @@ pub struct MsgSend {
 
 #[cfg(feature = "std")]
 impl Msg for MsgSend {
+	const TYPE_URL: &'static [u8] = b"/cosmos.bank.v1beta1.MsgSend";
+
 	fn get_signers(&self) -> Vec<AccountId> {
 		vec![self.from_address.clone()]
 	}
@@ -50,10 +54,6 @@ impl TryFrom<Any> for MsgSend {
 
 	fn try_from(msg: Any) -> Result<Self, Self::Error> {
 		let type_url = String::from_utf8(msg.type_url).map_err(|_| DecodeError::InvalidTypeUrl)?;
-		if type_url != "/cosmos.bank.v1beta1.MsgSend" {
-			return Err(DecodeError::UnsupportedType);
-		}
-
 		let any = cosmrs::Any { type_url, value: msg.value };
 		let msg_send =
 			cosmrs::bank::MsgSend::from_any(&any).map_err(|_| DecodeError::InvalidMsgData)?;

@@ -58,6 +58,7 @@ substrate-frame-rpc-system = { workspace = true }
 # Horizon
 hc-rpc = { workspace = true }
 hp-account = { workspace = true, features = ["std"] }
+hp-cosmos = { workspace = true, features = ["std"] }
 hp-io = { workspace = true, features = ["std"] }
 hp-rpc = { workspace = true, features = ["std"] }
 horizon-template-runtime = { workspace = true, features = ["std"] }
