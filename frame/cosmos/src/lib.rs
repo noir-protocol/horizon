@@ -35,7 +35,7 @@ use frame_support::{
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use hp_cosmos::{Account, PublicKey, SignerPublicKey};
 use hp_io::cosmos::ripemd160;
-use pallet_cosmos_x::{ante::AnteHandler, msgs::MsgServiceRouter};
+use pallet_cosmos_x::{ante::AnteDecorator, msgs::MsgServiceRouter};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
@@ -79,7 +79,7 @@ where
 		if let Call::transact { tx_bytes } = self {
 			let tx = hp_io::cosmos::decode_tx(tx_bytes)?;
 
-			if let Err(e) = T::AnteHandler::handle(&tx) {
+			if let Err(e) = T::AnteHandler::ante_handle(&tx, true) {
 				return Some(Err(e));
 			}
 
@@ -163,7 +163,6 @@ pub mod pallet {
 	use super::*;
 	use frame_support::pallet_prelude::*;
 	use hp_cosmos::Any;
-	use pallet_cosmos_x::{ante::AnteHandler, msgs::MsgServiceRouter};
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -194,7 +193,7 @@ pub mod pallet {
 		/// Convert a weight value into a deductible fee based on the currency type.
 		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
 		/// Verify the validity of a Cosmos transaction.
-		type AnteHandler: AnteHandler;
+		type AnteHandler: AnteDecorator;
 		/// The maximum size of the memo.
 		#[pallet::constant]
 		type MaxMemoCharacters: Get<u64>;
@@ -257,7 +256,7 @@ impl<T: Config> Pallet<T> {
 		let tx = hp_io::cosmos::decode_tx(tx_bytes)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-		T::AnteHandler::handle(&tx)?;
+		T::AnteHandler::ante_handle(&tx, false)?;
 
 		Ok(())
 	}
@@ -268,7 +267,7 @@ impl<T: Config> Pallet<T> {
 		let tx = hp_io::cosmos::decode_tx(tx_bytes)
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-		T::AnteHandler::handle(&tx)?;
+		T::AnteHandler::ante_handle(&tx, true)?;
 
 		let transaction_nonce = tx
 			.auth_info

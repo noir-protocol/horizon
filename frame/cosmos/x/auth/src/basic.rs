@@ -17,21 +17,23 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use hp_cosmos::Tx;
-use pallet_cosmos_x::ante::AnteHandler;
+use pallet_cosmos_x::ante::AnteDecorator;
 use sp_runtime::{
 	traits::Get,
-	transaction_validity::{InvalidTransaction, TransactionValidityError},
+	transaction_validity::{
+		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
+	},
 	SaturatedConversion,
 };
 use sp_std::marker::PhantomData;
 
-pub struct ValidateBasicHandler<T>(PhantomData<T>);
+pub struct ValidateBasicDecorator<T>(PhantomData<T>);
 
-impl<T> AnteHandler for ValidateBasicHandler<T>
+impl<T> AnteDecorator for ValidateBasicDecorator<T>
 where
 	T: frame_system::Config,
 {
-	fn handle(tx: &Tx) -> Result<(), TransactionValidityError> {
+	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		if tx.signatures.is_empty() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
 		}
@@ -39,17 +41,17 @@ where
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 		}
 
-		Ok(())
+		Ok(ValidTransaction::default())
 	}
 }
 
-pub struct TxTimeoutHeightHandler<T>(PhantomData<T>);
+pub struct TxTimeoutHeightDecorator<T>(PhantomData<T>);
 
-impl<T> AnteHandler for TxTimeoutHeightHandler<T>
+impl<T> AnteDecorator for TxTimeoutHeightDecorator<T>
 where
 	T: frame_system::Config,
 {
-	fn handle(tx: &Tx) -> Result<(), TransactionValidityError> {
+	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		if tx.body.timeout_height > 0 &&
 			frame_system::Pallet::<T>::block_number().saturated_into::<u64>() >
 				tx.body.timeout_height
@@ -57,22 +59,22 @@ where
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
 		}
 
-		Ok(())
+		Ok(ValidTransaction::default())
 	}
 }
 
-pub struct ValidateMemoHandler<T>(PhantomData<T>);
+pub struct ValidateMemoDecorator<T>(PhantomData<T>);
 
-impl<T> AnteHandler for ValidateMemoHandler<T>
+impl<T> AnteDecorator for ValidateMemoDecorator<T>
 where
 	T: pallet_cosmos::Config,
 {
-	fn handle(tx: &Tx) -> Result<(), TransactionValidityError> {
+	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		if tx.body.memo.len().saturated_into::<u64>() > T::MaxMemoCharacters::get() {
 			// TODO: Consider use InvalidTransaction::Custom
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 		}
 
-		Ok(())
+		Ok(ValidTransaction::default())
 	}
 }

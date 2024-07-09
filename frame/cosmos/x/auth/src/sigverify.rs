@@ -18,24 +18,25 @@
 
 use hp_cosmos::{AccountId, PublicKey, SignerPublicKey, Tx};
 use hp_io::cosmos::secp256k1_ecdsa_verify;
-use pallet_cosmos_x::ante::AnteHandler;
+use pallet_cosmos_x::ante::AnteDecorator;
 use sp_core::{sha2_256, Get, H160};
-use sp_runtime::transaction_validity::{InvalidTransaction, TransactionValidityError};
+use sp_runtime::transaction_validity::{
+	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
+};
 use sp_std::marker::PhantomData;
 
-pub struct SigVerificationHandler<T>(PhantomData<T>);
+pub struct SigVerificationDecorator<T>(PhantomData<T>);
 
-impl<T> AnteHandler for SigVerificationHandler<T>
+impl<T> AnteDecorator for SigVerificationDecorator<T>
 where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
-	fn handle(tx: &Tx) -> Result<(), TransactionValidityError> {
+	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		let signatures = &tx.signatures;
 
 		let mut signers = sp_std::vec::Vec::<AccountId>::new();
 		for msg in &tx.body.messages {
-			if let Some(msg_signers) =
-				hp_io::cosmos::get_msg_any_signers(&msg.type_url, &msg.value)
+			if let Some(msg_signers) = hp_io::cosmos::get_msg_any_signers(&msg.type_url, &msg.value)
 			{
 				for msg_signer in msg_signers {
 					if !signers.contains(&msg_signer) {
@@ -110,6 +111,6 @@ where
 			}
 		}
 
-		Ok(())
+		Ok(ValidTransaction::default())
 	}
 }
