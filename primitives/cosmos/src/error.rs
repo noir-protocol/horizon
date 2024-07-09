@@ -16,20 +16,15 @@
 // limitations under the License.
 
 #[derive(Copy, Clone, Debug)]
-pub enum DecodeTxError {
+pub enum DecodeError {
 	EmptyFeeAmount,
 	EmptyTxBytes,
 	InvalidMsgData,
 	InvalidSignDoc,
 	InvalidTxData,
 	InvalidChainId,
+	InvalidTypeUrl,
 	UnsupportedSignerType,
 	UnsupportedSigningMode,
-}
-
-#[derive(Copy, Clone, Debug)]
-pub enum DecodeMsgError {
-	InvalidTypeUrl,
 	UnsupportedType,
-	InvalidValue,
 }

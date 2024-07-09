@@ -25,7 +25,7 @@ pub mod msgs;
 pub mod sign_doc;
 
 #[cfg(feature = "std")]
-use error::DecodeTxError;
+use error::DecodeError;
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
@@ -49,13 +49,13 @@ pub struct Tx {
 
 #[cfg(feature = "std")]
 impl Tx {
-	pub fn decode(tx_bytes: &[u8]) -> Result<Self, DecodeTxError> {
+	pub fn decode(tx_bytes: &[u8]) -> Result<Self, DecodeError> {
 		if tx_bytes.is_empty() {
-			return Err(DecodeTxError::EmptyTxBytes);
+			return Err(DecodeError::EmptyTxBytes);
 		}
 
 		let tx_origin =
-			cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeTxError::InvalidTxData)?;
+			cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeError::InvalidTxData)?;
 		let signatures = tx_origin.signatures.to_vec();
 
 		Ok(Self {
@@ -77,7 +77,7 @@ pub struct Body {
 
 #[cfg(feature = "std")]
 impl TryFrom<cosmrs::tx::Body> for Body {
-	type Error = DecodeTxError;
+	type Error = DecodeError;
 
 	fn try_from(body: cosmrs::tx::Body) -> Result<Self, Self::Error> {
 		let mut messages: Vec<Any> = Vec::new();
@@ -115,7 +115,7 @@ pub struct AuthInfo {
 
 #[cfg(feature = "std")]
 impl TryFrom<cosmrs::tx::AuthInfo> for AuthInfo {
-	type Error = DecodeTxError;
+	type Error = DecodeError;
 
 	fn try_from(auth_info: cosmrs::tx::AuthInfo) -> Result<Self, Self::Error> {
 		let mut signer_infos: Vec<SignerInfo> = Vec::new();
@@ -173,12 +173,12 @@ pub enum ModeInfo {
 
 #[cfg(feature = "std")]
 impl TryFrom<cosmrs::tx::ModeInfo> for ModeInfo {
-	type Error = DecodeTxError;
+	type Error = DecodeError;
 
 	fn try_from(mode_info: cosmrs::tx::ModeInfo) -> Result<Self, Self::Error> {
 		match mode_info {
 			cosmrs::tx::ModeInfo::Single(single) => Ok(ModeInfo::Single(single.into())),
-			_ => Err(DecodeTxError::UnsupportedSigningMode),
+			_ => Err(DecodeError::UnsupportedSigningMode),
 		}
 	}
 }
@@ -193,7 +193,7 @@ pub struct SignerInfo {
 
 #[cfg(feature = "std")]
 impl TryFrom<cosmrs::tx::SignerInfo> for SignerInfo {
-	type Error = DecodeTxError;
+	type Error = DecodeError;
 
 	fn try_from(signer_info: cosmrs::tx::SignerInfo) -> Result<Self, Self::Error> {
 		let public_key = match signer_info.public_key {
@@ -209,9 +209,9 @@ impl TryFrom<cosmrs::tx::SignerInfo> for SignerInfo {
 						raw_bytes.copy_from_slice(&p.to_bytes()[..]);
 						Some(SignerPublicKey::Single(PublicKey::Secp256k1(raw_bytes)))
 					},
-					_ => return Err(DecodeTxError::UnsupportedSignerType),
+					_ => return Err(DecodeError::UnsupportedSignerType),
 				},
-				_ => return Err(DecodeTxError::UnsupportedSignerType),
+				_ => return Err(DecodeError::UnsupportedSignerType),
 			},
 			None => None,
 		};
@@ -248,11 +248,11 @@ pub struct Fee {
 
 #[cfg(feature = "std")]
 impl TryFrom<cosmrs::tx::Fee> for Fee {
-	type Error = DecodeTxError;
+	type Error = DecodeError;
 
 	fn try_from(fee: cosmrs::tx::Fee) -> Result<Self, Self::Error> {
 		if fee.amount.is_empty() {
-			return Err(DecodeTxError::EmptyFeeAmount);
+			return Err(DecodeError::EmptyFeeAmount);
 		}
 		let amount = fee.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
 		let payer = fee.payer.map(Into::into);

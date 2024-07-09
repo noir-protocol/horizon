@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{error::DecodeTxError, SequenceNumber};
+use crate::{error::DecodeError, SequenceNumber};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sp_core::hashing::sha2_256;
@@ -61,7 +61,7 @@ impl AminoSignDoc {
 		chain_id: String,
 		account_number: u64,
 		sequence: SequenceNumber,
-	) -> Result<Self, DecodeTxError> {
+	) -> Result<Self, DecodeError> {
 		let fee = AminoSignFee {
 			amount: tx
 				.auth_info
@@ -80,18 +80,18 @@ impl AminoSignDoc {
 						from_address,
 						to_address,
 						amount,
-					} = msg.to_msg().map_err(|_| DecodeTxError::InvalidMsgData)?;
+					} = msg.to_msg().map_err(|_| DecodeError::InvalidMsgData)?;
 					let amount = amount
 						.iter()
 						.map(|amt| Coin { amount: amt.amount.clone(), denom: amt.denom.clone() })
 						.collect::<Vec<Coin>>();
 					let value = serde_json::to_value(MsgSend { from_address, to_address, amount })
-						.map_err(|_| DecodeTxError::InvalidMsgData)?;
+						.map_err(|_| DecodeError::InvalidMsgData)?;
 
 					msgs.push(Any { r#type: "cosmos-sdk/MsgSend".to_string(), value });
 				},
 				_ => {
-					return Err(DecodeTxError::InvalidMsgData);
+					return Err(DecodeError::InvalidMsgData);
 				},
 			}
 		}
@@ -106,15 +106,15 @@ impl AminoSignDoc {
 		})
 	}
 
-	pub fn bytes(&self) -> Result<Vec<u8>, DecodeTxError> {
+	pub fn bytes(&self) -> Result<Vec<u8>, DecodeError> {
 		Ok(serde_json::to_value(self)
-			.map_err(|_| DecodeTxError::InvalidSignDoc)?
+			.map_err(|_| DecodeError::InvalidSignDoc)?
 			.to_string()
 			.as_bytes()
 			.to_vec())
 	}
 
-	pub fn hash(&self) -> Result<[u8; 32], DecodeTxError> {
+	pub fn hash(&self) -> Result<[u8; 32], DecodeError> {
 		Ok(sha2_256(&self.bytes()?))
 	}
 }

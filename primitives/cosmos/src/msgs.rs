@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{error::DecodeMsgError, AccountId, Any, Coin};
+use crate::{error::DecodeError, AccountId, Any, Coin};
 #[cfg(feature = "std")]
 use cosmrs::tx::Msg as _;
 #[cfg(feature = "with-codec")]
@@ -46,18 +46,17 @@ impl Msg for MsgSend {
 
 #[cfg(feature = "std")]
 impl TryFrom<Any> for MsgSend {
-	type Error = DecodeMsgError;
+	type Error = DecodeError;
 
 	fn try_from(msg: Any) -> Result<Self, Self::Error> {
-		let type_url =
-			String::from_utf8(msg.type_url).map_err(|_| DecodeMsgError::InvalidTypeUrl)?;
+		let type_url = String::from_utf8(msg.type_url).map_err(|_| DecodeError::InvalidTypeUrl)?;
 		if type_url != "/cosmos.bank.v1beta1.MsgSend" {
-			return Err(DecodeMsgError::UnsupportedType);
+			return Err(DecodeError::UnsupportedType);
 		}
 
 		let any = cosmrs::Any { type_url, value: msg.value };
 		let msg_send =
-			cosmrs::bank::MsgSend::from_any(&any).map_err(|_| DecodeMsgError::InvalidValue)?;
+			cosmrs::bank::MsgSend::from_any(&any).map_err(|_| DecodeError::InvalidMsgData)?;
 
 		let from_address = msg_send.from_address.into();
 		let to_address = msg_send.to_address.into();
@@ -68,29 +67,26 @@ impl TryFrom<Any> for MsgSend {
 }
 
 #[cfg(all(feature = "std", feature = "with-codec"))]
-pub fn to_scale(type_url: &[u8], value: &[u8]) -> Result<(Vec<u8>, Vec<u8>), DecodeMsgError> {
+pub fn to_scale(type_url: &[u8], value: &[u8]) -> Result<(Vec<u8>, Vec<u8>), DecodeError> {
 	match type_url {
 		b"/cosmos.bank.v1beta1.MsgSend" => {
 			let any = Any { type_url: type_url.to_vec(), value: value.to_vec() };
 			let msg_send: MsgSend = any.try_into()?;
 			Ok((type_url.to_vec(), msg_send.encode()))
 		},
-		_ => Err(DecodeMsgError::InvalidTypeUrl),
+		_ => Err(DecodeError::InvalidTypeUrl),
 	}
 }
 
 #[cfg(all(feature = "std", feature = "with-codec"))]
-pub fn get_msg_any_signers(
-	type_url: &[u8],
-	value: &[u8],
-) -> Result<Vec<AccountId>, DecodeMsgError> {
+pub fn get_msg_any_signers(type_url: &[u8], value: &[u8]) -> Result<Vec<AccountId>, DecodeError> {
 	match type_url {
 		b"/cosmos.bank.v1beta1.MsgSend" => {
 			let any = Any { type_url: type_url.to_vec(), value: value.to_vec() };
 			let msg_send: MsgSend = any.try_into()?;
 			Ok(msg_send.get_signers())
 		},
-		_ => Err(DecodeMsgError::InvalidTypeUrl),
+		_ => Err(DecodeError::InvalidTypeUrl),
 	}
 }
 
