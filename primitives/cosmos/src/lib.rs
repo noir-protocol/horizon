@@ -53,14 +53,12 @@ impl Tx {
 		if tx_bytes.is_empty() {
 			return Err(DecodeError::EmptyTxBytes);
 		}
-
 		let tx_origin = cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeError::InvalidTxData)?;
-		let signatures = tx_origin.signatures.to_vec();
 
 		Ok(Self {
 			body: tx_origin.body.try_into()?,
 			auth_info: tx_origin.auth_info.try_into()?,
-			signatures,
+			signatures: tx_origin.signatures,
 			raw: tx_bytes.to_vec(),
 		})
 	}
