@@ -36,7 +36,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::{fungible, Fortitude, Preservation},
-		ConstBool, ConstU32, ConstU8, OnTimestampSet,
+		ConstBool, ConstU32, ConstU8, Contains, OnTimestampSet,
 	},
 	weights::{
 		constants::{RocksDbWeight as RuntimeDbWeight, WEIGHT_REF_TIME_PER_MILLIS},
@@ -299,6 +299,13 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
+pub struct MsgFilter;
+impl Contains<Vec<u8>> for MsgFilter {
+	fn contains(type_url: &Vec<u8>) -> bool {
+		matches!(&type_url[..], b"/cosmos.bank.v1beta1.MsgSend")
+	}
+}
+
 parameter_types! {
 	pub const MaxMemoCharacters: u64 = 256;
 	pub const StringLimit: u32 = 128;
@@ -333,6 +340,8 @@ impl pallet_cosmos::Config for Runtime {
 	type MsgServiceRouter = MsgServiceRouter<Self>;
 	/// The chain ID.
 	type ChainId = ChainId;
+	/// The message filter.
+	type MsgFilter = MsgFilter;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {

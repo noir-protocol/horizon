@@ -16,19 +16,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::comparison_chain, clippy::large_enum_variant)]
+use frame_support::traits::Contains;
+use hp_cosmos::Tx;
+use pallet_cosmos_x::ante::AnteDecorator;
+use sp_runtime::transaction_validity::{
+	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
+};
 
-pub mod basic;
-pub mod msg;
-pub mod sigverify;
+pub struct KnownMsgDecorator<T>(sp_std::marker::PhantomData<T>);
 
-pub type AnteDecorators<T> = (
-	basic::ValidateBasicDecorator<T>,
-	basic::TxTimeoutHeightDecorator<T>,
-	basic::ValidateMemoDecorator<T>,
-	msg::KnownMsgDecorator<T>,
-	sigverify::SigVerificationDecorator<T>,
-	// TODO: Check fee
-	// TODO: Increment account nonce
-);
+impl<T> AnteDecorator for KnownMsgDecorator<T>
+where
+	T: pallet_cosmos::Config,
+{
+	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
+		for msg in &tx.body.messages {
+			if !T::MsgFilter::contains(&msg.type_url) {
+				return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
+			}
+		}
+
+		Ok(ValidTransaction::default())
+	}
+}

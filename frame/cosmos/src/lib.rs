@@ -161,7 +161,7 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
+	use frame_support::{pallet_prelude::*, traits::Contains};
 	use hp_cosmos::Any;
 
 	#[pallet::pallet]
@@ -208,6 +208,8 @@ pub mod pallet {
 		/// The chain ID.
 		#[pallet::constant]
 		type ChainId: Get<BoundedVec<u8, Self::StringLimit>>;
+		/// The message filter.
+		type MsgFilter: Contains<Vec<u8>>;
 	}
 
 	#[pallet::event]
@@ -294,7 +296,14 @@ impl<T: Config> Pallet<T> {
 		let mut total_weight = ExtrinsicBaseWeight::get();
 
 		for msg in tx.body.messages.iter() {
-			let handler = T::MsgServiceRouter::route(&msg.type_url).unwrap();
+			let handler =
+				T::MsgServiceRouter::route(&msg.type_url).ok_or(DispatchErrorWithPostInfo {
+					post_info: PostDispatchInfo {
+						actual_weight: Some(total_weight),
+						pays_fee: Pays::Yes,
+					},
+					error: DispatchError::Other("Unknown message type"),
+				})?;
 			match handler.handle(msg) {
 				Ok(weight) => {
 					total_weight = total_weight.saturating_add(weight);
@@ -307,7 +316,7 @@ impl<T: Config> Pallet<T> {
 							actual_weight: Some(total_weight),
 							pays_fee: Pays::Yes,
 						},
-						error: DispatchError::Other("Invalid msg"),
+						error: DispatchError::Other("Failed to handle message"),
 					});
 				},
 			}

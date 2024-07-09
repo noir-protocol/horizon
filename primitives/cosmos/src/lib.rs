@@ -54,8 +54,7 @@ impl Tx {
 			return Err(DecodeError::EmptyTxBytes);
 		}
 
-		let tx_origin =
-			cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeError::InvalidTxData)?;
+		let tx_origin = cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeError::InvalidTxData)?;
 		let signatures = tx_origin.signatures.to_vec();
 
 		Ok(Self {

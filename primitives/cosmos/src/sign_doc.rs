@@ -42,8 +42,7 @@ pub fn get_amino_signer_doc_bytes(
 	sequence: SequenceNumber,
 ) -> Result<[u8; 32], DecodeError> {
 	let tx = cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeError::InvalidTxData)?;
-	let chain_id =
-		String::from_utf8(chain_id.to_vec()).map_err(|_| DecodeError::InvalidChainId)?;
+	let chain_id = String::from_utf8(chain_id.to_vec()).map_err(|_| DecodeError::InvalidChainId)?;
 	let sign_doc_bytes = AminoSignDoc::new(&tx, chain_id, sequence, account_number)
 		.map_err(|_| DecodeError::InvalidSignDoc)?
 		.bytes()?;
