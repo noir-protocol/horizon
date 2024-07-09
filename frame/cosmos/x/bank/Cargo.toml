@@ -1,5 +1,5 @@
 [package]
-name = "pallet-cosmos-bank"
+name = "pallet-cosmos-x-bank"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"

@@ -16,4 +16,4 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-pub type AnteHandler<T> = (pallet_cosmos_auth::AnteDecorators<T>,);
+pub type AnteHandler<T> = (pallet_cosmos_x_auth::AnteDecorators<T>,);

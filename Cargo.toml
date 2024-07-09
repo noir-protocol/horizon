@@ -101,9 +101,9 @@ pallet-cosmos = { path = "frame/cosmos", default-features = false }
 pallet-cosmos-accounts = { path = "frame/cosmos-accounts", default-features = false }
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
-pallet-cosmos-auth = { path = "frame/cosmos/x/auth", default-features = false}
-pallet-cosmos-bank = { path = "frame/cosmos/x/bank", default-features = false}
 pallet-cosmos-x = { path = "frame/cosmos/x", default-features = false}
+pallet-cosmos-x-auth = { path = "frame/cosmos/x/auth", default-features = false}
+pallet-cosmos-x-bank = { path = "frame/cosmos/x/bank", default-features = false}
 
 [profile.release]
 panic = "unwind"
