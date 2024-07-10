@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::weights::Weight;
-use hp_cosmos::{AccountId, Any};
+use pallet_cosmos_types::tx::{AccountId, Any};
 use sp_runtime::RuntimeString;
 
 pub trait Msg {

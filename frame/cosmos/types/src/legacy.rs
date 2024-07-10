@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{error::DecodeError, SequenceNumber};
+use crate::{error::DecodeError, tx::SequenceNumber};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use sp_core::hashing::sha2_256;

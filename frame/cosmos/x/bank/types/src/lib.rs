@@ -15,8 +15,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
+#[cfg(feature = "std")]
 use cosmrs::tx::Msg as _;
-use hp_cosmos::{error::DecodeError, msgs::Msg, AccountId, Any, Coin};
+use pallet_cosmos_types::{
+	error::DecodeError,
+	msgs::Msg,
+	tx::{AccountId, Any, Coin},
+};
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]

@@ -33,8 +33,8 @@ use frame_support::{
 	weights::{constants::ExtrinsicBaseWeight, Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use hp_cosmos::{Account, PublicKey, SignerPublicKey};
 use hp_io::cosmos::ripemd160;
+use pallet_cosmos_types::tx::{Account, PublicKey, SignerPublicKey};
 use pallet_cosmos_x::{ante::AnteDecorator, msgs::MsgServiceRouter};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -162,7 +162,7 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 pub mod pallet {
 	use super::*;
 	use frame_support::{pallet_prelude::*, traits::Contains};
-	use hp_cosmos::Any;
+	use pallet_cosmos_types::tx::Any;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -292,7 +292,10 @@ impl<T: Config> Pallet<T> {
 		builder.build()
 	}
 
-	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
+	fn apply_validated_transaction(
+		source: H160,
+		tx: pallet_cosmos_types::tx::Tx,
+	) -> DispatchResultWithPostInfo {
 		let mut total_weight = ExtrinsicBaseWeight::get();
 
 		for msg in tx.body.messages.iter() {

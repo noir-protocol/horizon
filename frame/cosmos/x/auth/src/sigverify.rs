@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use hp_cosmos::{AccountId, PublicKey, SignerPublicKey, Tx};
 use hp_io::cosmos::secp256k1_ecdsa_verify;
+use pallet_cosmos_types::tx::{AccountId, PublicKey, SignerPublicKey, Tx};
 use pallet_cosmos_x::ante::AnteDecorator;
 use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
@@ -87,12 +87,12 @@ where
 
 				let chain_id = T::ChainId::get();
 				let hash = match &signer_info.mode_info {
-					hp_cosmos::ModeInfo::Single(single) => match single.mode {
-						hp_cosmos::SignMode::Direct =>
-							hp_io::cosmos::get_signer_doc_bytes(&tx.raw, &chain_id, 0u64),
+					pallet_cosmos_types::tx::ModeInfo::Single(single) => match single.mode {
+						pallet_cosmos_types::tx::SignMode::Direct =>
+							hp_io::cosmos::get_sign_doc_bytes(&tx.raw, &chain_id, 0u64),
 
-						hp_cosmos::SignMode::LegacyAminoJson =>
-							hp_io::cosmos::get_amino_signer_doc_bytes(
+						pallet_cosmos_types::tx::SignMode::LegacyAminoJson =>
+							hp_io::cosmos::get_amino_sign_doc_bytes(
 								&tx.raw,
 								&chain_id,
 								0u64,

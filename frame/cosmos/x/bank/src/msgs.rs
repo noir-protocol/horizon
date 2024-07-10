@@ -20,10 +20,11 @@ use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement},
 };
-use hp_cosmos::{msgs::MsgSend, Any, Coin};
 use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
+use pallet_cosmos_types::tx::{Any, Coin};
 use pallet_cosmos_x::msgs::{MsgHandlerError, MsgHandlerErrorInfo};
+use pallet_cosmos_x_bank_types::MsgSend;
 use sp_runtime::{format_runtime_string, SaturatedConversion};
 
 pub struct MsgSendHandler<T>(PhantomData<T>);

@@ -1,5 +1,5 @@
 [package]
-name = "hp-cosmos"
+name = "pallet-cosmos-types"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
@@ -10,9 +10,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 cosmrs = { workspace = true, optional = true }
-num_enum = { workspace = true }
 parity-scale-codec = { workspace = true, features = [
-  "derive",
+    "derive",
 ], optional = true }
 scale-info = { workspace = true, features = ["derive"], optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
@@ -28,13 +27,12 @@ base64ct = { workspace = true, features = ["alloc"] }
 [features]
 default = ["std"]
 std = [
-  "cosmrs",
-  "num_enum/std",
-  "parity-scale-codec/std",
-  "scale-info/std",
-  "serde",
-  "serde_json",
-  "sp-core/std",
-  "sp-std/std",
+    "cosmrs",
+    "parity-scale-codec/std",
+    "scale-info/std",
+    "serde",
+    "serde_json",
+    "sp-core/std",
+    "sp-std/std",
 ]
 with-codec = ["parity-scale-codec", "scale-info"]

@@ -17,7 +17,7 @@ scale-info = { workspace = true, optional = true }
 
 sp-std = { workspace = true }
 
-hp-cosmos = { workspace = true, features = ["with-codec"] }
+pallet-cosmos-types = { workspace = true, features = ["with-codec"] }
 
 [features]
 default = ["std"]
@@ -26,7 +26,7 @@ std = [
     "parity-scale-codec/std",
     "scale-info/std",
     "sp-std/std",
-    "hp-cosmos/std",
+    "pallet-cosmos-types/std",
 ]
 with-codec = [
     "parity-scale-codec", 

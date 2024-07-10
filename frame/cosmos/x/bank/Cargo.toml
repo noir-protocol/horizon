@@ -15,7 +15,8 @@ frame-support = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
-hp-cosmos = { workspace = true }
+pallet-cosmos-types = { workspace = true }
+pallet-cosmos-x-bank-types = { workspace = true, features = ["with-codec"] }
 hp-io = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-cosmos = { workspace = true }
@@ -27,9 +28,10 @@ std = [
 	"frame-support/std",
 	"sp-runtime/std",
 	"sp-std/std",
-	"hp-cosmos/std",
 	"hp-io/std",
 	"pallet-balances/std",
 	"pallet-cosmos/std",
+	"pallet-cosmos-x-bank-types/std",
+	"pallet-cosmos-types/std",
 	"pallet-cosmos-x/std",
 ]

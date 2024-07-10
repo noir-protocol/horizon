@@ -16,7 +16,7 @@ sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
 # Horizon
-hp-cosmos = { workspace = true, features = ["with-codec"] }
+pallet-cosmos-types = { workspace = true, features = ["with-codec"] }
 
 [features]
 default = ["std"]
@@ -24,5 +24,5 @@ std = [
     "frame-support/std", 
     "sp-runtime/std", 
     "sp-std/std", 
-    "hp-cosmos/std"
+    "pallet-cosmos-types/std"
 ]

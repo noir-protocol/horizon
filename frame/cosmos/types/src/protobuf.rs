@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{error::DecodeError, msgs::Msg, Any};
+use crate::{error::DecodeError, msgs::Msg, tx::Any};
 use parity_scale_codec::Encode;
 use std::sync::OnceLock;
 
@@ -35,18 +35,15 @@ impl<T: TryFrom<Any, Error = DecodeError> + Msg + Encode> Transcode for T {
 	}
 }
 
+#[macro_export]
 macro_rules! register_protobuf_types {
 	($($t:ty),* $(,)?) => {
 		let _ = $crate::protobuf::TRANSCODER.set(Box::new(|type_url, value| {
 			match type_url {
 				$(<$t as $crate::msgs::Msg>::TYPE_URL =>
 					<$t as $crate::protobuf::Transcode>::transcode(type_url, value),)*
-				_ => Err(DecodeError::InvalidTypeUrl),
+				_ => Err(pallet_cosmos_types::error::DecodeError::InvalidTypeUrl),
 			}
 		}));
 	};
-}
-
-pub fn register_generic_protobuf_types() {
-	register_protobuf_types!(crate::msgs::MsgSend);
 }

@@ -15,25 +15,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-
-pub mod error;
 #[cfg(feature = "std")]
-pub mod legacy;
-pub mod msgs;
-#[cfg(feature = "std")]
-pub mod protobuf;
-#[cfg(feature = "std")]
-pub mod sign_doc;
-
-#[cfg(feature = "std")]
-use error::DecodeError;
+use crate::error::DecodeError;
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
 use sp_core::H160;
-#[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;

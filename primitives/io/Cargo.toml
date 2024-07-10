@@ -13,7 +13,7 @@ cosmrs = { workspace = true, optional = true }
 sp-std = { workspace = true }
 sp-runtime-interface = { workspace = true }
 
-hp-cosmos = { workspace = true, features = ["with-codec"] }
+pallet-cosmos-types = { workspace = true, features = ["with-codec"] }
 hp-crypto = { workspace = true }
 
 [features]
@@ -22,6 +22,6 @@ std = [
   "cosmrs",
   "sp-std/std",
   "sp-runtime-interface/std",
-  "hp-cosmos/std",
+  "pallet-cosmos-types/std",
   "hp-crypto/std",
 ]

@@ -20,7 +20,7 @@
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use hp_cosmos::AccountId;
+use pallet_cosmos_types::tx::AccountId;
 use sp_runtime_interface::runtime_interface;
 use sp_std::vec::Vec;
 
@@ -38,27 +38,27 @@ pub trait Cosmos {
 	}
 
 	/// Decode raw type cosmos transaction
-	fn decode_tx(tx_bytes: &[u8]) -> Option<hp_cosmos::Tx> {
-		hp_cosmos::Tx::decode(tx_bytes).ok()
+	fn decode_tx(tx_bytes: &[u8]) -> Option<pallet_cosmos_types::tx::Tx> {
+		pallet_cosmos_types::tx::Tx::decode(tx_bytes).ok()
 	}
 
 	/// Get SignerDoc hash.
-	fn get_signer_doc_bytes(
+	fn get_sign_doc_bytes(
 		tx_bytes: &[u8],
 		chain_id: &[u8],
 		account_number: u64,
 	) -> Option<[u8; 32]> {
-		hp_cosmos::sign_doc::get_signer_doc_bytes(tx_bytes, chain_id, account_number).ok()
+		pallet_cosmos_types::sign_doc::get_sign_doc_bytes(tx_bytes, chain_id, account_number).ok()
 	}
 
 	/// Get AminoSignerDoc hash.
-	fn get_amino_signer_doc_bytes(
+	fn get_amino_sign_doc_bytes(
 		tx_bytes: &[u8],
 		chain_id: &[u8],
 		account_number: u64,
 		sequence: u64,
 	) -> Option<[u8; 32]> {
-		hp_cosmos::sign_doc::get_amino_signer_doc_bytes(
+		pallet_cosmos_types::sign_doc::get_amino_sign_doc_bytes(
 			tx_bytes,
 			chain_id,
 			account_number,
@@ -69,14 +69,15 @@ pub trait Cosmos {
 
 	/// Converting a message from Protobuf encoding to Scale encoding
 	fn protobuf_to_scale(type_url: &[u8], value: &[u8]) -> Option<Vec<u8>> {
-		match hp_cosmos::protobuf::TRANSCODER.get() {
+		match pallet_cosmos_types::protobuf::TRANSCODER.get() {
 			Some(f) => f(type_url, value).ok(),
 			None => None,
 		}
 	}
 
 	/// Converting a message from Protobuf encoding to Scale encoding
-	fn get_msg_any_signers(type_url: &[u8], value: &[u8]) -> Option<Vec<AccountId>> {
-		hp_cosmos::msgs::get_msg_any_signers(type_url, value).ok()
+	fn get_msg_any_signers(_type_url: &[u8], _value: &[u8]) -> Option<Vec<AccountId>> {
+		// TODO
+		None
 	}
 }

@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::traits::Contains;
-use hp_cosmos::Tx;
+use pallet_cosmos_types::tx::Tx;
 use pallet_cosmos_x::ante::AnteDecorator;
 use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,

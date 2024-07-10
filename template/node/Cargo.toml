@@ -58,10 +58,11 @@ substrate-frame-rpc-system = { workspace = true }
 # Horizon
 hc-rpc = { workspace = true }
 hp-account = { workspace = true, features = ["std"] }
-hp-cosmos = { workspace = true, features = ["std"] }
 hp-io = { workspace = true, features = ["std"] }
 hp-rpc = { workspace = true, features = ["std"] }
 horizon-template-runtime = { workspace = true, features = ["std"] }
+pallet-cosmos-types = { workspace = true, features = ["std", "with-codec"] }
+pallet-cosmos-x-bank-types = { workspace = true, features = ["std", "with-codec"] }
 
 [build-dependencies]
 substrate-build-script-utils = { workspace = true }
