@@ -20,7 +20,7 @@
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use pallet_cosmos_types::tx::AccountId;
+use pallet_cosmos_types::tx::{AccountId, Any};
 use sp_runtime_interface::runtime_interface;
 use sp_std::vec::Vec;
 
@@ -68,16 +68,18 @@ pub trait Cosmos {
 	}
 
 	/// Converting a message from Protobuf encoding to Scale encoding
-	fn protobuf_to_scale(type_url: &[u8], value: &[u8]) -> Option<Vec<u8>> {
-		match pallet_cosmos_types::protobuf::TRANSCODER.get() {
-			Some(f) => f(type_url, value).ok(),
+	fn protobuf_to_scale(any: &Any) -> Option<Vec<u8>> {
+		match pallet_cosmos_types::registry::REGISTRY.get() {
+			Some(reg) => reg.transcode(any).ok(),
 			None => None,
 		}
 	}
 
 	/// Converting a message from Protobuf encoding to Scale encoding
-	fn get_msg_any_signers(_type_url: &[u8], _value: &[u8]) -> Option<Vec<AccountId>> {
-		// TODO
-		None
+	fn get_msg_any_signers(any: &Any) -> Option<Vec<AccountId>> {
+		match pallet_cosmos_types::registry::REGISTRY.get() {
+			Some(reg) => reg.signers(any).ok(),
+			None => None,
+		}
 	}
 }

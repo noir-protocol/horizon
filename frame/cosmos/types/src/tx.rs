@@ -22,6 +22,8 @@ use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
 use sp_core::H160;
+#[cfg(feature = "with-codec")]
+use sp_runtime_interface::pass_by::PassByCodec;
 use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;
@@ -80,7 +82,7 @@ impl TryFrom<cosmrs::tx::Body> for Body {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo, PassByCodec))]
 pub struct Any {
 	pub type_url: Vec<u8>,
 	pub value: Vec<u8>,

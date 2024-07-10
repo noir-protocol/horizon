@@ -36,8 +36,7 @@ where
 
 		let mut signers = sp_std::vec::Vec::<AccountId>::new();
 		for msg in &tx.body.messages {
-			if let Some(msg_signers) = hp_io::cosmos::get_msg_any_signers(&msg.type_url, &msg.value)
-			{
+			if let Some(msg_signers) = hp_io::cosmos::get_msg_any_signers(&msg) {
 				for msg_signer in msg_signers {
 					if !signers.contains(&msg_signer) {
 						signers.push(msg_signer);

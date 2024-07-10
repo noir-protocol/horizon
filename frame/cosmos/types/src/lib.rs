@@ -22,7 +22,7 @@ pub mod error;
 pub mod legacy;
 pub mod msgs;
 #[cfg(feature = "std")]
-pub mod protobuf;
+pub mod registry;
 #[cfg(feature = "std")]
 pub mod sign_doc;
 pub mod tx;

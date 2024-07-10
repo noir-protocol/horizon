@@ -17,6 +17,7 @@ clap = { workspace = true }
 futures = { workspace = true }
 hex = { workspace = true }
 jsonrpsee = { workspace = true }
+parity-scale-codec = { workspace = true, features = ["std"] }
 serde_json = { workspace = true }
 
 # Substrate FRAME
