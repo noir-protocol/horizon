@@ -66,11 +66,8 @@ pub trait Cosmos {
 		}
 	}
 
-	/// Get signers from message.
-	fn get_signers(any: &Any) -> Option<Vec<AccountId>> {
-		match pallet_cosmos_types::registry::REGISTRY.get() {
-			Some(reg) => reg.signers(any).ok(),
-			None => None,
-		}
+	/// Get signers from Tx.
+	fn get_signers(tx: &pallet_cosmos_types::tx::Tx) -> Option<Vec<AccountId>> {
+		tx.get_signers().ok()
 	}
 }

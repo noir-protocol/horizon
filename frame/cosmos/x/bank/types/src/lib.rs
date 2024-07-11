@@ -34,6 +34,7 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde_json::json;
+#[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -17,6 +17,8 @@
 
 #[cfg(feature = "std")]
 use crate::error::DecodeError;
+#[cfg(feature = "std")]
+use crate::registry;
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
@@ -24,6 +26,7 @@ use scale_info::TypeInfo;
 use sp_core::H160;
 #[cfg(feature = "with-codec")]
 use sp_runtime_interface::pass_by::PassByCodec;
+#[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;
@@ -31,7 +34,7 @@ pub type SignatureBytes = Vec<u8>;
 pub type Gas = u64;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo, PassByCodec))]
 pub struct Tx {
 	pub body: Body,
 	pub auth_info: AuthInfo,
@@ -53,6 +56,27 @@ impl Tx {
 			signatures: tx_origin.signatures,
 			raw: tx_bytes.to_vec(),
 		})
+	}
+
+	pub fn get_signers(&self) -> Result<Vec<AccountId>, DecodeError> {
+		let mut signers = Vec::<AccountId>::new();
+		for msg in &self.body.messages {
+			let msg_signers = match registry::REGISTRY.get() {
+				Some(reg) => reg.signers(msg),
+				None => return Err(DecodeError::InvalidTypeUrl),
+			}?;
+			for msg_signer in msg_signers {
+				if !signers.contains(&msg_signer) {
+					signers.push(msg_signer);
+				}
+			}
+		}
+		if let Some(fee_payer) = &self.auth_info.fee.payer {
+			if !signers.contains(fee_payer) {
+				signers.push(fee_payer.clone());
+			}
+		}
+		Ok(signers)
 	}
 }
 

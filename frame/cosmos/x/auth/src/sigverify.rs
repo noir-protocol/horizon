@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use hp_io::cosmos::secp256k1_ecdsa_verify;
-use pallet_cosmos_types::tx::{AccountId, PublicKey, SignerPublicKey, Tx};
+use pallet_cosmos_types::tx::{PublicKey, SignerPublicKey, Tx};
 use pallet_cosmos_x::ante::AnteDecorator;
 use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
@@ -34,21 +34,8 @@ where
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		let signatures = &tx.signatures;
 
-		let mut signers = sp_std::vec::Vec::<AccountId>::new();
-		for msg in &tx.body.messages {
-			if let Some(msg_signers) = hp_io::cosmos::get_signers(msg) {
-				for msg_signer in msg_signers {
-					if !signers.contains(&msg_signer) {
-						signers.push(msg_signer);
-					}
-				}
-			}
-		}
-		if let Some(fee_payer) = &tx.auth_info.fee.payer {
-			if !signers.contains(fee_payer) {
-				signers.push(fee_payer.clone());
-			}
-		}
+		let signers = hp_io::cosmos::get_signers(tx)
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
 		if signatures.len() != signers.len() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
