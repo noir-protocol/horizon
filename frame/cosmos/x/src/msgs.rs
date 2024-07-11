@@ -17,12 +17,8 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use frame_support::weights::Weight;
-use pallet_cosmos_types::tx::{AccountId, Any};
+use pallet_cosmos_types::tx::Any;
 use sp_runtime::RuntimeString;
-
-pub trait Msg {
-	fn get_signers(&self) -> sp_std::vec::Vec<AccountId>;
-}
 
 pub struct MsgHandlerErrorInfo {
 	pub weight: Weight,
