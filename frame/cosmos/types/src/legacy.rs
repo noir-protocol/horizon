@@ -83,7 +83,7 @@ impl StdSignDoc {
 		})
 	}
 
-	pub fn bytes(&self) -> Result<Vec<u8>, DecodeError> {
+	pub fn to_bytes(&self) -> Result<Vec<u8>, DecodeError> {
 		Ok(serde_json::to_value(self)
 			.map_err(|_| DecodeError::InvalidSignDoc)?
 			.to_string()

@@ -19,7 +19,7 @@ use crate::{error::DecodeError, legacy::StdSignDoc, tx::SequenceNumber};
 use core::str::FromStr;
 use cosmrs::tendermint::chain;
 
-pub fn sign_doc_bytes(
+pub fn sign_bytes(
 	tx_bytes: &[u8],
 	chain_id: &[u8],
 	account_number: u64,
@@ -29,14 +29,14 @@ pub fn sign_doc_bytes(
 		.map(chain::Id::from_str)
 		.map_err(|_| DecodeError::InvalidChainId)?
 		.map_err(|_| DecodeError::InvalidChainId)?;
-	let sign_doc = cosmrs::tx::SignDoc::new(&tx.body, &tx.auth_info, &chain_id, account_number)
-		.map_err(|_| DecodeError::InvalidSignDoc)?;
-	let sign_doc_bytes = sign_doc.into_bytes().map_err(|_| DecodeError::InvalidSignDoc)?;
 
-	Ok(sign_doc_bytes)
+	cosmrs::tx::SignDoc::new(&tx.body, &tx.auth_info, &chain_id, account_number)
+		.map_err(|_| DecodeError::InvalidSignDoc)?
+		.into_bytes()
+		.map_err(|_| DecodeError::InvalidSignDoc)
 }
 
-pub fn std_sign_doc_bytes(
+pub fn std_sign_bytes(
 	tx_bytes: &[u8],
 	chain_id: &[u8],
 	account_number: u64,
@@ -44,25 +44,24 @@ pub fn std_sign_doc_bytes(
 ) -> Result<Vec<u8>, DecodeError> {
 	let tx = cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeError::InvalidTxData)?;
 	let chain_id = String::from_utf8(chain_id.to_vec()).map_err(|_| DecodeError::InvalidChainId)?;
-	let sign_doc_bytes = StdSignDoc::new(&tx, chain_id, sequence, account_number)
-		.map_err(|_| DecodeError::InvalidSignDoc)?
-		.bytes()?;
 
-	Ok(sign_doc_bytes)
+	StdSignDoc::new(&tx, chain_id, sequence, account_number)
+		.map_err(|_| DecodeError::InvalidSignDoc)?
+		.to_bytes()
 }
 
 #[cfg(test)]
 mod tests {
-	use super::sign_doc_bytes;
+	use super::sign_bytes;
 	use base64ct::{Base64, Encoding};
 	use sp_core::sha2_256;
 
 	#[test]
-	fn test_sign_doc_bytes() {
+	fn test_sign_bytes() {
 		let tx_raw = "CpMBCpABChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEnAKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMWdtajJleGFnMDN0dGdhZnBya2RjM3Q4ODBncm1hOW53ZWZjZDJ3GhAKBXVhdG9tEgcxMDAwMDAwEnEKTgpGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQIKEJE0H+VmS/oXgtXgR3lokGjJFrBMs2XsMVN1VoTZoRIECgIIARIfChUKBXVhdG9tEgw4ODY4ODAwMDAwMDAQgMDxxZSVFBpA9+DRmMYoIcxYF8jpNfUjMIMB4pgZ9diC8ySbnhc6YU84AA3b/0RsCr+nx9AZ27FwcrKJM/yBh8lz+/A9BFn3bg==";
 
 		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
-		let expected_hash = sign_doc_bytes(&tx_bytes, b"theta-testnet-001", 754989u64).unwrap();
+		let expected_hash = sign_bytes(&tx_bytes, b"theta-testnet-001", 754989u64).unwrap();
 
 		let sign_doc_raw = "CpMBCpABChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEnAKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMWdtajJleGFnMDN0dGdhZnBya2RjM3Q4ODBncm1hOW53ZWZjZDJ3GhAKBXVhdG9tEgcxMDAwMDAwEnEKTgpGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQIKEJE0H+VmS/oXgtXgR3lokGjJFrBMs2XsMVN1VoTZoRIECgIIARIfChUKBXVhdG9tEgw4ODY4ODAwMDAwMDAQgMDxxZSVFBoRdGhldGEtdGVzdG5ldC0wMDEgrYou";
 		let hash = sha2_256(&Base64::decode_vec(&sign_doc_raw).unwrap());

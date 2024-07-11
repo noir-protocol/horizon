@@ -43,24 +43,19 @@ pub trait Cosmos {
 	}
 
 	/// Get SignerDoc bytes.
-	fn sign_doc_bytes(tx_bytes: &[u8], chain_id: &[u8], account_number: u64) -> Option<Vec<u8>> {
-		pallet_cosmos_types::sign_doc::sign_doc_bytes(tx_bytes, chain_id, account_number).ok()
+	fn sign_bytes(tx_bytes: &[u8], chain_id: &[u8], account_number: u64) -> Option<Vec<u8>> {
+		pallet_cosmos_types::sign_doc::sign_bytes(tx_bytes, chain_id, account_number).ok()
 	}
 
 	/// Get StdSignDoc bytes.
-	fn std_sign_doc_bytes(
+	fn std_sign_bytes(
 		tx_bytes: &[u8],
 		chain_id: &[u8],
 		account_number: u64,
 		sequence: u64,
 	) -> Option<Vec<u8>> {
-		pallet_cosmos_types::sign_doc::std_sign_doc_bytes(
-			tx_bytes,
-			chain_id,
-			account_number,
-			sequence,
-		)
-		.ok()
+		pallet_cosmos_types::sign_doc::std_sign_bytes(tx_bytes, chain_id, account_number, sequence)
+			.ok()
 	}
 
 	/// Converting a message from Protobuf encoding to Scale encoding
