@@ -235,7 +235,10 @@ pub mod pallet {
 	{
 		/// Transact an Cosmos transaction.
 		#[pallet::call_index(0)]
-		#[pallet::weight({ 0 })]
+		#[pallet::weight({
+			let tx = hp_io::cosmos::decode_tx(tx_bytes).unwrap();
+			tx.auth_info.fee.gas_limit
+		})]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
 			let tx = hp_io::cosmos::decode_tx(&tx_bytes).unwrap();
