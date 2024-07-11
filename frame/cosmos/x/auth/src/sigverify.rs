@@ -36,7 +36,7 @@ where
 
 		let mut signers = sp_std::vec::Vec::<AccountId>::new();
 		for msg in &tx.body.messages {
-			if let Some(msg_signers) = hp_io::cosmos::get_msg_any_signers(&msg) {
+			if let Some(msg_signers) = hp_io::cosmos::get_signers(msg) {
 				for msg_signer in msg_signers {
 					if !signers.contains(&msg_signer) {
 						signers.push(msg_signer);
@@ -85,13 +85,12 @@ where
 				}
 
 				let chain_id = T::ChainId::get();
-				let hash = match &signer_info.mode_info {
+				let bytes = match &signer_info.mode_info {
 					pallet_cosmos_types::tx::ModeInfo::Single(single) => match single.mode {
 						pallet_cosmos_types::tx::SignMode::Direct =>
-							hp_io::cosmos::get_sign_doc_bytes(&tx.raw, &chain_id, 0u64),
-
+							hp_io::cosmos::sign_doc_bytes(&tx.raw, &chain_id, 0u64),
 						pallet_cosmos_types::tx::SignMode::LegacyAminoJson =>
-							hp_io::cosmos::get_amino_sign_doc_bytes(
+							hp_io::cosmos::std_sign_doc_bytes(
 								&tx.raw,
 								&chain_id,
 								0u64,
@@ -100,8 +99,9 @@ where
 						_ => None,
 					},
 				}
-				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadProof))?;
 
+				let hash = sp_core::sha2_256(&bytes);
 				if !secp256k1_ecdsa_verify(sig, &hash, &public_key) {
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
 				}

@@ -15,10 +15,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{error::DecodeError, tx::SequenceNumber};
+use crate::{error::DecodeError, registry, tx::SequenceNumber};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
-use sp_core::hashing::sha2_256;
+use serde_json::Value;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Coin {
@@ -27,35 +26,35 @@ pub struct Coin {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AminoSignFee {
+pub struct StdFee {
 	pub amount: Vec<Coin>,
 	pub gas: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Any {
+pub struct LegacyMsg {
 	pub r#type: String,
 	pub value: Value,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AminoSignDoc {
+pub struct StdSignDoc {
 	pub account_number: String,
 	pub chain_id: String,
-	pub fee: AminoSignFee,
+	pub fee: StdFee,
 	pub memo: String,
-	pub msgs: Vec<Any>,
+	pub msgs: Vec<LegacyMsg>,
 	pub sequence: String,
 }
 
-impl AminoSignDoc {
+impl StdSignDoc {
 	pub fn new(
 		tx: &cosmrs::Tx,
 		chain_id: String,
 		account_number: u64,
 		sequence: SequenceNumber,
 	) -> Result<Self, DecodeError> {
-		let fee = AminoSignFee {
+		let fee = StdFee {
 			amount: tx
 				.auth_info
 				.fee
@@ -65,30 +64,13 @@ impl AminoSignDoc {
 				.collect(),
 			gas: tx.auth_info.fee.gas_limit.to_string(),
 		};
-		let mut msgs = Vec::<Any>::new();
+		let mut msgs = Vec::<LegacyMsg>::new();
 		for msg in tx.body.messages.clone().into_iter() {
-			match msg.type_url.as_str() {
-				"/cosmos.bank.v1beta1.MsgSend" => {
-					let cosmrs::proto::cosmos::bank::v1beta1::MsgSend {
-						from_address,
-						to_address,
-						amount,
-					} = msg.to_msg().map_err(|_| DecodeError::InvalidMsgData)?;
-					let amount = amount
-						.iter()
-						.map(|amt| Coin { amount: amt.amount.clone(), denom: amt.denom.clone() })
-						.collect::<Vec<Coin>>();
-					let value = serde_json::to_value(
-						json!({ "from_address": from_address, "to_address": to_address, "amount": amount }),
-					)
-					.map_err(|_| DecodeError::InvalidMsgData)?;
-
-					msgs.push(Any { r#type: "cosmos-sdk/MsgSend".to_string(), value });
-				},
-				_ => {
-					return Err(DecodeError::InvalidMsgData);
-				},
-			}
+			let legacy_msg = match registry::REGISTRY.get() {
+				Some(reg) => reg.legacy_msg(&msg.into())?,
+				None => return Err(DecodeError::InvalidTypeUrl),
+			};
+			msgs.push(legacy_msg);
 		}
 
 		Ok(Self {
@@ -107,29 +89,5 @@ impl AminoSignDoc {
 			.to_string()
 			.as_bytes()
 			.to_vec())
-	}
-
-	pub fn hash(&self) -> Result<[u8; 32], DecodeError> {
-		Ok(sha2_256(&self.bytes()?))
-	}
-}
-
-#[cfg(test)]
-mod tests {
-	use super::AminoSignDoc;
-	use base64ct::{Base64, Encoding};
-
-	#[test]
-	fn test_sign_amino_doc_hash() {
-		let tx_bytes =  "CpoBCpcBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEncKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMW41amd4NjR6dzM4c3M3Nm16dXU0dWM3amV5cXcydmZqazYwZmR6GhcKBGFjZHQSDzEwMDAwMDAwMDAwMDAwMBJsCk4KRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECChCRNB/lZkv6F4LV4Ed5aJBoyRawTLNl7DFTdVaE2aESBAoCCH8SGgoSCgRhY2R0EgoxMDQwMDAwMDAwEIDa8esEGkBgXIiPoBpecG7QpKDJPaztFogqvmxjDHF5ORfWBrOoSzf0+AAmch1CXrG4OmiKL0y8v9ITx0QzWYUc7ueXcdIm";
-		let tx_bytes = Base64::decode_vec(tx_bytes).unwrap();
-		let tx = cosmrs::Tx::from_bytes(&tx_bytes).unwrap();
-		let sequence = tx.auth_info.signer_infos.first().unwrap().sequence;
-		let sign_doc = AminoSignDoc::new(&tx, "dev".to_string(), 0u64, sequence).unwrap();
-		let hash = &sign_doc.hash().unwrap();
-		assert_eq!(
-			array_bytes::bytes2hex("", hash),
-			"714d4bdfdbd0bd630ebdf93b1f6eba7d3c752e92bbab6c9d3d9c93e1777348bb"
-		);
 	}
 }

@@ -17,21 +17,14 @@
 
 use crate::{
 	error::DecodeError,
+	legacy::LegacyMsg,
 	tx::{AccountId, Any},
 };
 
 pub trait Msg {
 	const TYPE_URL: &'static [u8];
+	const AMINO_NAME: &'static [u8];
 
 	fn get_signers(&self) -> sp_std::vec::Vec<AccountId>;
-}
-
-#[cfg(feature = "std")]
-pub fn get_msg_any_signers<T: TryFrom<Any, Error = DecodeError> + Msg>(
-	type_url: &[u8],
-	value: &[u8],
-) -> Result<Vec<AccountId>, DecodeError> {
-	let any = Any { type_url: type_url.to_vec(), value: value.to_vec() };
-	let msg: T = any.try_into()?;
-	Ok(msg.get_signers())
+	fn legacy_msg(any: Any) -> Result<LegacyMsg, DecodeError>;
 }

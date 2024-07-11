@@ -20,6 +20,7 @@
 pub mod error;
 #[cfg(feature = "std")]
 pub mod legacy;
+#[cfg(feature = "std")]
 pub mod msgs;
 #[cfg(feature = "std")]
 pub mod registry;

@@ -17,6 +17,7 @@
 
 use crate::{
 	error::DecodeError,
+	legacy::LegacyMsg,
 	tx::{AccountId, Any},
 };
 use std::sync::OnceLock;
@@ -26,6 +27,7 @@ pub static REGISTRY: OnceLock<Box<dyn Registry + Send + Sync + 'static>> = OnceL
 pub trait Registry {
 	fn signers(&self, any: &Any) -> Result<Vec<AccountId>, DecodeError>;
 	fn transcode(&self, any: &Any) -> Result<Vec<u8>, DecodeError>;
+	fn legacy_msg(&self, any: &Any) -> Result<LegacyMsg, DecodeError>;
 }
 
 #[macro_export]
@@ -52,6 +54,13 @@ macro_rules! register_cosmos_types {
 				fn transcode(&self, any: &Any) -> Result<Vec<u8>, DecodeError> {
 					match &any.type_url[..] {
 						$(<$t as Msg>::TYPE_URL => Ok(<$t>::try_from(any.clone())?.encode()),)*
+						_ => Err(DecodeError::InvalidTypeUrl),
+					}
+				}
+
+				fn legacy_msg(&self, any: &Any) -> Result<pallet_cosmos_types::legacy::LegacyMsg, DecodeError> {
+					match &any.type_url[..] {
+						$(<$t as Msg>::TYPE_URL => Ok(<$t>::legacy_msg(any.clone())?),)*
 						_ => Err(DecodeError::InvalidTypeUrl),
 					}
 				}

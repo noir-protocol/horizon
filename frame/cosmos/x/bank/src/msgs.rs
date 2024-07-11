@@ -61,8 +61,10 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn to_msg(msg: &Any) -> Result<MsgSend, MsgHandlerError> {
-		let value = hp_io::cosmos::protobuf_to_scale(&msg).ok_or(MsgHandlerError::InvalidMsg)?;
-		Decode::decode(&mut &value[..]).map_err(|_| MsgHandlerError::InvalidMsg)
+		hp_io::cosmos::protobuf_to_scale(msg)
+			.map(|value| Decode::decode(&mut &value[..]))
+			.ok_or(MsgHandlerError::InvalidMsg)?
+			.map_err(|_| MsgHandlerError::InvalidMsg)
 	}
 
 	fn send_coins(

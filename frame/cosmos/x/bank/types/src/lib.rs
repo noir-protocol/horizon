@@ -21,13 +21,19 @@
 use cosmrs::tx::Msg as _;
 use pallet_cosmos_types::{
 	error::DecodeError,
-	msgs::Msg,
 	tx::{AccountId, Any, Coin},
+};
+#[cfg(feature = "std")]
+use pallet_cosmos_types::{
+	legacy::{self, LegacyMsg},
+	msgs::Msg,
 };
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
+#[cfg(feature = "std")]
+use serde_json::json;
 use sp_std::vec::Vec;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -41,9 +47,30 @@ pub struct MsgSend {
 #[cfg(feature = "std")]
 impl Msg for MsgSend {
 	const TYPE_URL: &'static [u8] = b"/cosmos.bank.v1beta1.MsgSend";
+	const AMINO_NAME: &'static [u8] = b"cosmos-sdk/MsgSend";
 
 	fn get_signers(&self) -> Vec<AccountId> {
 		vec![self.from_address.clone()]
+	}
+
+	fn legacy_msg(any: Any) -> Result<LegacyMsg, DecodeError> {
+		let type_url = String::from_utf8(any.type_url).map_err(|_| DecodeError::InvalidMsgData)?;
+		let cosmrs::proto::cosmos::bank::v1beta1::MsgSend { from_address, to_address, amount } =
+			cosmrs::Any { type_url, value: any.value }
+				.to_msg()
+				.map_err(|_| DecodeError::InvalidMsgData)?;
+		let amount = amount
+			.iter()
+			.map(|amt| legacy::Coin { amount: amt.amount.to_string(), denom: amt.denom.clone() })
+			.collect::<Vec<legacy::Coin>>();
+		let value = serde_json::to_value(
+			json!({ "from_address": from_address, "to_address": to_address, "amount": amount }),
+		)
+		.map_err(|_| DecodeError::InvalidMsgData)?;
+		let r#type = String::from_utf8(MsgSend::AMINO_NAME.to_vec())
+			.map_err(|_| DecodeError::InvalidMsgData)?;
+
+		Ok(LegacyMsg { r#type, value })
 	}
 }
 

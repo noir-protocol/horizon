@@ -42,23 +42,19 @@ pub trait Cosmos {
 		pallet_cosmos_types::tx::Tx::decode(tx_bytes).ok()
 	}
 
-	/// Get SignerDoc hash.
-	fn get_sign_doc_bytes(
-		tx_bytes: &[u8],
-		chain_id: &[u8],
-		account_number: u64,
-	) -> Option<[u8; 32]> {
-		pallet_cosmos_types::sign_doc::get_sign_doc_bytes(tx_bytes, chain_id, account_number).ok()
+	/// Get SignerDoc bytes.
+	fn sign_doc_bytes(tx_bytes: &[u8], chain_id: &[u8], account_number: u64) -> Option<Vec<u8>> {
+		pallet_cosmos_types::sign_doc::sign_doc_bytes(tx_bytes, chain_id, account_number).ok()
 	}
 
-	/// Get AminoSignerDoc hash.
-	fn get_amino_sign_doc_bytes(
+	/// Get StdSignDoc bytes.
+	fn std_sign_doc_bytes(
 		tx_bytes: &[u8],
 		chain_id: &[u8],
 		account_number: u64,
 		sequence: u64,
-	) -> Option<[u8; 32]> {
-		pallet_cosmos_types::sign_doc::get_amino_sign_doc_bytes(
+	) -> Option<Vec<u8>> {
+		pallet_cosmos_types::sign_doc::std_sign_doc_bytes(
 			tx_bytes,
 			chain_id,
 			account_number,
@@ -75,8 +71,8 @@ pub trait Cosmos {
 		}
 	}
 
-	/// Converting a message from Protobuf encoding to Scale encoding
-	fn get_msg_any_signers(any: &Any) -> Option<Vec<AccountId>> {
+	/// Get signers from message.
+	fn get_signers(any: &Any) -> Option<Vec<AccountId>> {
 		match pallet_cosmos_types::registry::REGISTRY.get() {
 			Some(reg) => reg.signers(any).ok(),
 			None => None,
