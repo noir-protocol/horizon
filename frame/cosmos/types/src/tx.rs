@@ -78,6 +78,13 @@ impl Tx {
 		}
 		Ok(signers)
 	}
+
+	pub fn fee_payer(&self) -> Result<AccountId, DecodeError> {
+		if let Some(fee_payer) = &self.auth_info.fee.payer {
+			return Ok(fee_payer.clone());
+		}
+		self.get_signers()?.first().ok_or(DecodeError::InvalidTxData).cloned()
+	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -66,8 +66,13 @@ pub trait Cosmos {
 		}
 	}
 
-	/// Get signers from Tx.
+	/// Get transaction signers.
 	fn get_signers(tx: &pallet_cosmos_types::tx::Tx) -> Option<Vec<AccountId>> {
 		tx.get_signers().ok()
+	}
+
+	/// Get transaction fee payer.
+	fn fee_payer(tx: &pallet_cosmos_types::tx::Tx) -> Option<AccountId> {
+		tx.fee_payer().ok()
 	}
 }
