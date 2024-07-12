@@ -19,6 +19,7 @@
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
+#[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
