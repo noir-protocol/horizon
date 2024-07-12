@@ -33,13 +33,11 @@ use frame_support::{
 	weights::{constants::ExtrinsicBaseWeight, Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use hp_io::cosmos::ripemd160;
-use pallet_cosmos_types::tx::{Account, PublicKey, SignerPublicKey};
+use pallet_cosmos_types::tx::Account;
 use pallet_cosmos_x::{ante::AnteDecorator, msgs::MsgServiceRouter};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
-use sp_io::hashing::sha2_256;
 use sp_runtime::{
 	traits::{BadOrigin, Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
@@ -83,18 +81,7 @@ where
 				return Some(Err(e));
 			}
 
-			if let Some(signer) = tx.auth_info.signer_infos.first() {
-				if let Some(SignerPublicKey::Single(PublicKey::Secp256k1(public_key))) =
-					signer.public_key
-				{
-					let address = ripemd160(&sha2_256(&public_key)).into();
-					Some(Ok(address))
-				} else {
-					Some(Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)))
-				}
-			} else {
-				Some(Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)))
-			}
+			hp_io::cosmos::fee_payer(&tx).map(|fee_payer| Ok(fee_payer.address))
 		} else {
 			None
 		}
