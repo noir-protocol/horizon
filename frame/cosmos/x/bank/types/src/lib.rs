@@ -20,8 +20,9 @@
 #[cfg(feature = "std")]
 use cosmrs::tx::Msg as _;
 use pallet_cosmos_types::{
+	coin::Coin,
 	error::DecodeError,
-	tx::{AccountId, Any, Coin},
+	tx::{AccountId, Any},
 };
 #[cfg(feature = "std")]
 use pallet_cosmos_types::{

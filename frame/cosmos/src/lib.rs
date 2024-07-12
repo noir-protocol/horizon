@@ -194,6 +194,7 @@ pub mod pallet {
 		/// The converter for converting Weight to Gas.
 		type WeightToGas: Convert<Weight, Gas>;
 		/// The maximum number of transaction signatures allowed.
+		#[pallet::constant]
 		type TxSigLimit: Get<u64>;
 	}
 

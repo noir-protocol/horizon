@@ -75,17 +75,15 @@ where
 				let chain_id = T::ChainId::get();
 				let bytes = match &signer_info.mode_info {
 					pallet_cosmos_types::tx::ModeInfo::Single(single) => match single.mode {
-						pallet_cosmos_types::tx::SignMode::Direct => {
-							hp_io::cosmos::sign_bytes(&tx.raw, &chain_id, 0u64)
-						},
-						pallet_cosmos_types::tx::SignMode::LegacyAminoJson => {
+						pallet_cosmos_types::tx::SignMode::Direct =>
+							hp_io::cosmos::sign_bytes(&tx.raw, &chain_id, 0u64),
+						pallet_cosmos_types::tx::SignMode::LegacyAminoJson =>
 							hp_io::cosmos::std_sign_bytes(
 								&tx.raw,
 								&chain_id,
 								0u64,
 								signer_info.sequence,
-							)
-						},
+							),
 						_ => None,
 					},
 				}

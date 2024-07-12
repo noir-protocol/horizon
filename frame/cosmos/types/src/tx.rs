@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::coin::Coin;
 #[cfg(feature = "std")]
 use crate::error::DecodeError;
 #[cfg(feature = "std")]
@@ -287,21 +288,6 @@ impl TryFrom<cosmrs::tx::Fee> for Fee {
 pub struct Account {
 	pub sequence: SequenceNumber,
 	pub amount: u128,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-pub struct Coin {
-	pub denom: Vec<u8>,
-	pub amount: u128,
-}
-
-#[cfg(feature = "std")]
-impl From<&cosmrs::Coin> for Coin {
-	fn from(coin: &cosmrs::Coin) -> Self {
-		let denom = coin.denom.as_ref().as_bytes().to_vec();
-		Self { denom, amount: coin.amount }
-	}
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
