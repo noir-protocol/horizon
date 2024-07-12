@@ -19,8 +19,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
-pub mod errors;
-
 pub use self::pallet::*;
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
