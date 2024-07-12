@@ -46,6 +46,7 @@ use frame_support::{
 use hp_crypto::EcdsaExt;
 use msgs::MsgServiceRouter;
 use pallet_cosmos::AddressMapping;
+use pallet_cosmos_types::tx::Gas;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -56,7 +57,7 @@ use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable,
+		AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, DispatchInfoOf, Dispatchable,
 		IdentifyAccount, NumberFor, One, PostDispatchInfoOf, Verify,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
@@ -306,11 +307,26 @@ impl Contains<Vec<u8>> for MsgFilter {
 	}
 }
 
+pub struct GasToWeight;
+impl Convert<Gas, Weight> for GasToWeight {
+	fn convert(gas: Gas) -> Weight {
+		Weight::from_parts(gas, 0u64)
+	}
+}
+
+pub struct WeightToGas;
+impl Convert<Weight, Gas> for WeightToGas {
+	fn convert(weight: Weight) -> Gas {
+		weight.ref_time()
+	}
+}
+
 parameter_types! {
 	pub const MaxMemoCharacters: u64 = 256;
 	pub const StringLimit: u32 = 128;
 	pub NativeDenom: BoundedVec<u8, StringLimit> = (*b"acdt").to_vec().try_into().unwrap();
 	pub ChainId: BoundedVec<u8, StringLimit> = (*b"dev").to_vec().try_into().unwrap();
+	pub const TxSigLimit: u64 = 7;
 }
 
 impl pallet_cosmos::Config for Runtime {
@@ -322,8 +338,6 @@ impl pallet_cosmos::Config for Runtime {
 	type LengthToFee = IdentityFee<Balance>;
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
-	/// Weight information for extrinsics in this pallet.
-	type WeightInfo = pallet_cosmos::weights::HorizonWeight<Runtime>;
 	/// Used to calculate actual fee when executing cosmos transaction.
 	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
 	/// Convert a weight value into a deductible fee based on the currency type.
@@ -342,6 +356,12 @@ impl pallet_cosmos::Config for Runtime {
 	type ChainId = ChainId;
 	/// The message filter.
 	type MsgFilter = MsgFilter;
+	/// The converter for converting Gas to Weight.
+	type GasToWeight = GasToWeight;
+	/// The converter for converting Weight to Gas.
+	type WeightToGas = WeightToGas;
+	/// The maximum number of transaction signatures allowed.
+	type TxSigLimit = TxSigLimit;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {

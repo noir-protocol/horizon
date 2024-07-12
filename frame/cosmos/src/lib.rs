@@ -20,7 +20,6 @@
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
 pub mod errors;
-pub mod weights;
 
 pub use self::pallet::*;
 use frame_support::{
@@ -33,7 +32,7 @@ use frame_support::{
 	weights::{constants::ExtrinsicBaseWeight, Weight, WeightToFee},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use pallet_cosmos_types::tx::Account;
+use pallet_cosmos_types::tx::{Account, Gas};
 use pallet_cosmos_x::{ante::AnteDecorator, msgs::MsgServiceRouter};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -46,7 +45,6 @@ use sp_runtime::{
 	DispatchError, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
-pub use weights::*;
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum RawOrigin {
@@ -76,10 +74,6 @@ where
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx_bytes } = self {
 			let tx = hp_io::cosmos::decode_tx(tx_bytes)?;
-
-			if let Err(e) = T::AnteHandler::ante_handle(&tx, true) {
-				return Some(Err(e));
-			}
 
 			hp_io::cosmos::fee_payer(&tx).map(|fee_payer| Ok(fee_payer.address))
 		} else {
@@ -172,8 +166,6 @@ pub mod pallet {
 		type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
 		/// The overarching event type.
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-		/// Weight information for extrinsics in this pallet.
-		type WeightInfo: WeightInfo;
 		/// Used to answer contracts' queries regarding the current weight price. This is **not**
 		/// used to calculate the actual fee and is only for informational purposes.
 		type WeightPrice: Convert<Weight, BalanceOf<Self>>;
@@ -197,12 +189,18 @@ pub mod pallet {
 		type ChainId: Get<BoundedVec<u8, Self::StringLimit>>;
 		/// The message filter.
 		type MsgFilter: Contains<Vec<u8>>;
+		/// The converter for converting Gas to Weight.
+		type GasToWeight: Convert<Gas, Weight>;
+		/// The converter for converting Weight to Gas.
+		type WeightToGas: Convert<Weight, Gas>;
+		/// The maximum number of transaction signatures allowed.
+		type TxSigLimit: Get<u64>;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event {
-		Executed { gas_used: Weight, messages: Vec<Any> },
+		Executed { gas_used: Gas, messages: Vec<Any> },
 	}
 
 	#[pallet::error]
@@ -224,7 +222,7 @@ pub mod pallet {
 		#[pallet::call_index(0)]
 		#[pallet::weight({
 			let tx = hp_io::cosmos::decode_tx(tx_bytes).unwrap();
-			tx.auth_info.fee.gas_limit
+			T::GasToWeight::convert(tx.auth_info.fee.gas_limit)
 		})]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
@@ -315,7 +313,10 @@ impl<T: Config> Pallet<T> {
 			}
 		}
 
-		Self::deposit_event(Event::Executed { gas_used: total_weight, messages: tx.body.messages });
+		Self::deposit_event(Event::Executed {
+			gas_used: T::WeightToGas::convert(total_weight),
+			messages: tx.body.messages,
+		});
 
 		Ok(PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes })
 	}

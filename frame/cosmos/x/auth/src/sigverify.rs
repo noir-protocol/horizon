@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use hp_io::cosmos::secp256k1_ecdsa_verify;
-use pallet_cosmos_types::tx::{PublicKey, SignerPublicKey, Tx};
+use pallet_cosmos_types::tx::{PublicKey, SignerInfo, SignerPublicKey, Tx};
 use pallet_cosmos_x::ante::AnteDecorator;
 use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
@@ -98,5 +98,35 @@ where
 		}
 
 		Ok(ValidTransaction::default())
+	}
+}
+
+pub struct ValidateSigCountDecorator<T>(sp_std::marker::PhantomData<T>);
+
+impl<T> AnteDecorator for ValidateSigCountDecorator<T>
+where
+	T: pallet_cosmos::Config,
+{
+	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
+		let mut sig_count = 0u64;
+		for SignerInfo { public_key, .. } in &tx.auth_info.signer_infos {
+			sig_count = sig_count.saturating_add(Self::count_sub_keys(public_key.clone()));
+
+			if sig_count > T::TxSigLimit::get() {
+				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+			}
+		}
+
+		Ok(ValidTransaction::default())
+	}
+}
+
+impl<T> ValidateSigCountDecorator<T> {
+	fn count_sub_keys(public_key: Option<SignerPublicKey>) -> u64 {
+		// TODO: Support legacy multi signatures.
+		match public_key {
+			Some(SignerPublicKey::Single(_)) => 1,
+			None => 0,
+		}
 	}
 }
