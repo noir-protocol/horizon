@@ -31,5 +31,5 @@ pub type AnteDecorators<T> = (
 	msg::KnownMsgDecorator<T>,
 	sigverify::SigVerificationDecorator<T>,
 	// TODO: Check fee
-	// TODO: Increment account nonce
+	sigverify::IncrementSequenceDecorator<T>,
 );

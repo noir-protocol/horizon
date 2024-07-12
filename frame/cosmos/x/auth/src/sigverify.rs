@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use hp_io::cosmos::secp256k1_ecdsa_verify;
+use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::tx::{PublicKey, SignerInfo, SignerPublicKey, Tx};
 use pallet_cosmos_x::ante::AnteDecorator;
 use sp_core::{sha2_256, Get, H160};
@@ -74,15 +75,17 @@ where
 				let chain_id = T::ChainId::get();
 				let bytes = match &signer_info.mode_info {
 					pallet_cosmos_types::tx::ModeInfo::Single(single) => match single.mode {
-						pallet_cosmos_types::tx::SignMode::Direct =>
-							hp_io::cosmos::sign_bytes(&tx.raw, &chain_id, 0u64),
-						pallet_cosmos_types::tx::SignMode::LegacyAminoJson =>
+						pallet_cosmos_types::tx::SignMode::Direct => {
+							hp_io::cosmos::sign_bytes(&tx.raw, &chain_id, 0u64)
+						},
+						pallet_cosmos_types::tx::SignMode::LegacyAminoJson => {
 							hp_io::cosmos::std_sign_bytes(
 								&tx.raw,
 								&chain_id,
 								0u64,
 								signer_info.sequence,
-							),
+							)
+						},
 						_ => None,
 					},
 				}
@@ -128,5 +131,22 @@ impl<T> ValidateSigCountDecorator<T> {
 			Some(SignerPublicKey::Single(_)) => 1,
 			None => 0,
 		}
+	}
+}
+
+pub struct IncrementSequenceDecorator<T>(sp_std::marker::PhantomData<T>);
+impl<T> AnteDecorator for IncrementSequenceDecorator<T>
+where
+	T: frame_system::Config + pallet_cosmos::Config,
+{
+	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
+		let signers = hp_io::cosmos::get_signers(tx)
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+		for signer in signers {
+			let account = T::AddressMapping::into_account_id(signer.address);
+			frame_system::pallet::Pallet::<T>::inc_account_nonce(account);
+		}
+
+		Ok(ValidTransaction::default())
 	}
 }
