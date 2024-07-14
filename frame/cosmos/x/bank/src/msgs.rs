@@ -88,7 +88,7 @@ where
 				})?;
 
 				total_weight = total_weight.saturating_add(
-					pallet_balances::weights::SubstrateWeight::<T>::transfer_allow_death(),
+					pallet_balances::weights::SubstrateWeight::<T>::transfer_keep_alive(),
 				);
 			} else {
 				// TODO: Asset support planned
