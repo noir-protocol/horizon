@@ -334,14 +334,8 @@ impl pallet_cosmos::Config for Runtime {
 	type AddressMapping = compat::cosm::HashedAddressMapping<Self, BlakeTwo256>;
 	/// Currency type for withdraw and balance storage.
 	type Currency = Balances;
-	/// Convert a length value into a deductible fee based on the currency type.
-	type LengthToFee = IdentityFee<Balance>;
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
-	/// Used to calculate actual fee when executing cosmos transaction.
-	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
-	/// Convert a weight value into a deductible fee based on the currency type.
-	type WeightToFee = IdentityFee<Balance>;
 	/// Verify the validity of a Cosmos transaction.
 	type AnteHandler = ante::AnteHandler<Self>;
 	/// The maximum size of the memo.

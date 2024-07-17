@@ -27,7 +27,7 @@ use frame_support::{
 		tokens::{fungible::Inspect, Fortitude, Preservation},
 		Currency, Get,
 	},
-	weights::{constants::ExtrinsicBaseWeight, Weight, WeightToFee},
+	weights::{constants::ExtrinsicBaseWeight, Weight},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use pallet_cosmos_types::tx::{Account, Gas};
@@ -154,21 +154,72 @@ pub mod pallet {
 	pub type BalanceOf<T> =
 		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
-	#[pallet::config]
+	/// Default implementations of [`DefaultConfig`], which can be used to implement [`Config`].
+	pub mod config_preludes {
+		use super::*;
+		use frame_support::{derive_impl, parameter_types};
+		pub struct TestDefaultConfig;
+
+		#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig, no_aggregated_types)]
+		impl frame_system::DefaultConfig for TestDefaultConfig {}
+
+		pub struct MsgFilter;
+		impl Contains<Vec<u8>> for MsgFilter {
+			fn contains(_type_url: &Vec<u8>) -> bool {
+				true
+			}
+		}
+
+		pub struct GasToWeight;
+		impl Convert<Gas, Weight> for GasToWeight {
+			fn convert(gas: Gas) -> Weight {
+				Weight::from_parts(gas, 0u64)
+			}
+		}
+
+		pub struct WeightToGas;
+		impl Convert<Weight, Gas> for WeightToGas {
+			fn convert(weight: Weight) -> Gas {
+				weight.ref_time()
+			}
+		}
+
+		parameter_types! {
+			pub const MaxMemoCharacters: u64 = 256;
+			pub const StringLimit: u32 = 128;
+			pub NativeDenom: BoundedVec<u8, StringLimit> = (*b"acdt").to_vec().try_into().unwrap();
+			pub ChainId: BoundedVec<u8, StringLimit> = (*b"dev").to_vec().try_into().unwrap();
+			pub const TxSigLimit: u64 = 7;
+		}
+
+		#[frame_support::register_default_impl(TestDefaultConfig)]
+		impl DefaultConfig for TestDefaultConfig {
+			type Currency = ();
+			#[inject_runtime_type]
+			type RuntimeEvent = ();
+			type AnteHandler = ();
+			type MaxMemoCharacters = MaxMemoCharacters;
+			type NativeDenom = NativeDenom;
+			type StringLimit = StringLimit;
+			type MsgServiceRouter = ();
+			type ChainId = ChainId;
+			type MsgFilter = MsgFilter;
+			type GasToWeight = GasToWeight;
+			type WeightToGas = WeightToGas;
+			type TxSigLimit = TxSigLimit;
+		}
+	}
+
+	#[pallet::config(with_default)]
 	pub trait Config: frame_system::Config {
 		/// Mapping from address to account id.
+		#[pallet::no_default]
 		type AddressMapping: AddressMapping<Self::AccountId>;
 		/// Currency type for withdraw and balance storage.
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
-		/// Convert a length value into a deductible fee based on the currency type.
-		type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
 		/// The overarching event type.
+		#[pallet::no_default_bounds]
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-		/// Used to answer contracts' queries regarding the current weight price. This is **not**
-		/// used to calculate the actual fee and is only for informational purposes.
-		type WeightPrice: Convert<Weight, BalanceOf<Self>>;
-		/// Convert a weight value into a deductible fee based on the currency type.
-		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
 		/// Verify the validity of a Cosmos transaction.
 		type AnteHandler: AnteDecorator;
 		/// The maximum size of the memo.
@@ -337,26 +388,5 @@ impl<T: Config> Pallet<T> {
 			},
 			T::DbWeight::get().reads(2),
 		)
-	}
-
-	fn compute_fee(len: u32, weight: Weight) -> BalanceOf<T> {
-		// Base fee is already included.
-		let adjusted_weight_fee = T::WeightPrice::convert(weight);
-		let length_fee = Self::length_to_fee(len);
-		length_fee + adjusted_weight_fee
-	}
-
-	/// Compute the length portion of a fee by invoking the configured `LengthToFee` impl.
-	pub fn length_to_fee(length: u32) -> BalanceOf<T> {
-		T::LengthToFee::weight_to_fee(&Weight::from_parts(length as u64, 0))
-	}
-
-	/// Compute the unadjusted portion of the weight fee by invoking the configured `WeightToFee`
-	/// impl. Note that the input `weight` is capped by the maximum block weight before computation.
-	pub fn weight_to_fee(weight: Weight) -> BalanceOf<T> {
-		// cap the weight to the maximum defined in runtime, otherwise it will be the
-		// `Bounded` maximum of its data type, which is not desired.
-		let capped_weight = weight.min(T::BlockWeights::get().max_block);
-		T::WeightToFee::weight_to_fee(&capped_weight)
 	}
 }

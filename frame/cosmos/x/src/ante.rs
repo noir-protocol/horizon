@@ -23,6 +23,12 @@ pub trait AnteDecorator {
 	fn ante_handle(tx: &Tx, simulate: bool) -> TransactionValidity;
 }
 
+impl AnteDecorator for () {
+	fn ante_handle(_tx: &Tx, _simulate: bool) -> TransactionValidity {
+		Ok(ValidTransaction::default())
+	}
+}
+
 #[impl_trait_for_tuples::impl_for_tuples(1, 12)]
 impl AnteDecorator for Tuple {
 	fn ante_handle(tx: &Tx, simulate: bool) -> TransactionValidity {
