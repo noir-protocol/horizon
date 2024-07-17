@@ -15,18 +15,32 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use crate::tx::Any;
+use frame_support::weights::Weight;
+use sp_runtime::RuntimeString;
 
-pub mod coin;
-pub mod error;
-pub mod handler;
-#[cfg(feature = "std")]
-pub mod legacy;
-#[cfg(feature = "std")]
-pub mod msgs;
-pub mod msgservice;
-#[cfg(feature = "std")]
-pub mod registry;
-#[cfg(feature = "std")]
-pub mod sign_doc;
-pub mod tx;
+pub struct MsgHandlerErrorInfo {
+	pub weight: Weight,
+	pub error: MsgHandlerError,
+}
+
+#[derive(Debug)]
+pub enum MsgHandlerError {
+	InvalidMsg,
+	Unsupported,
+	Custom(RuntimeString),
+}
+
+pub trait MsgHandler {
+	fn handle(&self, msg: &Any) -> Result<Weight, MsgHandlerErrorInfo>;
+}
+
+pub trait MsgServiceRouter {
+	fn route(type_url: &[u8]) -> Option<sp_std::boxed::Box<dyn MsgHandler>>;
+}
+
+impl MsgServiceRouter for () {
+	fn route(_type_url: &[u8]) -> Option<sp_std::boxed::Box<dyn MsgHandler>> {
+		None
+	}
+}

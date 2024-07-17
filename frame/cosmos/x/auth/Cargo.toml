@@ -18,7 +18,6 @@ sp-std = { workspace = true }
 pallet-cosmos-types = { workspace = true }
 hp-io = { workspace = true }
 pallet-cosmos = { workspace = true }
-pallet-cosmos-x = { workspace = true }
 
 [features]
 default = ["std"]
@@ -31,5 +30,4 @@ std = [
 	"hp-io/std",
 	"pallet-cosmos/std",
 	"pallet-cosmos-types/std",
-	"pallet-cosmos-x/std"
 ]

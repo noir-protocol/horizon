@@ -337,7 +337,7 @@ impl pallet_cosmos::Config for Runtime {
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
 	/// Verify the validity of a Cosmos transaction.
-	type AnteHandler = ante::AnteHandler<Self>;
+	type AnteHandler = handler::AnteHandler<Self>;
 	/// The maximum size of the memo.
 	type MaxMemoCharacters = MaxMemoCharacters;
 	/// The native denomination for the currency.

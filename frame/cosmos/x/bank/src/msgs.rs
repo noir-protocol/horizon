@@ -22,8 +22,11 @@ use frame_support::{
 };
 use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::{coin::Coin, tx::Any};
-use pallet_cosmos_x::msgs::{MsgHandlerError, MsgHandlerErrorInfo};
+use pallet_cosmos_types::{
+	coin::Coin,
+	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
+	tx::Any,
+};
 use pallet_cosmos_x_bank_types::MsgSend;
 use sp_runtime::{format_runtime_string, SaturatedConversion};
 
@@ -35,7 +38,7 @@ impl<T> Default for MsgSendHandler<T> {
 	}
 }
 
-impl<T> pallet_cosmos_x::msgs::MsgHandler for MsgSendHandler<T>
+impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgSendHandler<T>
 where
 	T: pallet_cosmos::Config,
 {

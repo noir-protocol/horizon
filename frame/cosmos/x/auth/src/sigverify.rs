@@ -18,8 +18,10 @@
 
 use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::tx::{PublicKey, SignerInfo, SignerPublicKey, Tx};
-use pallet_cosmos_x::ante::AnteDecorator;
+use pallet_cosmos_types::{
+	handler::AnteDecorator,
+	tx::{PublicKey, SignerInfo, SignerPublicKey, Tx},
+};
 use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,

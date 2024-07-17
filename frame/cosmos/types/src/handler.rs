@@ -15,18 +15,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use crate::tx::Tx;
+use sp_runtime::transaction_validity::{TransactionValidity, ValidTransaction};
 
-pub mod coin;
-pub mod error;
-pub mod handler;
-#[cfg(feature = "std")]
-pub mod legacy;
-#[cfg(feature = "std")]
-pub mod msgs;
-pub mod msgservice;
-#[cfg(feature = "std")]
-pub mod registry;
-#[cfg(feature = "std")]
-pub mod sign_doc;
-pub mod tx;
+pub trait AnteDecorator {
+	fn ante_handle(tx: &Tx, simulate: bool) -> TransactionValidity;
+}
+
+impl AnteDecorator for () {
+	fn ante_handle(_tx: &Tx, _simulate: bool) -> TransactionValidity {
+		Ok(ValidTransaction::default())
+	}
+}
+
+#[impl_trait_for_tuples::impl_for_tuples(1, 12)]
+impl AnteDecorator for Tuple {
+	fn ante_handle(tx: &Tx, simulate: bool) -> TransactionValidity {
+		let valid = ValidTransaction::default();
+		for_tuples!( #( let valid = valid.combine_with(Tuple::ante_handle(tx, simulate)?); )* );
+		Ok(valid)
+	}
+}

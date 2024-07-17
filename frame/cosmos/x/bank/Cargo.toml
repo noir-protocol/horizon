@@ -20,7 +20,6 @@ pallet-cosmos-x-bank-types = { workspace = true, features = ["with-codec"] }
 hp-io = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-cosmos = { workspace = true }
-pallet-cosmos-x = { workspace = true }
 
 [features]
 default = ["std"]
@@ -33,5 +32,4 @@ std = [
 	"pallet-cosmos/std",
 	"pallet-cosmos-x-bank-types/std",
 	"pallet-cosmos-types/std",
-	"pallet-cosmos-x/std",
 ]

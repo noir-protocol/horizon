@@ -4,7 +4,6 @@ members = [
 	"client/rpc",
 	"frame/cosmos",
 	"frame/cosmos/types",
-	"frame/cosmos/x",
 	"frame/cosmos/x/auth",
 	"frame/cosmos/x/bank",
 	"frame/cosmos/x/bank/types",
@@ -102,7 +101,6 @@ pallet-cosmos-accounts = { path = "frame/cosmos-accounts", default-features = fa
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
 pallet-cosmos-types = { path = "frame/cosmos/types", default-features = false}
-pallet-cosmos-x = { path = "frame/cosmos/x", default-features = false}
 pallet-cosmos-x-auth = { path = "frame/cosmos/x/auth", default-features = false}
 pallet-cosmos-x-bank = { path = "frame/cosmos/x/bank", default-features = false}
 pallet-cosmos-x-bank-types = { path = "frame/cosmos/x/bank/types", default-features = false}

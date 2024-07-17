@@ -30,8 +30,11 @@ use frame_support::{
 	weights::{constants::ExtrinsicBaseWeight, Weight},
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use pallet_cosmos_types::tx::{Account, Gas};
-use pallet_cosmos_x::{ante::AnteDecorator, msgs::MsgServiceRouter};
+use pallet_cosmos_types::{
+	handler::AnteDecorator,
+	msgservice::MsgServiceRouter,
+	tx::{Account, Gas},
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
