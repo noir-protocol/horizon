@@ -127,6 +127,16 @@ impl From<cosmrs::Any> for Any {
 	}
 }
 
+#[cfg(feature = "std")]
+impl TryFrom<Any> for cosmrs::Any {
+	type Error = DecodeError;
+
+	fn try_from(any: Any) -> Result<Self, Self::Error> {
+		let type_url = String::from_utf8(any.type_url).map_err(|_| DecodeError::InvalidTypeUrl)?;
+		Ok(cosmrs::Any { type_url, value: any.value })
+	}
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
 pub struct AuthInfo {

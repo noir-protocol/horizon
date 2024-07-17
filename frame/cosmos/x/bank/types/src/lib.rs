@@ -56,11 +56,8 @@ impl Msg for MsgSend {
 	}
 
 	fn legacy_msg(any: Any) -> Result<LegacyMsg, DecodeError> {
-		let type_url = String::from_utf8(any.type_url).map_err(|_| DecodeError::InvalidMsgData)?;
 		let cosmrs::proto::cosmos::bank::v1beta1::MsgSend { from_address, to_address, amount } =
-			cosmrs::Any { type_url, value: any.value }
-				.to_msg()
-				.map_err(|_| DecodeError::InvalidMsgData)?;
+			cosmrs::Any::try_from(any)?.to_msg().map_err(|_| DecodeError::InvalidMsgData)?;
 		let amount = amount
 			.iter()
 			.map(|amt| legacy::Coin { amount: amt.amount.to_string(), denom: amt.denom.clone() })
@@ -81,8 +78,7 @@ impl TryFrom<Any> for MsgSend {
 	type Error = DecodeError;
 
 	fn try_from(msg: Any) -> Result<Self, Self::Error> {
-		let type_url = String::from_utf8(msg.type_url).map_err(|_| DecodeError::InvalidTypeUrl)?;
-		let any = cosmrs::Any { type_url, value: msg.value };
+		let any = msg.try_into()?;
 		let msg_send =
 			cosmrs::bank::MsgSend::from_any(&any).map_err(|_| DecodeError::InvalidMsgData)?;
 
