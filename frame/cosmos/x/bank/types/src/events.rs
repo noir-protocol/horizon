@@ -15,6 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub const EVENT_TYPE_TRANSFER: &'static str = "transfer";
+pub const EVENT_TYPE_TRANSFER: &str = "transfer";
 
-pub const ATTRIBUTE_KEY_RECIPIENT: &'static str = "recipient";
+pub const ATTRIBUTE_KEY_RECIPIENT: &str = "recipient";

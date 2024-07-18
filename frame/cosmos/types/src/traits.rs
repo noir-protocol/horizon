@@ -15,8 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub trait ToRuntimeString {
-    type Error;
+pub trait ToStringBytes {
+	type Error;
 
-    fn to_string(&self) -> Result<Vec<u8>, Self::Error>;
+	fn to_bytes(&self) -> Result<sp_std::vec::Vec<u8>, Self::Error>;
 }

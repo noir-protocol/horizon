@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{error::DecodeError, traits::ToRuntimeString};
+use crate::{error::DecodeError, traits::ToStringBytes};
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
@@ -39,11 +39,11 @@ impl From<&cosmrs::Coin> for Coin {
 	}
 }
 
-impl ToRuntimeString for Coin {
+impl ToStringBytes for Coin {
 	type Error = DecodeError;
 
-	fn to_string(&self) -> Result<Vec<u8>, Self::Error> {
-		let mut amount = format_runtime_string!("{}", self.amount).as_bytes().to_vec();
+	fn to_bytes(&self) -> Result<Vec<u8>, Self::Error> {
+		let mut amount = format_runtime_string!("{}", self.amount).as_ref().to_vec();
 		amount.extend(self.denom.clone());
 		Ok(amount)
 	}
@@ -51,18 +51,18 @@ impl ToRuntimeString for Coin {
 
 pub type Coins = Vec<Coin>;
 
-impl ToRuntimeString for Coins {
+impl ToStringBytes for Coins {
 	type Error = DecodeError;
 
-	fn to_string(&self) -> Result<Vec<u8>, Self::Error> {
+	fn to_bytes(&self) -> Result<Vec<u8>, Self::Error> {
 		if self.is_empty() {
 			return Ok("".as_bytes().to_vec());
 		}
 		let mut coins = Vec::<Vec<u8>>::new();
-		for (i, coin) in self.into_iter().enumerate() {
-			coins.push(coin.to_string()?);
+		for (i, coin) in self.iter().enumerate() {
+			coins.push(coin.to_bytes()?);
 			if i < self.len() - 1 {
-				coins.push(vec![b',']);
+				coins.push(sp_std::vec![b',']);
 			}
 		}
 		Ok(coins.into_iter().flatten().collect())
@@ -72,23 +72,20 @@ impl ToRuntimeString for Coins {
 #[cfg(test)]
 mod tests {
 	use super::Coin;
-	use crate::traits::ToRuntimeString;
+	use crate::traits::ToStringBytes;
 
 	#[test]
-	fn coin_to_string() {
+	fn coin_to_bytes() {
 		let coins = vec![];
-		assert_eq!("".as_bytes().to_vec(), coins.to_string().unwrap());
+		assert_eq!("".as_bytes().to_vec(), coins.to_bytes().unwrap());
 
 		let coins = vec![Coin { denom: "uatom".as_bytes().to_vec(), amount: 1000000 }];
-		assert_eq!("1000000uatom".as_bytes().to_vec(), coins.to_string().unwrap());
+		assert_eq!("1000000uatom".as_bytes().to_vec(), coins.to_bytes().unwrap());
 
 		let coins = vec![
 			Coin { denom: "uatom".as_bytes().to_vec(), amount: 1000000 },
 			Coin { denom: "acdt".as_bytes().to_vec(), amount: 1000000000000 },
 		];
-		assert_eq!(
-			"1000000uatom,1000000000000acdt".as_bytes().to_vec(),
-			coins.to_string().unwrap()
-		);
+		assert_eq!("1000000uatom,1000000000000acdt".as_bytes().to_vec(), coins.to_bytes().unwrap());
 	}
 }

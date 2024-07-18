@@ -24,10 +24,15 @@ use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	coin::Coin,
+	events::{EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
 	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
-	tx::Any,
+	traits::ToStringBytes,
+	tx::{AccountId, Any},
 };
-use pallet_cosmos_x_bank_types::tx::MsgSend;
+use pallet_cosmos_x_bank_types::{
+	events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER},
+	tx::MsgSend,
+};
 use sp_runtime::{format_runtime_string, SaturatedConversion};
 
 pub struct MsgSendHandler<T>(PhantomData<T>);
@@ -48,12 +53,17 @@ where
 		let MsgSend { from_address, to_address, amount } = Self::to_msg(msg)
 			.map_err(|e| MsgHandlerErrorInfo { weight: total_weight, error: e })?;
 
-		let from = T::AddressMapping::into_account_id(from_address.address);
-		let to = T::AddressMapping::into_account_id(to_address.address);
-		total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
-
-		let weight = Self::send_coins(from, to, amount)?;
-		total_weight = total_weight.saturating_add(weight);
+		match Self::send_coins(from_address, to_address, amount) {
+			Ok(weight) => {
+				total_weight = total_weight.saturating_add(weight);
+			},
+			Err(e) => {
+				return Err(MsgHandlerErrorInfo {
+					weight: total_weight.saturating_add(e.weight),
+					error: e.error,
+				});
+			},
+		};
 
 		Ok(total_weight)
 	}
@@ -71,17 +81,21 @@ where
 	}
 
 	fn send_coins(
-		from: T::AccountId,
-		to: T::AccountId,
+		from: AccountId,
+		to: AccountId,
 		amount: sp_std::vec::Vec<Coin>,
 	) -> Result<Weight, MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
+		let from_acc = T::AddressMapping::into_account_id(from.address);
+		let to_acc = T::AddressMapping::into_account_id(to.address);
+		total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
+
 		for amt in amount.iter() {
 			if T::NativeDenom::get() == amt.denom {
 				T::Currency::transfer(
-					&from,
-					&to,
+					&from_acc,
+					&to_acc,
 					amt.amount.saturated_into(),
 					ExistenceRequirement::KeepAlive,
 				)
@@ -101,6 +115,23 @@ where
 				});
 			}
 		}
+
+		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::Executed(
+			pallet_cosmos_types::events::Event {
+				r#type: EVENT_TYPE_TRANSFER.into(),
+				attributes: sp_std::vec![
+					EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from.bech32 },
+					EventAttribute { key: ATTRIBUTE_KEY_RECIPIENT.into(), value: to.bech32 },
+					EventAttribute {
+						key: ATTRIBUTE_KEY_AMOUNT.into(),
+						value: amount.to_bytes().map_err(|_| MsgHandlerErrorInfo {
+							weight: total_weight,
+							error: MsgHandlerError::InvalidMsg
+						})?
+					},
+				],
+			},
+		));
 
 		Ok(total_weight)
 	}

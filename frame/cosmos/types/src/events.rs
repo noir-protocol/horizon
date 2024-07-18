@@ -22,10 +22,10 @@ use scale_info::TypeInfo;
 #[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
 
-pub const EVENT_TYPE_MESSAGE: &'static str = "message";
+pub const EVENT_TYPE_MESSAGE: &str = "message";
 
-pub const ATTRIBUTE_KEY_SENDER: &'static str = "sender";
-pub const ATTRIBUTE_KEY_AMOUNT: &'static str = "amount";
+pub const ATTRIBUTE_KEY_SENDER: &str = "sender";
+pub const ATTRIBUTE_KEY_AMOUNT: &str = "amount";
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
