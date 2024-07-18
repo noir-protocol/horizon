@@ -15,19 +15,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+#[cfg(feature = "with-codec")]
+use parity_scale_codec::{Decode, Encode};
+#[cfg(feature = "with-codec")]
+use scale_info::TypeInfo;
+#[cfg(not(feature = "std"))]
+use sp_std::vec::Vec;
 
-pub mod coin;
-pub mod error;
-pub mod events;
-pub mod handler;
-#[cfg(feature = "std")]
-pub mod legacy;
-#[cfg(feature = "std")]
-pub mod msgs;
-pub mod msgservice;
-#[cfg(feature = "std")]
-pub mod registry;
-#[cfg(feature = "std")]
-pub mod sign_doc;
-pub mod tx;
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+pub struct Event {
+	pub r#type: Vec<u8>,
+	pub attributes: Vec<EventAttribute>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+pub struct EventAttribute {
+	pub key: Vec<u8>,
+	pub value: Vec<u8>,
+}

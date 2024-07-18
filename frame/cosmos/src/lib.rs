@@ -144,7 +144,6 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 pub mod pallet {
 	use super::*;
 	use frame_support::{pallet_prelude::*, traits::Contains};
-	use pallet_cosmos_types::tx::Any;
 
 	#[pallet::pallet]
 	#[pallet::without_storage_info]
@@ -253,7 +252,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event {
-		Executed { gas_used: Gas, messages: Vec<Any> },
+		Executed(pallet_cosmos_types::events::Event),
 	}
 
 	#[pallet::error]
@@ -365,11 +364,6 @@ impl<T: Config> Pallet<T> {
 				},
 			}
 		}
-
-		Self::deposit_event(Event::Executed {
-			gas_used: T::WeightToGas::convert(total_weight),
-			messages: tx.body.messages,
-		});
 
 		Ok(PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes })
 	}

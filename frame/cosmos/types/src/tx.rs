@@ -305,6 +305,7 @@ pub struct Account {
 pub struct AccountId {
 	pub hrp: Vec<u8>,
 	pub address: H160,
+	pub bech32: Vec<u8>,
 }
 
 #[cfg(feature = "std")]
@@ -312,6 +313,6 @@ impl From<cosmrs::AccountId> for AccountId {
 	fn from(account_id: cosmrs::AccountId) -> Self {
 		let hrp = account_id.prefix().as_bytes().to_vec();
 		let address = H160::from_slice(&account_id.to_bytes());
-		Self { hrp, address }
+		Self { hrp, address, bech32: account_id.as_ref().into() }
 	}
 }
