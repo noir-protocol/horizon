@@ -15,20 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+pub trait ToRuntimeString {
+    type Error;
 
-pub mod coin;
-pub mod error;
-pub mod events;
-pub mod handler;
-#[cfg(feature = "std")]
-pub mod legacy;
-#[cfg(feature = "std")]
-pub mod msgs;
-pub mod msgservice;
-#[cfg(feature = "std")]
-pub mod registry;
-#[cfg(feature = "std")]
-pub mod sign_doc;
-pub mod traits;
-pub mod tx;
+    fn to_string(&self) -> Result<Vec<u8>, Self::Error>;
+}

@@ -41,7 +41,7 @@ type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 const GRANDPA_JUSTIFICATION_PERIOD: u32 = 512;
 
 pallet_cosmos_types::register_cosmos_types! {
-	pallet_cosmos_x_bank_types::MsgSend,
+	pallet_cosmos_x_bank_types::tx::MsgSend,
 }
 
 #[allow(clippy::type_complexity)]

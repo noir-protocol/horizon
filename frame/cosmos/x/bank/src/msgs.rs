@@ -27,7 +27,7 @@ use pallet_cosmos_types::{
 	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
 	tx::Any,
 };
-use pallet_cosmos_x_bank_types::MsgSend;
+use pallet_cosmos_x_bank_types::tx::MsgSend;
 use sp_runtime::{format_runtime_string, SaturatedConversion};
 
 pub struct MsgSendHandler<T>(PhantomData<T>);
