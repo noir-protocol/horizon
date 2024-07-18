@@ -197,7 +197,6 @@ pub mod pallet {
 
 		#[frame_support::register_default_impl(TestDefaultConfig)]
 		impl DefaultConfig for TestDefaultConfig {
-			type Currency = ();
 			#[inject_runtime_type]
 			type RuntimeEvent = ();
 			type AnteHandler = ();
@@ -219,6 +218,7 @@ pub mod pallet {
 		#[pallet::no_default]
 		type AddressMapping: AddressMapping<Self::AccountId>;
 		/// Currency type for withdraw and balance storage.
+		#[pallet::no_default]
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
 		/// The overarching event type.
 		#[pallet::no_default_bounds]
