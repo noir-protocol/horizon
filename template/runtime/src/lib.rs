@@ -33,6 +33,7 @@ mod msgs;
 use frame_support::{
 	construct_runtime, derive_impl,
 	genesis_builder_helper::{build_config, create_default_config},
+	pallet_prelude::InvalidTransaction,
 	parameter_types,
 	traits::{
 		tokens::{fungible, Fortitude, Preservation},
@@ -43,17 +44,18 @@ use frame_support::{
 		IdentityFee, Weight,
 	},
 };
+use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use msgs::MsgServiceRouter;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::tx::Gas;
+use pallet_cosmos_types::tx::{Gas, PublicKey};
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
+use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
@@ -149,16 +151,6 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 }
 
-pub struct OnNewAccount;
-impl frame_support::traits::OnNewAccount<AccountId> for OnNewAccount {
-	fn on_new_account(who: &AccountId) {
-		if let Some(address) = who.to_cosm_address() {
-			let _ = Runtime::migrate_cosm_account(&address, who);
-			let _ = pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(who);
-		}
-	}
-}
-
 #[derive_impl(frame_system::config_preludes::SolochainDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
 	/// The basic call filter to use in dispatchable.
@@ -198,7 +190,7 @@ impl frame_system::Config for Runtime {
 	/// The data to be stored in an account.
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// What to do if a new account is created.
-	type OnNewAccount = OnNewAccount;
+	type OnNewAccount = ();
 	/// What to do if an account is fully reaped from the system.
 	type OnKilledAccount = ();
 	/// Weight information for the extrinsics of this pallet.
@@ -450,8 +442,17 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		len: usize,
 	) -> Option<TransactionValidity> {
 		match self {
-			RuntimeCall::Cosmos(call) =>
-				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len),
+			RuntimeCall::Cosmos(call) => {
+				if let pallet_cosmos::Call::transact { tx_bytes } = call {
+					if Runtime::migrate_cosm_account(tx_bytes).is_err() {
+						return Some(Err(TransactionValidityError::Invalid(
+							InvalidTransaction::BadSigner,
+						)));
+					}
+				}
+
+				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len)
+			},
 			_ => None,
 		}
 	}
@@ -463,11 +464,21 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		len: usize,
 	) -> Option<Result<(), TransactionValidityError>> {
 		match self {
-			RuntimeCall::Cosmos(call) => call.pre_dispatch_self_contained(
-				&info.to_cosm_address().unwrap(),
-				dispatch_info,
-				len,
-			),
+			RuntimeCall::Cosmos(call) => {
+				if let pallet_cosmos::Call::transact { tx_bytes } = call {
+					if Runtime::migrate_cosm_account(tx_bytes).is_err() {
+						return Some(Err(TransactionValidityError::Invalid(
+							InvalidTransaction::BadSigner,
+						)));
+					}
+				}
+
+				call.pre_dispatch_self_contained(
+					&info.to_cosm_address().unwrap(),
+					dispatch_info,
+					len,
+				)
+			},
 			_ => None,
 		}
 	}
@@ -487,24 +498,48 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 }
 
 impl Runtime {
-	fn migrate_cosm_account(address: &H160, who: &AccountId) -> Result<Balance, ()> {
+	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), ()> {
 		use fungible::{Inspect, Mutate};
 
-		let interim_account =
-			<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(*address);
-		let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
-			&interim_account,
-			Preservation::Expendable,
-			Fortitude::Polite,
-		);
-		<pallet_balances::Pallet<Runtime> as Mutate<AccountId>>::transfer(
-			&interim_account,
-			who,
-			balance,
-			Preservation::Expendable,
-		)
-		.map_err(|_| ())
-		.map(|_| balance)
+		let tx = hp_io::cosmos::decode_tx(tx_bytes).ok_or(())?;
+		let signers = hp_io::cosmos::get_signers(&tx).ok_or(())?;
+		let signer_infos = tx.auth_info.signer_infos;
+
+		for (i, signer_info) in signer_infos.iter().enumerate() {
+			if signer_info.sequence == 0 {
+				let signer = signers.get(i).ok_or(())?;
+
+				let interim_account =
+					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(
+						signer.address,
+					);
+				let who = if let pallet_cosmos_types::tx::SignerPublicKey::Single(
+					PublicKey::Secp256k1(pk),
+				) = signer_info.public_key.clone().ok_or(())?
+				{
+					CosmosSigner(Public(pk))
+				} else {
+					return Err(());
+				};
+
+				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
+					&interim_account,
+					Preservation::Expendable,
+					Fortitude::Polite,
+				);
+				<pallet_balances::Pallet<Runtime> as Mutate<AccountId>>::transfer(
+					&interim_account,
+					&who,
+					balance,
+					Preservation::Expendable,
+				)
+				.map_err(|_| ())?;
+
+				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who).map_err(|_| ())?;
+			}
+		}
+
+		Ok(())
 	}
 }
 
