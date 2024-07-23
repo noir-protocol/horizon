@@ -26,5 +26,4 @@ pub enum DecodeError {
 	InvalidTypeUrl,
 	UnsupportedSignerType,
 	UnsupportedSigningMode,
-	UnsupportedType,
 }
