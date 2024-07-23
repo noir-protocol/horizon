@@ -45,7 +45,7 @@ pub fn std_sign_bytes(
 	let tx = cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeError::InvalidTxData)?;
 	let chain_id = String::from_utf8(chain_id.to_vec()).map_err(|_| DecodeError::InvalidChainId)?;
 
-	StdSignDoc::new(&tx, chain_id, sequence, account_number)
+	StdSignDoc::new(&tx, chain_id, account_number, sequence)
 		.map_err(|_| DecodeError::InvalidSignDoc)?
 		.to_bytes()
 }
