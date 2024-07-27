@@ -58,7 +58,7 @@ where
 {
 	match o.into() {
 		Ok(RawOrigin::CosmosTransaction(n)) => Ok(n),
-		_ => Err("bad origin: expected to be an Cosmos transaction"),
+		_ => Err("bad origin: expected to be a Cosmos transaction"),
 	}
 }
 
@@ -270,7 +270,7 @@ pub mod pallet {
 	where
 		OriginFor<T>: Into<Result<RawOrigin, OriginFor<T>>>,
 	{
-		/// Transact an Cosmos transaction.
+		/// Transact a Cosmos transaction.
 		#[pallet::call_index(0)]
 		#[pallet::weight({
 			let tx = hp_io::cosmos::decode_tx(tx_bytes).unwrap();
@@ -286,7 +286,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	/// Validate an Cosmos transaction already in block
+	/// Validate a Cosmos transaction already in block
 	///
 	/// This function must be called during the pre-dispatch phase
 	/// (just before applying the extrinsic).
