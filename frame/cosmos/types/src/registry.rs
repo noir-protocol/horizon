@@ -16,8 +16,7 @@
 // limitations under the License.
 
 use crate::{error::DecodeError, legacy::LegacyMsg};
-use cosmos_sdk_proto::prost::alloc::string::String;
-use cosmos_sdk_proto::Any;
+use cosmos_sdk_proto::{prost::alloc::string::String, Any};
 use std::sync::OnceLock;
 
 pub static REGISTRY: OnceLock<Box<dyn Registry + Send + Sync + 'static>> = OnceLock::new();

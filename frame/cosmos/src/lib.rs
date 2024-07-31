@@ -20,6 +20,7 @@
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
 pub use self::pallet::*;
+use cosmos_sdk_proto::prost::Message;
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchResultWithPostInfo, Pays},
@@ -46,7 +47,6 @@ use sp_runtime::{
 	DispatchError, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
-use cosmos_sdk_proto::prost::Message;
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum RawOrigin {

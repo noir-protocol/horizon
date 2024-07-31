@@ -16,8 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
 use frame_support::traits::Contains;
-use pallet_cosmos_types::{handler::AnteDecorator, tx::Tx};
+use pallet_cosmos_types::handler::AnteDecorator;
 use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 };
@@ -29,10 +30,14 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		for msg in &tx.body.messages {
-			if !T::MsgFilter::contains(&msg.type_url) {
-				return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
+		if let Some(body) = tx.body {
+			for msg in body.messages.iter() {
+				if !T::MsgFilter::contains(&msg.type_url) {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
+				}
 			}
+		} else {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 		}
 
 		Ok(ValidTransaction::default())

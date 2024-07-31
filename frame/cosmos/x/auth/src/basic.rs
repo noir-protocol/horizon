@@ -37,11 +37,16 @@ where
 		if tx.signatures.is_empty() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
 		}
-		if tx.auth_info.is_none() || tx.auth_info.signer_infos.len() != tx.signatures.len() {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
-		}
 
-		Ok(ValidTransaction::default())
+		if let Some(auth_info) = tx.auth_info {
+			if auth_info.signer_infos.len() == tx.signatures.len() {
+				Ok(ValidTransaction::default())
+			} else {
+				Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
+			}
+		} else {
+			Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
+		}
 	}
 }
 
@@ -52,14 +57,17 @@ where
 	T: frame_system::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		if tx.body.timeout_height > 0
-			&& frame_system::Pallet::<T>::block_number().saturated_into::<u64>()
-				> tx.body.timeout_height
-		{
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
+		if let Some(body) = &tx.body {
+			if body.timeout_height > 0 &&
+				frame_system::Pallet::<T>::block_number().saturated_into::<u64>() >
+					body.timeout_height
+			{
+				return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
+			}
+			Ok(ValidTransaction::default())
+		} else {
+			Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
 		}
-
-		Ok(ValidTransaction::default())
 	}
 }
 
@@ -70,11 +78,14 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		if tx.body.memo.len().saturated_into::<u64>() > T::MaxMemoCharacters::get() {
-			// TODO: Consider use InvalidTransaction::Custom
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
+		if let Some(body) = &tx.body {
+			if body.memo.len().saturated_into::<u64>() > T::MaxMemoCharacters::get() {
+				Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
+			} else {
+				Ok(ValidTransaction::default())
+			}
+		} else {
+			Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
 		}
-
-		Ok(ValidTransaction::default())
 	}
 }

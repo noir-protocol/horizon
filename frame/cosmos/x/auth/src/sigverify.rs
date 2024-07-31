@@ -16,12 +16,10 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
 use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::{
-	handler::AnteDecorator,
-	tx::{PublicKey, SignerInfo, SignerPublicKey, Tx},
-};
+use pallet_cosmos_types::handler::AnteDecorator;
 use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,

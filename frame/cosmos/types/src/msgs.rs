@@ -15,9 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cosmos_sdk_proto::Any;
 use crate::{error::DecodeError, legacy::LegacyMsg};
-use cosmos_sdk_proto::prost::alloc::string::String;
+use cosmos_sdk_proto::{prost::alloc::string::String, Any};
 
 pub trait Msg {
 	const TYPE_URL: &'static [u8];
