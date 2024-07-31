@@ -11,6 +11,7 @@ members = [
 	"primitives/account",
 	"primitives/io",
 	"primitives/rpc",
+	"proto/cosmos-sdk",
 	"template/runtime",
 	"template/node",
 ]
@@ -28,6 +29,8 @@ jsonrpsee = "0.22.5"
 log = { version = "0.4.21", default-features = false }
 num_enum = { version = "0.7.2", default-features = false }
 parity-scale-codec = { version = "3.2.0", default-features = false }
+prost = { version = "0.13", default-features = false }
+prost-types = { version = "0.13", default-features = false }
 ripemd = { version = "0.1.3", default-features = false }
 scale-info = { version = "2.3.0", default-features = false }
 secp256k1 = { version = "0.28.1", default-features = false }
@@ -104,6 +107,9 @@ pallet-cosmos-types = { path = "frame/cosmos/types", default-features = false}
 pallet-cosmos-x-auth = { path = "frame/cosmos/x/auth", default-features = false}
 pallet-cosmos-x-bank = { path = "frame/cosmos/x/bank", default-features = false}
 pallet-cosmos-x-bank-types = { path = "frame/cosmos/x/bank/types", default-features = false}
+
+cosmos-sdk-proto = { path = "proto/cosmos-sdk", default-features = false }
+tendermint-proto = { version = "0.38", default-features = false }
 
 [profile.release]
 panic = "unwind"
