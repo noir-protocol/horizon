@@ -39,6 +39,18 @@ impl From<&cosmrs::Coin> for Coin {
 	}
 }
 
+impl TryFrom<cosmos_sdk_proto::cosmos::base::v1beta1::Coin> for Coin {
+	type Error = DecodeError;
+
+	fn try_from(value: cosmos_sdk_proto::cosmos::base::v1beta1::Coin) -> Result<Self, Self::Error> {
+		Ok(Self {
+			denom: value.denom.as_bytes().to_vec(),
+			amount: u128::from_str_radix(value.amount.as_str(), 10)
+				.map_err(|_| DecodeError::ParseAmount)?,
+		})
+	}
+}
+
 impl ToStringBytes for Coin {
 	type Error = DecodeError;
 

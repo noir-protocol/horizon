@@ -15,17 +15,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-	error::DecodeError,
-	legacy::LegacyMsg,
-	tx::{AccountId, Any},
-};
+use crate::{error::DecodeError, legacy::LegacyMsg};
+use cosmos_sdk_proto::prost::alloc::string::String;
+use cosmos_sdk_proto::Any;
 use std::sync::OnceLock;
 
 pub static REGISTRY: OnceLock<Box<dyn Registry + Send + Sync + 'static>> = OnceLock::new();
 
 pub trait Registry {
-	fn signers(&self, any: &Any) -> Result<Vec<AccountId>, DecodeError>;
+	fn signers(&self, any: &Any) -> Result<Vec<String>, DecodeError>;
 	fn transcode(&self, any: &Any) -> Result<Vec<u8>, DecodeError>;
 	fn legacy_msg(&self, any: &Any) -> Result<LegacyMsg, DecodeError>;
 }

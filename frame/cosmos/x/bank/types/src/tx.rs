@@ -15,6 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use cosmos_sdk_proto::prost::Message;
 #[cfg(feature = "std")]
 use cosmrs::tx::Msg as _;
 use pallet_cosmos_types::{
@@ -76,9 +77,8 @@ impl TryFrom<Any> for MsgSend {
 	type Error = DecodeError;
 
 	fn try_from(msg: Any) -> Result<Self, Self::Error> {
-		let any = msg.try_into()?;
-		let msg_send =
-			cosmrs::bank::MsgSend::from_any(&any).map_err(|_| DecodeError::InvalidMsgData)?;
+		let msg_send = cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend::decode(&*msg.value)
+			.map_err(|_| DecodeError::InvalidMsgData)?;
 
 		let from_address = msg_send.from_address.into();
 		let to_address = msg_send.to_address.into();

@@ -35,7 +35,7 @@ use pallet_cosmos_types::{
 	msgservice::MsgServiceRouter,
 	tx::{Account, Gas},
 };
-use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use parity_scale_codec::{Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::{
@@ -46,6 +46,7 @@ use sp_runtime::{
 	DispatchError, RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
+use cosmos_sdk_proto::prost::Message;
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum RawOrigin {
@@ -295,8 +296,7 @@ impl<T: Config> Pallet<T> {
 		tx_bytes: &[u8],
 	) -> Result<(), TransactionValidityError> {
 		let (_who, _) = Self::account(&origin);
-		let tx = hp_io::cosmos::decode_tx(tx_bytes)
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let tx = cosmos_sdk_proto::cosmos::tx::v1beta1::Tx::decode(tx_bytes).unwrap();
 
 		T::AnteHandler::ante_handle(&tx, false)?;
 
@@ -306,8 +306,7 @@ impl<T: Config> Pallet<T> {
 	// Controls that must be performed by the pool.
 	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		let tx = hp_io::cosmos::decode_tx(tx_bytes)
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let tx = cosmos_sdk_proto::cosmos::tx::v1beta1::Tx::decode(tx_bytes).unwrap();
 
 		T::AnteHandler::ante_handle(&tx, true)?;
 
@@ -334,7 +333,7 @@ impl<T: Config> Pallet<T> {
 
 	fn apply_validated_transaction(
 		source: H160,
-		tx: pallet_cosmos_types::tx::Tx,
+		tx: cosmos_sdk_proto::cosmos::tx::v1beta1::Tx,
 	) -> DispatchResultWithPostInfo {
 		let mut total_weight = ExtrinsicBaseWeight::get();
 

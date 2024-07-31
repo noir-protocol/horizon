@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::tx::Any;
+use cosmos_sdk_proto::Any;
 use frame_support::weights::Weight;
 use sp_runtime::RuntimeString;
 

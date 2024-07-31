@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::tx::Tx;
+use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
 use sp_runtime::transaction_validity::{TransactionValidity, ValidTransaction};
 
 pub trait AnteDecorator {

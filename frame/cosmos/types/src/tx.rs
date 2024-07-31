@@ -15,304 +15,294 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::coin::Coin;
-#[cfg(feature = "std")]
-use crate::error::DecodeError;
-#[cfg(feature = "std")]
-use crate::registry;
+// use crate::coin::Coin;
+// use crate::error::DecodeError;
+// #[cfg(feature = "std")]
+// use crate::registry;
+// use bech32::FromBase32;
+// use cosmos_sdk_proto::prost::{alloc::string::String, Message};
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
-use sp_core::H160;
-#[cfg(feature = "with-codec")]
-use sp_runtime_interface::pass_by::PassByCodec;
-#[cfg(not(feature = "std"))]
-use sp_std::vec::Vec;
+// use sp_core::H160;
+// #[cfg(feature = "with-codec")]
+// use sp_runtime_interface::pass_by::PassByCodec;
+// #[cfg(not(feature = "std"))]
+// use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;
 pub type SignatureBytes = Vec<u8>;
 pub type Gas = u64;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo, PassByCodec))]
-pub struct Tx {
-	pub body: Body,
-	pub auth_info: AuthInfo,
-	pub signatures: Vec<SignatureBytes>,
-	pub raw: Vec<u8>,
-}
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo, PassByCodec))]
+// pub struct Tx {
+// 	pub body: Body,
+// 	pub auth_info: AuthInfo,
+// 	pub signatures: Vec<SignatureBytes>,
+// 	pub raw: Vec<u8>,
+// }
 
-#[cfg(feature = "std")]
-impl Tx {
-	pub fn decode(tx_bytes: &[u8]) -> Result<Self, DecodeError> {
-		if tx_bytes.is_empty() {
-			return Err(DecodeError::EmptyTxBytes);
-		}
-		let tx_origin = cosmrs::Tx::from_bytes(tx_bytes).map_err(|_| DecodeError::InvalidTxData)?;
+// #[cfg(feature = "std")]
+// impl Tx {
+// 	pub fn get_signers(&self) -> Result<Vec<String>, DecodeError> {
+// 		let mut signers = Vec::<String>::new();
+// 		for msg in &self.body.messages {
+// 			let msg_signers = match registry::REGISTRY.get() {
+// 				Some(reg) => reg.signers(msg),
+// 				None => return Err(DecodeError::InvalidTypeUrl),
+// 			}?;
+// 			for msg_signer in msg_signers {
+// 				if !signers.contains(&msg_signer) {
+// 					signers.push(msg_signer);
+// 				}
+// 			}
+// 		}
+// 		if let Some(fee_payer) = &self.auth_info.fee.payer {
+// 			if !signers.contains(fee_payer) {
+// 				signers.push(fee_payer.clone());
+// 			}
+// 		}
+// 		Ok(signers)
+// 	}
 
-		Ok(Self {
-			body: tx_origin.body.try_into()?,
-			auth_info: tx_origin.auth_info.try_into()?,
-			signatures: tx_origin.signatures,
-			raw: tx_bytes.to_vec(),
-		})
-	}
+// 	pub fn fee_payer(&self) -> Result<AccountId, DecodeError> {
+// 		if let Some(fee_payer) = &self.auth_info.fee.payer {
+// 			return Ok(fee_payer.clone());
+// 		}
+// 		self.get_signers()?.first().ok_or(DecodeError::InvalidTxData).cloned()
+// 	}
+// }
 
-	pub fn get_signers(&self) -> Result<Vec<AccountId>, DecodeError> {
-		let mut signers = Vec::<AccountId>::new();
-		for msg in &self.body.messages {
-			let msg_signers = match registry::REGISTRY.get() {
-				Some(reg) => reg.signers(msg),
-				None => return Err(DecodeError::InvalidTypeUrl),
-			}?;
-			for msg_signer in msg_signers {
-				if !signers.contains(&msg_signer) {
-					signers.push(msg_signer);
-				}
-			}
-		}
-		if let Some(fee_payer) = &self.auth_info.fee.payer {
-			if !signers.contains(fee_payer) {
-				signers.push(fee_payer.clone());
-			}
-		}
-		Ok(signers)
-	}
+// impl Tx {
+// 	pub fn decode(tx_bytes: &[u8]) -> Result<Self, DecodeError> {
+// 		if tx_bytes.is_empty() {
+// 			return Err(DecodeError::EmptyTxBytes);
+// 		}
+// 		let tx = cosmos_sdk_proto::cosmos::tx::v1beta1::Tx::decode(tx_bytes)
+// 			.map_err(|_| DecodeError::InvalidTxData)?;
 
-	pub fn fee_payer(&self) -> Result<AccountId, DecodeError> {
-		if let Some(fee_payer) = &self.auth_info.fee.payer {
-			return Ok(fee_payer.clone());
-		}
-		self.get_signers()?.first().ok_or(DecodeError::InvalidTxData).cloned()
-	}
-}
+// 		Ok(Self {
+// 			body: tx.body.map(Into::into).ok_or(DecodeError::InvalidTxData)?,
+// 			auth_info: tx.auth_info.map(TryInto::try_into).ok_or(DecodeError::InvalidTxData)??,
+// 			signatures: tx.signatures,
+// 			raw: tx_bytes.to_vec(),
+// 		})
+// 	}
+// }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-pub struct Body {
-	pub messages: Vec<Any>,
-	pub memo: Vec<u8>,
-	pub timeout_height: u64,
-}
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+// pub struct Body {
+// 	pub messages: Vec<Any>,
+// 	pub memo: Vec<u8>,
+// 	pub timeout_height: u64,
+// }
 
-#[cfg(feature = "std")]
-impl TryFrom<cosmrs::tx::Body> for Body {
-	type Error = DecodeError;
+// impl From<cosmos_sdk_proto::cosmos::tx::v1beta1::TxBody> for Body {
+// 	fn from(value: cosmos_sdk_proto::cosmos::tx::v1beta1::TxBody) -> Self {
+// 		let messages = value.messages.into_iter().map(Into::into).collect::<Vec<Any>>();
+// 		Self {
+// 			messages,
+// 			memo: value.memo.as_bytes().to_vec(),
+// 			timeout_height: value.timeout_height,
+// 		}
+// 	}
+// }
 
-	fn try_from(body: cosmrs::tx::Body) -> Result<Self, Self::Error> {
-		let mut messages: Vec<Any> = Vec::new();
-		for msg in body.messages {
-			messages.push(msg.into());
-		}
-		Ok(Self {
-			messages,
-			memo: body.memo.as_bytes().to_vec(),
-			timeout_height: body.timeout_height.into(),
-		})
-	}
-}
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo, PassByCodec))]
+// pub struct Any {
+// 	pub type_url: Vec<u8>,
+// 	pub value: Vec<u8>,
+// }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo, PassByCodec))]
-pub struct Any {
-	pub type_url: Vec<u8>,
-	pub value: Vec<u8>,
-}
+// impl From<cosmos_sdk_proto::Any> for Any {
+// 	fn from(value: cosmos_sdk_proto::Any) -> Self {
+// 		Self { type_url: value.type_url.as_bytes().to_vec(), value: value.value }
+// 	}
+// }
 
-#[cfg(feature = "std")]
-impl From<cosmrs::Any> for Any {
-	fn from(any: cosmrs::Any) -> Self {
-		Any { type_url: any.type_url.as_bytes().to_vec(), value: any.value }
-	}
-}
+// #[cfg(feature = "std")]
+// impl From<cosmrs::Any> for Any {
+// 	fn from(any: cosmrs::Any) -> Self {
+// 		Any { type_url: any.type_url.as_bytes().to_vec(), value: any.value }
+// 	}
+// }
 
-#[cfg(feature = "std")]
-impl TryFrom<Any> for cosmrs::Any {
-	type Error = DecodeError;
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+// pub struct AuthInfo {
+// 	pub signer_infos: Vec<SignerInfo>,
+// 	pub fee: Fee,
+// }
 
-	fn try_from(any: Any) -> Result<Self, Self::Error> {
-		let type_url = String::from_utf8(any.type_url).map_err(|_| DecodeError::InvalidTypeUrl)?;
-		Ok(cosmrs::Any { type_url, value: any.value })
-	}
-}
+// impl TryFrom<cosmos_sdk_proto::cosmos::tx::v1beta1::AuthInfo> for AuthInfo {
+// 	type Error = DecodeError;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-pub struct AuthInfo {
-	pub signer_infos: Vec<SignerInfo>,
-	pub fee: Fee,
-}
+// 	fn try_from(
+// 		value: cosmos_sdk_proto::cosmos::tx::v1beta1::AuthInfo,
+// 	) -> Result<Self, Self::Error> {
+// 		let mut signer_infos = Vec::<SignerInfo>::new();
+// 		for signer in value.signer_infos.into_iter() {
+// 			signer_infos.push(signer.try_into()?);
+// 		}
 
-#[cfg(feature = "std")]
-impl TryFrom<cosmrs::tx::AuthInfo> for AuthInfo {
-	type Error = DecodeError;
+// 		let fee = value.fee.map(TryInto::try_into).ok_or(DecodeError::InvalidTxData)??;
 
-	fn try_from(auth_info: cosmrs::tx::AuthInfo) -> Result<Self, Self::Error> {
-		let mut signer_infos: Vec<SignerInfo> = Vec::new();
-		for signer_info in auth_info.signer_infos {
-			signer_infos.push(signer_info.try_into()?);
-		}
-		Ok(Self { signer_infos, fee: auth_info.fee.try_into()? })
-	}
-}
+// 		Ok(Self { signer_infos, fee })
+// 	}
+// }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[repr(i32)]
-pub enum SignMode {
-	Unspecified = 0,
-	Direct = 1,
-	Textual = 2,
-	DirectAux = 3,
-	LegacyAminoJson = 127,
-	Eip191 = 191,
-}
+// #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+// #[repr(i32)]
+// pub enum SignMode {
+// 	Unspecified = 0,
+// 	Direct = 1,
+// 	Textual = 2,
+// 	DirectAux = 3,
+// 	LegacyAminoJson = 127,
+// 	Eip191 = 191,
+// }
 
-#[cfg(feature = "std")]
-impl From<cosmrs::tx::SignMode> for SignMode {
-	fn from(sign_mode: cosmrs::tx::SignMode) -> Self {
-		match sign_mode {
-			cosmrs::tx::SignMode::Unspecified => SignMode::Unspecified,
-			cosmrs::tx::SignMode::Direct => SignMode::Direct,
-			cosmrs::tx::SignMode::Textual => SignMode::Textual,
-			cosmrs::tx::SignMode::DirectAux => SignMode::DirectAux,
-			cosmrs::tx::SignMode::LegacyAminoJson => SignMode::LegacyAminoJson,
-			cosmrs::tx::SignMode::Eip191 => SignMode::Eip191,
-		}
-	}
-}
+// impl TryFrom<i32> for SignMode {
+// 	type Error = DecodeError;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-pub struct Single {
-	pub mode: SignMode,
-}
+// 	fn try_from(mode: i32) -> Result<Self, Self::Error> {
+// 		let mode = match mode {
+// 			0i32 => SignMode::Unspecified,
+// 			1i32 => SignMode::Direct,
+// 			2i32 => SignMode::Textual,
+// 			3i32 => SignMode::DirectAux,
+// 			127i32 => SignMode::LegacyAminoJson,
+// 			191i32 => SignMode::Eip191,
+// 			_ => return Err(DecodeError::UnsupportedSigningMode),
+// 		};
 
-#[cfg(feature = "std")]
-impl From<cosmrs::tx::mode_info::Single> for Single {
-	fn from(single: cosmrs::tx::mode_info::Single) -> Self {
-		Single { mode: single.mode.into() }
-	}
-}
+// 		Ok(mode)
+// 	}
+// }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-pub enum ModeInfo {
-	Single(Single),
-}
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+// pub struct Single {
+// 	pub mode: SignMode,
+// }
 
-#[cfg(feature = "std")]
-impl TryFrom<cosmrs::tx::ModeInfo> for ModeInfo {
-	type Error = DecodeError;
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+// pub enum ModeInfo {
+// 	Single(Single),
+// }
 
-	fn try_from(mode_info: cosmrs::tx::ModeInfo) -> Result<Self, Self::Error> {
-		match mode_info {
-			cosmrs::tx::ModeInfo::Single(single) => Ok(ModeInfo::Single(single.into())),
-			_ => Err(DecodeError::UnsupportedSigningMode),
-		}
-	}
-}
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+// pub struct SignerInfo {
+// 	pub public_key: Option<SignerPublicKey>,
+// 	pub mode_info: ModeInfo,
+// 	pub sequence: SequenceNumber,
+// }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-pub struct SignerInfo {
-	pub public_key: Option<SignerPublicKey>,
-	pub mode_info: ModeInfo,
-	pub sequence: SequenceNumber,
-}
+// impl TryFrom<cosmos_sdk_proto::cosmos::tx::v1beta1::SignerInfo> for SignerInfo {
+// 	type Error = DecodeError;
 
-#[cfg(feature = "std")]
-impl TryFrom<cosmrs::tx::SignerInfo> for SignerInfo {
-	type Error = DecodeError;
+// 	fn try_from(
+// 		value: cosmos_sdk_proto::cosmos::tx::v1beta1::SignerInfo,
+// 	) -> Result<Self, Self::Error> {
+// 		let public_key = if let Some(any) = value.public_key {
+// 			match any.type_url.as_str() {
+// 				"/cosmos.crypto.secp256k1.PubKey" => {
+// 					let pubkey =
+// 						cosmos_sdk_proto::cosmos::crypto::secp256k1::PubKey::decode(&*any.value)
+// 							.map_err(|_| DecodeError::InvalidTxData)?;
+// 					let mut pk = [0u8; 33];
+// 					pk.copy_from_slice(&pubkey.key[..]);
+// 					Some(SignerPublicKey::Single(PublicKey::Secp256k1(pk)))
+// 				},
+// 				_ => return Err(DecodeError::UnsupportedSignerType),
+// 			}
+// 		} else {
+// 			None
+// 		};
 
-	fn try_from(signer_info: cosmrs::tx::SignerInfo) -> Result<Self, Self::Error> {
-		let public_key = match signer_info.public_key {
-			Some(pubkey) => match pubkey {
-				cosmrs::tx::SignerPublicKey::Single(p) => match p.type_url() {
-					cosmrs::crypto::PublicKey::ED25519_TYPE_URL => {
-						let mut raw_bytes: [u8; 32] = [0u8; 32];
-						raw_bytes.copy_from_slice(&p.to_bytes()[..]);
-						Some(SignerPublicKey::Single(PublicKey::Ed25519(raw_bytes)))
-					},
-					cosmrs::crypto::PublicKey::SECP256K1_TYPE_URL => {
-						let mut raw_bytes: [u8; 33] = [0u8; 33];
-						raw_bytes.copy_from_slice(&p.to_bytes()[..]);
-						Some(SignerPublicKey::Single(PublicKey::Secp256k1(raw_bytes)))
-					},
-					_ => return Err(DecodeError::UnsupportedSignerType),
-				},
-				_ => return Err(DecodeError::UnsupportedSignerType),
-			},
-			None => None,
-		};
-		Ok(Self {
-			public_key,
-			mode_info: signer_info.mode_info.try_into()?,
-			sequence: signer_info.sequence,
-		})
-	}
-}
+// 		let mode_info = if let Some(mode_info) = value.mode_info {
+// 			match mode_info.sum {
+// 				Some(cosmos_sdk_proto::cosmos::tx::v1beta1::mode_info::Sum::Single(
+// 					cosmos_sdk_proto::cosmos::tx::v1beta1::mode_info::Single { mode },
+// 				)) => ModeInfo::Single(Single { mode: mode.try_into()? }),
+// 				_ => return Err(DecodeError::UnsupportedSignerType),
+// 			}
+// 		} else {
+// 			return Err(DecodeError::UnsupportedSignerType);
+// 		};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-pub enum SignerPublicKey {
-	/// Single singer.
-	Single(PublicKey),
-}
+// 		Ok(Self { public_key, mode_info, sequence: value.sequence })
+// 	}
+// }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-pub enum PublicKey {
-	Ed25519([u8; 32]),
-	Secp256k1([u8; 33]),
-}
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+// pub enum SignerPublicKey {
+// 	/// Single singer.
+// 	Single(PublicKey),
+// }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-pub struct Fee {
-	pub amount: Vec<Coin>,
-	pub gas_limit: Gas,
-	pub payer: Option<AccountId>,
-	pub granter: Option<AccountId>,
-}
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+// pub enum PublicKey {
+// 	Secp256k1([u8; 33]),
+// }
 
-#[cfg(feature = "std")]
-impl TryFrom<cosmrs::tx::Fee> for Fee {
-	type Error = DecodeError;
+// #[derive(Clone, Debug, PartialEq, Eq)]
+// #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+// pub struct Fee {
+// 	pub amount: Vec<Coin>,
+// 	pub gas_limit: Gas,
+// 	pub payer: Option<Vec<u8>>,
+// 	pub granter: Option<Vec<u8>>,
+// }
 
-	fn try_from(fee: cosmrs::tx::Fee) -> Result<Self, Self::Error> {
-		if fee.amount.is_empty() {
-			return Err(DecodeError::EmptyFeeAmount);
-		}
-		let amount = fee.amount.iter().map(|c| c.into()).collect::<Vec<Coin>>();
-		let payer = fee.payer.map(Into::into);
-		let granter = fee.granter.map(Into::into);
+// impl TryFrom<cosmos_sdk_proto::cosmos::tx::v1beta1::Fee> for Fee {
+// 	type Error = DecodeError;
 
-		Ok(Self { amount, gas_limit: fee.gas_limit, payer, granter })
-	}
-}
+// 	fn try_from(value: cosmos_sdk_proto::cosmos::tx::v1beta1::Fee) -> Result<Self, Self::Error> {
+// 		if value.amount.is_empty() {
+// 			return Err(DecodeError::EmptyFeeAmount);
+// 		}
+// 		let mut amount = Vec::<Coin>::new();
+// 		for amt in value.amount.into_iter() {
+// 			amount.push(amt.try_into()?);
+// 		}
+
+// 		let payer = if value.payer.len() > 0 {
+// 			let (hrp, data, _) = bech32::decode(&value.payer).unwrap();
+// 			let data = Vec::<u8>::from_base32(&data).unwrap();
+// 			let address = H160::from_slice(&data);
+
+// 			Some(AccountId { hrp: hrp.into(), address, bech32: value.payer.as_bytes().to_vec() })
+// 		} else {
+// 			None
+// 		};
+
+// 		let granter = if value.granter.len() > 0 {
+// 			let (hrp, data, _) = bech32::decode(&value.granter).unwrap();
+// 			let data = Vec::<u8>::from_base32(&data).unwrap();
+// 			let address = H160::from_slice(&data);
+
+// 			Some(AccountId { hrp: hrp.into(), address, bech32: value.granter.as_bytes().to_vec() })
+// 		} else {
+// 			None
+// 		};
+
+// 		Ok(Self { amount, gas_limit: value.gas_limit, payer, granter })
+// 	}
+// }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
 pub struct Account {
 	pub sequence: SequenceNumber,
 	pub amount: u128,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-pub struct AccountId {
-	pub hrp: Vec<u8>,
-	pub address: H160,
-	pub bech32: Vec<u8>,
-}
-
-#[cfg(feature = "std")]
-impl From<cosmrs::AccountId> for AccountId {
-	fn from(account_id: cosmrs::AccountId) -> Self {
-		let hrp = account_id.prefix().as_bytes().to_vec();
-		let address = H160::from_slice(&account_id.to_bytes());
-		Self { hrp, address, bech32: account_id.as_ref().into() }
-	}
 }

@@ -24,6 +24,7 @@ pub enum DecodeError {
 	InvalidTxData,
 	InvalidChainId,
 	InvalidTypeUrl,
+	ParseAmount,
 	UnsupportedSignerType,
 	UnsupportedSigningMode,
 }

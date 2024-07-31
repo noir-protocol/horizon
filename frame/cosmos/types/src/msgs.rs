@@ -15,16 +15,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{
-	error::DecodeError,
-	legacy::LegacyMsg,
-	tx::{AccountId, Any},
-};
+use cosmos_sdk_proto::Any;
+use crate::{error::DecodeError, legacy::LegacyMsg};
+use cosmos_sdk_proto::prost::alloc::string::String;
 
 pub trait Msg {
 	const TYPE_URL: &'static [u8];
 	const AMINO_NAME: &'static [u8];
 
-	fn get_signers(&self) -> sp_std::vec::Vec<AccountId>;
+	fn get_signers(&self) -> sp_std::vec::Vec<String>;
 	fn legacy_msg(any: Any) -> Result<LegacyMsg, DecodeError>;
 }
