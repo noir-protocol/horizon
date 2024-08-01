@@ -16,6 +16,12 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use bech32::FromBase32;
+use cosmos_sdk_proto::{
+	cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin},
+	prost::alloc::string::String,
+	Any,
+};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement},
@@ -23,17 +29,14 @@ use frame_support::{
 use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
-	coin::Coin,
 	events::{EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
 	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
 	traits::ToStringBytes,
-	tx::{AccountId, Any},
 };
-use pallet_cosmos_x_bank_types::{
-	events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER},
-	tx::MsgSend,
-};
+use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
+use sp_core::H160;
 use sp_runtime::{format_runtime_string, SaturatedConversion};
+use sp_std::vec::Vec;
 
 pub struct MsgSendHandler<T>(PhantomData<T>);
 
@@ -50,8 +53,7 @@ where
 	fn handle(&self, msg: &Any) -> Result<Weight, MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
-		let MsgSend { from_address, to_address, amount } = Self::to_msg(msg)
-			.map_err(|e| MsgHandlerErrorInfo { weight: total_weight, error: e })?;
+		let MsgSend { from_address, to_address, amount } = MsgSend::decode(&mut msg.value).unwrap();
 
 		match Self::send_coins(from_address, to_address, amount) {
 			Ok(weight) => {
@@ -73,29 +75,28 @@ impl<T> MsgSendHandler<T>
 where
 	T: pallet_cosmos::Config,
 {
-	fn to_msg(msg: &Any) -> Result<MsgSend, MsgHandlerError> {
-		hp_io::cosmos::protobuf_to_scale(msg)
-			.map(|value| Decode::decode(&mut &value[..]))
-			.ok_or(MsgHandlerError::InvalidMsg)?
-			.map_err(|_| MsgHandlerError::InvalidMsg)
-	}
-
 	fn send_coins(
-		from: AccountId,
-		to: AccountId,
-		amount: sp_std::vec::Vec<Coin>,
+		from_address: String,
+		to_address: String,
+		amount: Vec<Coin>,
 	) -> Result<Weight, MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
-		let from_acc = T::AddressMapping::into_account_id(from.address);
-		let to_acc = T::AddressMapping::into_account_id(to.address);
+		let (_, data, _) = bech32::decode(&from_address).unwrap();
+		let from_addr = H160::from_slice(&Vec::<u8>::from_base32(&data).unwrap());
+
+		let (_, data, _) = bech32::decode(&to_address).unwrap();
+		let to_addr = H160::from_slice(&Vec::<u8>::from_base32(&data).unwrap());
+
+		let from_account = T::AddressMapping::into_account_id(from_addr);
+		let to_account = T::AddressMapping::into_account_id(to_addr);
 		total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
 
 		for amt in amount.iter() {
 			if T::NativeDenom::get() == amt.denom {
 				T::Currency::transfer(
-					&from_acc,
-					&to_acc,
+					&from_account,
+					&to_account,
 					amt.amount.saturated_into(),
 					ExistenceRequirement::KeepAlive,
 				)
@@ -120,8 +121,14 @@ where
 			pallet_cosmos_types::events::Event {
 				r#type: EVENT_TYPE_TRANSFER.into(),
 				attributes: sp_std::vec![
-					EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from.bech32 },
-					EventAttribute { key: ATTRIBUTE_KEY_RECIPIENT.into(), value: to.bech32 },
+					EventAttribute {
+						key: ATTRIBUTE_KEY_SENDER.into(),
+						value: from_address.as_bytes().to_vec()
+					},
+					EventAttribute {
+						key: ATTRIBUTE_KEY_RECIPIENT.into(),
+						value: to_address.as_bytes().to_vec()
+					},
 					EventAttribute {
 						key: ATTRIBUTE_KEY_AMOUNT.into(),
 						value: amount.to_bytes().map_err(|_| MsgHandlerErrorInfo {

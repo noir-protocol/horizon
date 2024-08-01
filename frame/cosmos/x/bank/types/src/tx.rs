@@ -72,7 +72,6 @@ impl Msg for MsgSend {
 	}
 }
 
-#[cfg(feature = "std")]
 impl TryFrom<Any> for MsgSend {
 	type Error = DecodeError;
 

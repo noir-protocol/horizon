@@ -9,9 +9,12 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+bech32 = { workspace = true }
+cosmos-sdk-proto = { workspace = true }
 log = { workspace = true }
 
 frame-support = { workspace = true }
+sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
@@ -24,7 +27,10 @@ pallet-cosmos = { workspace = true }
 [features]
 default = ["std"]
 std = [
+	"bech32/std",
+	"cosmos-sdk-proto/std",
 	"frame-support/std",
+	"sp-core/std",
 	"sp-runtime/std",
 	"sp-std/std",
 	"hp-io/std",
