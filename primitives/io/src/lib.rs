@@ -20,7 +20,6 @@
 #![warn(missing_docs)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use pallet_cosmos_types::tx::{AccountId, Any};
 use sp_runtime_interface::runtime_interface;
 use sp_std::vec::Vec;
 
@@ -37,11 +36,6 @@ pub trait Cosmos {
 		hp_crypto::secp256k1_ecdsa_verify(sig, msg, pub_key)
 	}
 
-	/// Decode raw type cosmos transaction
-	fn decode_tx(tx_bytes: &[u8]) -> Option<pallet_cosmos_types::tx::Tx> {
-		pallet_cosmos_types::tx::Tx::decode(tx_bytes).ok()
-	}
-
 	/// Get SignerDoc bytes.
 	fn sign_bytes(tx_bytes: &[u8], chain_id: &[u8], account_number: u64) -> Option<Vec<u8>> {
 		pallet_cosmos_types::sign_doc::sign_bytes(tx_bytes, chain_id, account_number).ok()
@@ -56,23 +50,5 @@ pub trait Cosmos {
 	) -> Option<Vec<u8>> {
 		pallet_cosmos_types::sign_doc::std_sign_bytes(tx_bytes, chain_id, account_number, sequence)
 			.ok()
-	}
-
-	/// Converting a message from Protobuf encoding to Scale encoding
-	fn protobuf_to_scale(any: &Any) -> Option<Vec<u8>> {
-		match pallet_cosmos_types::registry::REGISTRY.get() {
-			Some(reg) => reg.transcode(any).ok(),
-			None => None,
-		}
-	}
-
-	/// Get transaction signers.
-	fn get_signers(tx: &pallet_cosmos_types::tx::Tx) -> Option<Vec<AccountId>> {
-		tx.get_signers().ok()
-	}
-
-	/// Get transaction fee payer.
-	fn fee_payer(tx: &pallet_cosmos_types::tx::Tx) -> Option<AccountId> {
-		tx.fee_payer().ok()
 	}
 }

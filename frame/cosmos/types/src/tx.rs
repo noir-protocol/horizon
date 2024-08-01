@@ -28,8 +28,8 @@ use scale_info::TypeInfo;
 // use sp_core::H160;
 // #[cfg(feature = "with-codec")]
 // use sp_runtime_interface::pass_by::PassByCodec;
-// #[cfg(not(feature = "std"))]
-// use sp_std::vec::Vec;
+#[cfg(not(feature = "std"))]
+use sp_std::vec::Vec;
 
 pub type SequenceNumber = u64;
 pub type SignatureBytes = Vec<u8>;

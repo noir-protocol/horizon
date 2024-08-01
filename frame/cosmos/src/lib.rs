@@ -337,31 +337,41 @@ impl<T: Config> Pallet<T> {
 	) -> DispatchResultWithPostInfo {
 		let mut total_weight = ExtrinsicBaseWeight::get();
 
-		for msg in tx.body.messages.iter() {
-			let handler =
-				T::MsgServiceRouter::route(&msg.type_url).ok_or(DispatchErrorWithPostInfo {
-					post_info: PostDispatchInfo {
-						actual_weight: Some(total_weight),
-						pays_fee: Pays::Yes,
-					},
-					error: DispatchError::Other("Unknown message type"),
-				})?;
-			match handler.handle(msg) {
-				Ok(weight) => {
-					total_weight = total_weight.saturating_add(weight);
-				},
-				Err(e) => {
-					total_weight = total_weight.saturating_add(e.weight);
-
-					return Err(DispatchErrorWithPostInfo {
+		if let Some(body) = tx.body {
+			for msg in body.messages.iter() {
+				let handler =
+					T::MsgServiceRouter::route(&msg.type_url).ok_or(DispatchErrorWithPostInfo {
 						post_info: PostDispatchInfo {
 							actual_weight: Some(total_weight),
 							pays_fee: Pays::Yes,
 						},
-						error: DispatchError::Other("Failed to handle message"),
-					});
-				},
+						error: DispatchError::Other("Unknown message type"),
+					})?;
+				match handler.handle(msg) {
+					Ok(weight) => {
+						total_weight = total_weight.saturating_add(weight);
+					},
+					Err(e) => {
+						total_weight = total_weight.saturating_add(e.weight);
+
+						return Err(DispatchErrorWithPostInfo {
+							post_info: PostDispatchInfo {
+								actual_weight: Some(total_weight),
+								pays_fee: Pays::Yes,
+							},
+							error: DispatchError::Other("Failed to handle message"),
+						});
+					},
+				}
 			}
+		} else {
+			return Err(DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(total_weight),
+					pays_fee: Pays::Yes,
+				},
+				error: DispatchError::Other("Invalid tx"),
+			});
 		}
 
 		Ok(PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes })
