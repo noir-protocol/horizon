@@ -348,6 +348,10 @@ impl pallet_cosmos::Config for Runtime {
 	type WeightToGas = WeightToGas;
 	/// The maximum number of transaction signatures allowed.
 	type TxSigLimit = TxSigLimit;
+
+	type SigVerifiableTx = ();
+
+	type SignModeHander = ();
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {

@@ -20,13 +20,7 @@ use bech32::FromBase32;
 use cosmos_sdk_proto::{
 	cosmos::{
 		crypto::{multisig::LegacyAminoPubKey, secp256k1},
-		tx::{
-			signing::v1beta1::SignMode,
-			v1beta1::{
-				mode_info::{self, Sum},
-				ModeInfo, SignDoc, SignerInfo, Tx,
-			},
-		},
+		tx::v1beta1::{ModeInfo, SignerInfo, Tx},
 	},
 	prost::{alloc::string::String, Message},
 	Any,
@@ -45,6 +39,7 @@ use sp_runtime::transaction_validity::{
 use sp_std::{marker::PhantomData, vec::Vec};
 
 pub const SECP256K1_TYPE_URL: &str = "/cosmos.crypto.secp256k1.PubKey";
+
 pub struct SigVerificationDecorator<T>(PhantomData<T>);
 
 impl<T> AnteDecorator for SigVerificationDecorator<T>
@@ -57,6 +52,7 @@ where
 
 		let auth_info = tx
 			.auth_info
+			.clone()
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 		if signatures.len() != signers.len() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
@@ -91,6 +87,7 @@ where
 
 			let public_key = signer_info
 				.public_key
+				.clone()
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 			let chain_id = T::ChainId::get();
 			let chain_id = String::from_utf8(chain_id.to_vec()).unwrap();
@@ -99,11 +96,12 @@ where
 				chain_id,
 				account_number: 0,
 				sequence: account.sequence,
-				pub_key: public_key,
+				pub_key: public_key.clone(),
 			};
 
 			let sign_mode = signer_info
 				.mode_info
+				.clone()
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
 			Self::verify_signature(&public_key, &signer_data, &sign_mode, sig, tx)?;
@@ -151,7 +149,7 @@ where
 
 				Ok(())
 			},
-			_ => return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
+			_ => Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
 		}
 	}
 }
@@ -167,7 +165,7 @@ where
 		if let Some(auth_info) = &tx.auth_info {
 			for SignerInfo { public_key, .. } in &auth_info.signer_infos {
 				if let Some(public_key) = public_key {
-					sig_count = sig_count.saturating_add(Self::count_sub_keys(&public_key)?);
+					sig_count = sig_count.saturating_add(Self::count_sub_keys(public_key)?);
 				}
 
 				if sig_count > T::TxSigLimit::get() {
@@ -185,8 +183,8 @@ where
 impl<T> ValidateSigCountDecorator<T> {
 	fn count_sub_keys(pubkey: &Any) -> Result<u64, TransactionValidityError> {
 		// TODO: Support legacy multi signatures.
-		if let Ok(pubkey) = LegacyAminoPubKey::decode(&mut &*pubkey.value) {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+		if LegacyAminoPubKey::decode(&mut &*pubkey.value).is_ok() {
+			Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof))
 		} else {
 			Ok(1)
 		}
@@ -194,15 +192,18 @@ impl<T> ValidateSigCountDecorator<T> {
 }
 
 pub struct IncrementSequenceDecorator<T>(sp_std::marker::PhantomData<T>);
+
 impl<T> AnteDecorator for IncrementSequenceDecorator<T>
 where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		let signers = hp_io::cosmos::get_signers(tx)
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-		for signer in signers {
-			let account = T::AddressMapping::into_account_id(signer.address);
+		let signers = T::SigVerifiableTx::get_signers(tx);
+		for signer in signers.iter() {
+			let (_, data, _) = bech32::decode(signer).unwrap();
+			let address = Vec::<u8>::from_base32(&data).unwrap();
+			let address = H160::from_slice(&address);
+			let account = T::AddressMapping::into_account_id(address);
 			frame_system::pallet::Pallet::<T>::inc_account_nonce(account);
 		}
 

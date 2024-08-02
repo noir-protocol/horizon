@@ -26,10 +26,14 @@ pub mod msg_send {
 
 	const AMINO_NAME: &str = "cosmos-sdk/MsgSend";
 
-	pub fn sign_bytes(msg: MsgSend) -> Vec<u8> {
+	pub fn sign_bytes(msg: &MsgSend) -> Vec<u8> {
 		let mut value = Map::new();
-		value.insert(String::from_str("from_address").unwrap(), Value::String(msg.from_address));
-		value.insert(String::from_str("to_address").unwrap(), Value::String(msg.to_address));
+		value.insert(
+			String::from_str("from_address").unwrap(),
+			Value::String(msg.from_address.clone()),
+		);
+		value
+			.insert(String::from_str("to_address").unwrap(), Value::String(msg.to_address.clone()));
 
 		let mut coins = Vec::<Value>::new();
 		for amt in msg.amount.iter() {
@@ -49,5 +53,9 @@ pub mod msg_send {
 		legacy_msg.insert(String::from_str("value").unwrap(), Value::Object(value));
 
 		Value::Object(legacy_msg).to_string().into_bytes()
+	}
+
+	pub fn signers(msg: &MsgSend) -> Vec<String> {
+		sp_std::vec![msg.from_address.clone()]
 	}
 }
