@@ -17,9 +17,11 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use bech32::FromBase32;
+use core::str::FromStr;
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin},
 	prost::alloc::string::String,
+	traits::Message,
 	Any,
 };
 use frame_support::{
@@ -31,7 +33,6 @@ use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	events::{EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
 	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
-	traits::ToStringBytes,
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
 use sp_core::H160;
@@ -53,7 +54,8 @@ where
 	fn handle(&self, msg: &Any) -> Result<Weight, MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
-		let MsgSend { from_address, to_address, amount } = MsgSend::decode(&mut msg.value).unwrap();
+		let MsgSend { from_address, to_address, amount } =
+			MsgSend::decode(&mut &*msg.value).unwrap();
 
 		match Self::send_coins(from_address, to_address, amount) {
 			Ok(weight) => {
@@ -93,11 +95,11 @@ where
 		total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
 
 		for amt in amount.iter() {
-			if T::NativeDenom::get() == amt.denom {
+			if T::NativeDenom::get() == amt.denom.as_bytes().to_vec() {
 				T::Currency::transfer(
 					&from_account,
 					&to_account,
-					amt.amount.saturated_into(),
+					amt.amount.parse::<u128>().unwrap().saturated_into(),
 					ExistenceRequirement::KeepAlive,
 				)
 				.map_err(|_| MsgHandlerErrorInfo {
@@ -121,25 +123,57 @@ where
 			pallet_cosmos_types::events::Event {
 				r#type: EVENT_TYPE_TRANSFER.into(),
 				attributes: sp_std::vec![
-					EventAttribute {
-						key: ATTRIBUTE_KEY_SENDER.into(),
-						value: from_address.as_bytes().to_vec()
-					},
+					EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from_address.into() },
 					EventAttribute {
 						key: ATTRIBUTE_KEY_RECIPIENT.into(),
-						value: to_address.as_bytes().to_vec()
+						value: to_address.into()
 					},
 					EventAttribute {
 						key: ATTRIBUTE_KEY_AMOUNT.into(),
-						value: amount.to_bytes().map_err(|_| MsgHandlerErrorInfo {
-							weight: total_weight,
-							error: MsgHandlerError::InvalidMsg
-						})?
+						value: amount_to_string(&amount).into()
 					},
 				],
 			},
 		));
 
 		Ok(total_weight)
+	}
+}
+
+pub fn amount_to_string(amount: &[Coin]) -> String {
+	let mut ret = String::from_str("").unwrap();
+	for (i, coin) in amount.iter().enumerate() {
+		ret.push_str(&coin.amount);
+		ret.push_str(&coin.denom);
+		if i < amount.len() - 1 {
+			ret.push(',');
+		}
+	}
+	ret
+}
+
+#[cfg(test)]
+mod tests {
+	use crate::msgs::amount_to_string;
+	use core::str::FromStr;
+	use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
+
+	#[test]
+	fn amount_to_string_test() {
+		let mut amounts = Vec::<Coin>::new();
+		assert_eq!(amount_to_string(&amounts), "");
+
+		amounts.push(Coin {
+			denom: String::from_str("uatom").unwrap(),
+			amount: String::from_str("1000").unwrap(),
+		});
+		assert_eq!(amount_to_string(&amounts), "1000uatom");
+
+		amounts.push(Coin {
+			denom: String::from_str("uatom").unwrap(),
+			amount: String::from_str("2000").unwrap(),
+		});
+
+		assert_eq!(amount_to_string(&amounts), "1000uatom,2000uatom");
 	}
 }

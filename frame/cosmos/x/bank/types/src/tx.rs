@@ -18,11 +18,7 @@
 use cosmos_sdk_proto::prost::Message;
 #[cfg(feature = "std")]
 use cosmrs::tx::Msg as _;
-use pallet_cosmos_types::{
-	coin::Coin,
-	error::DecodeError,
-	tx::{AccountId, Any},
-};
+use pallet_cosmos_types::error::DecodeError;
 #[cfg(feature = "std")]
 use pallet_cosmos_types::{
 	legacy::{self, LegacyMsg},
@@ -76,8 +72,8 @@ impl TryFrom<Any> for MsgSend {
 	type Error = DecodeError;
 
 	fn try_from(msg: Any) -> Result<Self, Self::Error> {
-		let msg_send = cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend::decode(&*msg.value)
-			.map_err(|_| DecodeError::InvalidMsgData)?;
+		let msg_send =
+			MsgSend::decode(&mut &*msg.value).map_err(|_| DecodeError::InvalidMsgData)?;
 
 		let from_address = msg_send.from_address.into();
 		let to_address = msg_send.to_address.into();

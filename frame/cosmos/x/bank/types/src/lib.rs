@@ -18,4 +18,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod events;
-pub mod tx;
+pub mod msgs;

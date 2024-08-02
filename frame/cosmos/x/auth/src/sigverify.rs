@@ -16,16 +16,35 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
+use bech32::FromBase32;
+use cosmos_sdk_proto::{
+	cosmos::{
+		crypto::{multisig::LegacyAminoPubKey, secp256k1},
+		tx::{
+			signing::v1beta1::SignMode,
+			v1beta1::{
+				mode_info::{self, Sum},
+				ModeInfo, SignDoc, SignerInfo, Tx,
+			},
+		},
+	},
+	prost::{alloc::string::String, Message},
+	Any,
+};
 use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::handler::AnteDecorator;
+use pallet_cosmos_x_auth_signing::{
+	sign_mode_handler::{SignModeHander, SignerData},
+	sign_verifiable_tx::SigVerifiableTx,
+};
 use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 };
-use sp_std::marker::PhantomData;
+use sp_std::{marker::PhantomData, vec::Vec};
 
+pub const SECP256K1_TYPE_URL: &str = "/cosmos.crypto.secp256k1.PubKey";
 pub struct SigVerificationDecorator<T>(PhantomData<T>);
 
 impl<T> AnteDecorator for SigVerificationDecorator<T>
@@ -34,15 +53,17 @@ where
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		let signatures = &tx.signatures;
+		let signers = T::SigVerifiableTx::get_signers(tx);
 
-		let signers = hp_io::cosmos::get_signers(tx)
+		let auth_info = tx
+			.auth_info
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-
 		if signatures.len() != signers.len() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 		}
 
-		let signer_infos = &tx.auth_info.signer_infos;
+		let signer_infos = auth_info.signer_infos;
+
 		if signatures.len() != signer_infos.len() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 		}
@@ -52,53 +73,86 @@ where
 				.get(i)
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-			// TODO: Support other types of Signers as well
 			let signer_info = signer_infos
 				.get(i)
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-			if let Some(SignerPublicKey::Single(PublicKey::Secp256k1(public_key))) =
-				signer_info.public_key
-			{
-				let address: H160 = hp_io::cosmos::ripemd160(&sha2_256(&public_key)).into();
-				if signer.address != address {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
-				}
+			let (_, signer_addr, _) = bech32::decode(signer)
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+			let signer_addr = Vec::<u8>::from_base32(&signer_addr).unwrap();
+			let signer_addr = H160::from_slice(&signer_addr);
 
-				let (account, _) = pallet_cosmos::Pallet::<T>::account(&signer.address);
-				if signer_info.sequence > account.sequence {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::Future));
-				} else if signer_info.sequence < account.sequence {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
-				}
-
-				let chain_id = T::ChainId::get();
-				let bytes = match &signer_info.mode_info {
-					pallet_cosmos_types::tx::ModeInfo::Single(single) => match single.mode {
-						pallet_cosmos_types::tx::SignMode::Direct =>
-							hp_io::cosmos::sign_bytes(&tx.raw, &chain_id, 0u64),
-						pallet_cosmos_types::tx::SignMode::LegacyAminoJson =>
-							hp_io::cosmos::std_sign_bytes(
-								&tx.raw,
-								&chain_id,
-								0u64,
-								signer_info.sequence,
-							),
-						_ => None,
-					},
-				}
-				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadProof))?;
-
-				let hash = sp_core::sha2_256(&bytes);
-				if !secp256k1_ecdsa_verify(sig, &hash, &public_key) {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
-				}
-			} else {
-				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+			let (account, _) = pallet_cosmos::Pallet::<T>::account(&signer_addr);
+			if signer_info.sequence > account.sequence {
+				return Err(TransactionValidityError::Invalid(InvalidTransaction::Future));
+			} else if signer_info.sequence < account.sequence {
+				return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
 			}
+
+			let public_key = signer_info
+				.public_key
+				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+			let chain_id = T::ChainId::get();
+			let chain_id = String::from_utf8(chain_id.to_vec()).unwrap();
+			let signer_data = SignerData {
+				address: signer.clone(),
+				chain_id,
+				account_number: 0,
+				sequence: account.sequence,
+				pub_key: public_key,
+			};
+
+			let sign_mode = signer_info
+				.mode_info
+				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+
+			Self::verify_signature(&public_key, &signer_data, &sign_mode, sig, tx)?;
 		}
 
 		Ok(ValidTransaction::default())
+	}
+}
+
+impl<T> SigVerificationDecorator<T>
+where
+	T: pallet_cosmos::Config,
+{
+	fn verify_signature(
+		public_key: &Any,
+		signer_data: &SignerData,
+		sign_mode: &ModeInfo,
+		signature: &[u8],
+		tx: &Tx,
+	) -> Result<(), TransactionValidityError> {
+		match public_key.type_url.as_str() {
+			SECP256K1_TYPE_URL => {
+				let public_key =
+					secp256k1::PubKey::decode(&mut &*public_key.value).map_err(|_| {
+						TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+					})?;
+				let address: H160 = hp_io::cosmos::ripemd160(&sha2_256(&public_key.key)).into();
+
+				let (_, signer_addr, _) = bech32::decode(&signer_data.address).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
+				let signer_addr = Vec::<u8>::from_base32(&signer_addr).unwrap();
+				let signer_addr = H160::from_slice(&signer_addr);
+
+				if signer_addr != address {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+				}
+
+				let sign_bytes = T::SignModeHander::sign_bytes(sign_mode, signer_data, tx);
+				let msg = sha2_256(&sign_bytes);
+
+				if !secp256k1_ecdsa_verify(signature, &msg, &public_key.key) {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+				}
+
+				Ok(())
+			},
+			_ => return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
+		}
 	}
 }
 
@@ -110,12 +164,18 @@ where
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		let mut sig_count = 0u64;
-		for SignerInfo { public_key, .. } in &tx.auth_info.signer_infos {
-			sig_count = sig_count.saturating_add(Self::count_sub_keys(public_key.clone()));
+		if let Some(auth_info) = &tx.auth_info {
+			for SignerInfo { public_key, .. } in &auth_info.signer_infos {
+				if let Some(public_key) = public_key {
+					sig_count = sig_count.saturating_add(Self::count_sub_keys(&public_key)?);
+				}
 
-			if sig_count > T::TxSigLimit::get() {
-				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+				if sig_count > T::TxSigLimit::get() {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+				}
 			}
+		} else {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
 		}
 
 		Ok(ValidTransaction::default())
@@ -123,11 +183,12 @@ where
 }
 
 impl<T> ValidateSigCountDecorator<T> {
-	fn count_sub_keys(public_key: Option<SignerPublicKey>) -> u64 {
+	fn count_sub_keys(pubkey: &Any) -> Result<u64, TransactionValidityError> {
 		// TODO: Support legacy multi signatures.
-		match public_key {
-			Some(SignerPublicKey::Single(_)) => 1,
-			None => 0,
+		if let Ok(pubkey) = LegacyAminoPubKey::decode(&mut &*pubkey.value) {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+		} else {
+			Ok(1)
 		}
 	}
 }

@@ -20,14 +20,14 @@
 pub mod error;
 pub mod events;
 pub mod handler;
-#[cfg(feature = "std")]
-pub mod legacy;
-#[cfg(feature = "std")]
-pub mod msgs;
+// #[cfg(feature = "std")]
+// pub mod legacy;
+// #[cfg(feature = "std")]
+// pub mod msgs;
 pub mod msgservice;
 #[cfg(feature = "std")]
 pub mod registry;
-#[cfg(feature = "std")]
-pub mod sign_doc;
+// #[cfg(feature = "std")]
+// pub mod sign_doc;
 pub mod traits;
 pub mod tx;

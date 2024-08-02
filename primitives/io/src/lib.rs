@@ -21,7 +21,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_runtime_interface::runtime_interface;
-use sp_std::vec::Vec;
 
 /// Interface for working with crypto-related, handling Cosmos transactions and messages.
 #[runtime_interface]
@@ -34,21 +33,5 @@ pub trait Cosmos {
 	/// Verify with secp256k1.
 	fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
 		hp_crypto::secp256k1_ecdsa_verify(sig, msg, pub_key)
-	}
-
-	/// Get SignerDoc bytes.
-	fn sign_bytes(tx_bytes: &[u8], chain_id: &[u8], account_number: u64) -> Option<Vec<u8>> {
-		pallet_cosmos_types::sign_doc::sign_bytes(tx_bytes, chain_id, account_number).ok()
-	}
-
-	/// Get StdSignDoc bytes.
-	fn std_sign_bytes(
-		tx_bytes: &[u8],
-		chain_id: &[u8],
-		account_number: u64,
-		sequence: u64,
-	) -> Option<Vec<u8>> {
-		pallet_cosmos_types::sign_doc::std_sign_bytes(tx_bytes, chain_id, account_number, sequence)
-			.ok()
 	}
 }

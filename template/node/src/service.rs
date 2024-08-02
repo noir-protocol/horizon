@@ -40,10 +40,6 @@ type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 /// imported and generated.
 const GRANDPA_JUSTIFICATION_PERIOD: u32 = 512;
 
-pallet_cosmos_types::register_cosmos_types! {
-	pallet_cosmos_x_bank_types::tx::MsgSend,
-}
-
 #[allow(clippy::type_complexity)]
 pub fn new_partial(
 	config: &Configuration,
@@ -135,8 +131,6 @@ pub fn new_partial(
 			telemetry: telemetry.as_ref().map(|x| x.handle()),
 			compatibility_mode: Default::default(),
 		})?;
-
-	cosmos_type_registry::init();
 
 	Ok(sc_service::PartialComponents {
 		client,

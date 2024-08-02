@@ -15,7 +15,7 @@ parity-scale-codec = { workspace = true, features = [
 	"derive",
 ], optional = true }
 scale-info = { workspace = true, optional = true }
-serde_json = { workspace = true, optional = true }
+serde_json = { workspace = true }
 
 sp-std = { workspace = true }
 
@@ -28,7 +28,6 @@ std = [
 	"cosmrs",
 	"parity-scale-codec/std",
 	"scale-info/std",
-	"serde_json",
 	"sp-std/std",
 	"pallet-cosmos-types/std",
 ]

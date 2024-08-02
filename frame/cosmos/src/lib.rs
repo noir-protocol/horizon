@@ -36,7 +36,10 @@ use pallet_cosmos_types::{
 	msgservice::MsgServiceRouter,
 	tx::{Account, Gas},
 };
-use parity_scale_codec::{Encode, MaxEncodedLen};
+use pallet_cosmos_x_auth_signing::{
+	sign_mode_handler::SignModeHander, sign_verifiable_tx::SigVerifiableTx,
+};
+use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::{
@@ -74,13 +77,7 @@ where
 	}
 
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
-		if let Call::transact { tx_bytes } = self {
-			let tx = hp_io::cosmos::decode_tx(tx_bytes)?;
-
-			hp_io::cosmos::fee_payer(&tx).map(|fee_payer| Ok(fee_payer.address))
-		} else {
-			None
-		}
+		None
 	}
 
 	pub fn pre_dispatch_self_contained(
@@ -209,6 +206,8 @@ pub mod pallet {
 			type GasToWeight = GasToWeight;
 			type WeightToGas = WeightToGas;
 			type TxSigLimit = TxSigLimit;
+			type SigVerifiableTx = ();
+			type SignModeHander = ();
 		}
 	}
 
@@ -248,6 +247,10 @@ pub mod pallet {
 		/// The maximum number of transaction signatures allowed.
 		#[pallet::constant]
 		type TxSigLimit: Get<u64>;
+
+		type SigVerifiableTx: SigVerifiableTx;
+
+		type SignModeHander: SignModeHander;
 	}
 
 	#[pallet::event]
@@ -273,13 +276,10 @@ pub mod pallet {
 	{
 		/// Transact a Cosmos transaction.
 		#[pallet::call_index(0)]
-		#[pallet::weight({
-			let tx = hp_io::cosmos::decode_tx(tx_bytes).unwrap();
-			T::GasToWeight::convert(tx.auth_info.fee.gas_limit)
-		})]
+		#[pallet::weight({ 0 })]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
-			let tx = hp_io::cosmos::decode_tx(&tx_bytes).unwrap();
+			let tx = cosmos_sdk_proto::cosmos::tx::v1beta1::Tx::decode(&mut &*tx_bytes).unwrap();
 
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -296,7 +296,7 @@ impl<T: Config> Pallet<T> {
 		tx_bytes: &[u8],
 	) -> Result<(), TransactionValidityError> {
 		let (_who, _) = Self::account(&origin);
-		let tx = cosmos_sdk_proto::cosmos::tx::v1beta1::Tx::decode(tx_bytes).unwrap();
+		let tx = cosmos_sdk_proto::cosmos::tx::v1beta1::Tx::decode(&mut &*tx_bytes).unwrap();
 
 		T::AnteHandler::ante_handle(&tx, false)?;
 
@@ -305,30 +305,31 @@ impl<T: Config> Pallet<T> {
 
 	// Controls that must be performed by the pool.
 	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
-		let (who, _) = Self::account(&origin);
-		let tx = cosmos_sdk_proto::cosmos::tx::v1beta1::Tx::decode(tx_bytes).unwrap();
+		// let (who, _) = Self::account(&origin);
+		// let tx = cosmos_sdk_proto::cosmos::tx::v1beta1::Tx::decode(tx_bytes).unwrap();
 
-		T::AnteHandler::ante_handle(&tx, true)?;
+		// T::AnteHandler::ante_handle(&tx, true)?;
 
-		let transaction_nonce = tx
-			.auth_info
-			.signer_infos
-			.first()
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?
-			.sequence;
+		// let transaction_nonce = tx
+		// 	.auth_info
+		// 	.signer_infos
+		// 	.first()
+		// 	.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?
+		// 	.sequence;
 
-		let mut builder =
-			ValidTransactionBuilder::default().and_provides((origin, transaction_nonce));
+		// let mut builder =
+		// 	ValidTransactionBuilder::default().and_provides((origin, transaction_nonce));
 
-		// In the context of the pool, a transaction with
-		// too high a nonce is still considered valid
-		if transaction_nonce > who.sequence {
-			if let Some(prev_nonce) = transaction_nonce.checked_sub(1) {
-				builder = builder.and_requires((origin, prev_nonce))
-			}
-		}
+		// // In the context of the pool, a transaction with
+		// // too high a nonce is still considered valid
+		// if transaction_nonce > who.sequence {
+		// 	if let Some(prev_nonce) = transaction_nonce.checked_sub(1) {
+		// 		builder = builder.and_requires((origin, prev_nonce))
+		// 	}
+		// }
 
-		builder.build()
+		// builder.build()
+		Ok(Default::default())
 	}
 
 	fn apply_validated_transaction(

@@ -48,7 +48,7 @@ use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use msgs::MsgServiceRouter;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::tx::{Gas, PublicKey};
+use pallet_cosmos_types::tx::Gas;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -501,43 +501,43 @@ impl Runtime {
 	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), ()> {
 		use fungible::{Inspect, Mutate};
 
-		let tx = hp_io::cosmos::decode_tx(tx_bytes).ok_or(())?;
-		let signers = hp_io::cosmos::get_signers(&tx).ok_or(())?;
-		let signer_infos = tx.auth_info.signer_infos;
+		// let tx = hp_io::cosmos::decode_tx(tx_bytes).ok_or(())?;
+		// let signers = hp_io::cosmos::get_signers(&tx).ok_or(())?;
+		// let signer_infos = tx.auth_info.signer_infos;
 
-		for (i, signer_info) in signer_infos.iter().enumerate() {
-			if signer_info.sequence == 0 {
-				let signer = signers.get(i).ok_or(())?;
+		// for (i, signer_info) in signer_infos.iter().enumerate() {
+		// 	if signer_info.sequence == 0 {
+		// 		let signer = signers.get(i).ok_or(())?;
 
-				let interim_account =
-					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(
-						signer.address,
-					);
-				let who = if let pallet_cosmos_types::tx::SignerPublicKey::Single(
-					PublicKey::Secp256k1(pk),
-				) = signer_info.public_key.clone().ok_or(())?
-				{
-					CosmosSigner(Public(pk))
-				} else {
-					return Err(());
-				};
+		// 		let interim_account =
+		// 			<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(
+		// 				signer.address,
+		// 			);
+		// 		let who = if let pallet_cosmos_types::tx::SignerPublicKey::Single(
+		// 			PublicKey::Secp256k1(pk),
+		// 		) = signer_info.public_key.clone().ok_or(())?
+		// 		{
+		// 			CosmosSigner(Public(pk))
+		// 		} else {
+		// 			return Err(());
+		// 		};
 
-				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
-					&interim_account,
-					Preservation::Expendable,
-					Fortitude::Polite,
-				);
-				<pallet_balances::Pallet<Runtime> as Mutate<AccountId>>::transfer(
-					&interim_account,
-					&who,
-					balance,
-					Preservation::Expendable,
-				)
-				.map_err(|_| ())?;
+		// 		let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
+		// 			&interim_account,
+		// 			Preservation::Expendable,
+		// 			Fortitude::Polite,
+		// 		);
+		// 		<pallet_balances::Pallet<Runtime> as Mutate<AccountId>>::transfer(
+		// 			&interim_account,
+		// 			&who,
+		// 			balance,
+		// 			Preservation::Expendable,
+		// 		)
+		// 		.map_err(|_| ())?;
 
-				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who).map_err(|_| ())?;
-			}
-		}
+		// 		pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who).map_err(|_| ())?;
+		// 	}
+		// }
 
 		Ok(())
 	}

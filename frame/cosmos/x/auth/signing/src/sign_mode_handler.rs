@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizon.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -16,19 +16,28 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use pallet_cosmos_types::msgservice::MsgHandler;
-use pallet_cosmos_x_bank::msgs::MsgSendHandler;
+use cosmos_sdk_proto::{
+	cosmos::tx::v1beta1::{ModeInfo, Tx},
+	prost::alloc::string::String,
+	Any,
+};
+use sp_std::vec::Vec;
 
-pub struct MsgServiceRouter<T>(sp_std::marker::PhantomData<T>);
-impl<T> pallet_cosmos_types::msgservice::MsgServiceRouter for MsgServiceRouter<T>
-where
-	T: frame_system::Config + pallet_cosmos::Config,
-{
-	fn route(type_url: &str) -> Option<sp_std::boxed::Box<dyn MsgHandler>> {
-		match type_url {
-			"/cosmos.bank.v1beta1.MsgSend" =>
-				Some(sp_std::boxed::Box::<MsgSendHandler<T>>::default()),
-			_ => None,
-		}
+#[derive(Clone)]
+pub struct SignerData {
+	pub address: String,
+	pub chain_id: String,
+	pub account_number: u64,
+	pub sequence: u64,
+	pub pub_key: Any,
+}
+
+pub trait SignModeHander {
+	fn sign_bytes(mode: &ModeInfo, data: &SignerData, tx: &Tx) -> Vec<u8>;
+}
+
+impl SignModeHander for () {
+	fn sign_bytes(_mode: &ModeInfo, _data: &SignerData, _tx: &Tx) -> Vec<u8> {
+		Vec::new()
 	}
 }

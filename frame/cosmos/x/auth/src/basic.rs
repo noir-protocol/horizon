@@ -38,7 +38,7 @@ where
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
 		}
 
-		if let Some(auth_info) = tx.auth_info {
+		if let Some(auth_info) = &tx.auth_info {
 			if auth_info.signer_infos.len() == tx.signatures.len() {
 				Ok(ValidTransaction::default())
 			} else {
