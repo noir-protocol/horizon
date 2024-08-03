@@ -16,22 +16,4 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use cosmos_sdk_proto::{
-	cosmos::tx::v1beta1::{ModeInfo, Tx},
-	prost::alloc::string::String,
-	Any,
-};
-use sp_std::vec::Vec;
-
-#[derive(Clone)]
-pub struct SignerData {
-	pub address: String,
-	pub chain_id: String,
-	pub account_number: u64,
-	pub sequence: u64,
-	pub pub_key: Any,
-}
-
-pub trait SignModeHandler {
-	fn get_sign_bytes(mode: &ModeInfo, data: &SignerData, tx: &Tx) -> Result<Vec<u8>, ()>;
-}
+pub mod stdsign;

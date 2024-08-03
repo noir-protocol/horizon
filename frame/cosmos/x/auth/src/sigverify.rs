@@ -29,7 +29,7 @@ use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::handler::AnteDecorator;
 use pallet_cosmos_x_auth_signing::{
-	sign_mode_handler::{SignModeHander, SignerData},
+	sign_mode_handler::{SignModeHandler, SignerData},
 	sign_verifiable_tx::SigVerifiableTx,
 };
 use sp_core::{sha2_256, Get, H160};
@@ -48,7 +48,7 @@ where
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		let signatures = &tx.signatures;
-		let signers = T::SigVerifiableTx::get_signers(tx);
+		let signers = T::SigVerifiableTx::get_signers(tx).unwrap();
 
 		let auth_info = tx
 			.auth_info
@@ -140,7 +140,8 @@ where
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 				}
 
-				let sign_bytes = T::SignModeHander::sign_bytes(sign_mode, signer_data, tx);
+				let sign_bytes =
+					T::SignModeHandler::get_sign_bytes(sign_mode, signer_data, tx).unwrap();
 				let msg = sha2_256(&sign_bytes);
 
 				if !secp256k1_ecdsa_verify(signature, &msg, &public_key.key) {
@@ -198,12 +199,13 @@ where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		let signers = T::SigVerifiableTx::get_signers(tx);
+		let signers = T::SigVerifiableTx::get_signers(tx).unwrap();
 		for signer in signers.iter() {
 			let (_, data, _) = bech32::decode(signer).unwrap();
 			let address = Vec::<u8>::from_base32(&data).unwrap();
 			let address = H160::from_slice(&address);
 			let account = T::AddressMapping::into_account_id(address);
+
 			frame_system::pallet::Pallet::<T>::inc_account_nonce(account);
 		}
 

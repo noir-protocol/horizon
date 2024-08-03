@@ -29,7 +29,10 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod ante;
 mod compat;
 mod msgs;
+mod sig_verifiable_tx;
+mod sign_mode_handler;
 
+use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use frame_support::{
 	construct_runtime, derive_impl,
 	genesis_builder_helper::{build_config, create_default_config},
@@ -49,6 +52,7 @@ use hp_crypto::EcdsaExt;
 use msgs::MsgServiceRouter;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::tx::Gas;
+use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -349,9 +353,9 @@ impl pallet_cosmos::Config for Runtime {
 	/// The maximum number of transaction signatures allowed.
 	type TxSigLimit = TxSigLimit;
 
-	type SigVerifiableTx = ();
+	type SigVerifiableTx = sig_verifiable_tx::SigVerifiableTx;
 
-	type SignModeHander = ();
+	type SignModeHandler = sign_mode_handler::SignModeHandler;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
@@ -503,45 +507,55 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 
 impl Runtime {
 	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), ()> {
+		use bech32::FromBase32;
+		use cosmos_sdk_proto::cosmos::crypto::secp256k1;
 		use fungible::{Inspect, Mutate};
+		use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
+		use sp_core::H160;
 
-		// let tx = hp_io::cosmos::decode_tx(tx_bytes).ok_or(())?;
-		// let signers = hp_io::cosmos::get_signers(&tx).ok_or(())?;
-		// let signer_infos = tx.auth_info.signer_infos;
+		let tx = Tx::decode(&mut &*tx_bytes).unwrap();
+		let signers =
+			<Runtime as pallet_cosmos::Config>::SigVerifiableTx::get_signers(&tx).unwrap();
 
-		// for (i, signer_info) in signer_infos.iter().enumerate() {
-		// 	if signer_info.sequence == 0 {
-		// 		let signer = signers.get(i).ok_or(())?;
+		let signer_infos = tx.auth_info.ok_or(())?.signer_infos;
 
-		// 		let interim_account =
-		// 			<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(
-		// 				signer.address,
-		// 			);
-		// 		let who = if let pallet_cosmos_types::tx::SignerPublicKey::Single(
-		// 			PublicKey::Secp256k1(pk),
-		// 		) = signer_info.public_key.clone().ok_or(())?
-		// 		{
-		// 			CosmosSigner(Public(pk))
-		// 		} else {
-		// 			return Err(());
-		// 		};
+		for (i, signer_info) in signer_infos.iter().enumerate() {
+			if signer_info.sequence == 0 {
+				let signer = signers.get(i).ok_or(())?;
+				let (_, address, _) = bech32::decode(signer).unwrap();
+				let address = Vec::<u8>::from_base32(&address).unwrap();
+				let address = H160::from_slice(&address);
 
-		// 		let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
-		// 			&interim_account,
-		// 			Preservation::Expendable,
-		// 			Fortitude::Polite,
-		// 		);
-		// 		<pallet_balances::Pallet<Runtime> as Mutate<AccountId>>::transfer(
-		// 			&interim_account,
-		// 			&who,
-		// 			balance,
-		// 			Preservation::Expendable,
-		// 		)
-		// 		.map_err(|_| ())?;
+				let interim_account =
+					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(address);
+				let public_key = signer_info.public_key.clone().ok_or(())?;
+				let who = match public_key.type_url.as_str() {
+					SECP256K1_TYPE_URL => {
+						let public_key =
+							secp256k1::PubKey::decode(&mut &*public_key.value).unwrap();
+						let mut pk = [0u8; 33];
+						pk.copy_from_slice(&public_key.key);
+						CosmosSigner(Public(pk))
+					},
+					_ => return Err(()),
+				};
 
-		// 		pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who).map_err(|_| ())?;
-		// 	}
-		// }
+				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
+					&interim_account,
+					Preservation::Expendable,
+					Fortitude::Polite,
+				);
+				<pallet_balances::Pallet<Runtime> as Mutate<AccountId>>::transfer(
+					&interim_account,
+					&who,
+					balance,
+					Preservation::Expendable,
+				)
+				.map_err(|_| ())?;
+
+				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who).map_err(|_| ())?;
+			}
+		}
 
 		Ok(())
 	}

@@ -17,16 +17,13 @@
 
 pub mod msg_send {
 	use core::str::FromStr;
-	use cosmos_sdk_proto::{
-		cosmos::bank::v1beta1::MsgSend,
-		prost::alloc::string::{String, ToString},
-	};
+	use cosmos_sdk_proto::{cosmos::bank::v1beta1::MsgSend, prost::alloc::string::String};
 	use serde_json::{Map, Value};
 	use sp_std::vec::Vec;
 
 	const AMINO_NAME: &str = "cosmos-sdk/MsgSend";
 
-	pub fn sign_bytes(msg: &MsgSend) -> Vec<u8> {
+	pub fn get_sign_bytes(msg: &MsgSend) -> Value {
 		let mut value = Map::new();
 		value.insert(
 			String::from_str("from_address").unwrap(),
@@ -52,10 +49,10 @@ pub mod msg_send {
 		);
 		legacy_msg.insert(String::from_str("value").unwrap(), Value::Object(value));
 
-		Value::Object(legacy_msg).to_string().into_bytes()
+		Value::Object(legacy_msg)
 	}
 
-	pub fn signers(msg: &MsgSend) -> Vec<String> {
+	pub fn get_signers(msg: &MsgSend) -> Vec<String> {
 		sp_std::vec![msg.from_address.clone()]
 	}
 }

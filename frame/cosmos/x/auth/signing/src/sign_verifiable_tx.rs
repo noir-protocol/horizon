@@ -20,11 +20,5 @@ use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::alloc::string::String};
 use sp_std::vec::Vec;
 
 pub trait SigVerifiableTx {
-	fn get_signers(tx: &Tx) -> Vec<String>;
-}
-
-impl SigVerifiableTx for () {
-	fn get_signers(_tx: &Tx) -> Vec<String> {
-		Vec::new()
-	}
+	fn get_signers(tx: &Tx) -> Result<Vec<String>, ()>;
 }

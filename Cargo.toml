@@ -5,6 +5,7 @@ members = [
 	"frame/cosmos",
 	"frame/cosmos/types",
 	"frame/cosmos/x/auth",
+	"frame/cosmos/x/auth/migrations",
 	"frame/cosmos/x/auth/signing",
 	"frame/cosmos/x/bank",
 	"frame/cosmos/x/bank/types",
@@ -36,7 +37,9 @@ ripemd = { version = "0.1.3", default-features = false }
 scale-info = { version = "2.3.0", default-features = false }
 secp256k1 = { version = "0.28.1", default-features = false }
 serde = { version = "1.0.0", default-features = false }
-serde_json = { version = "1.0.94", default-features = false, features = ["alloc"] }
+serde_json = { version = "1.0.94", default-features = false, features = [
+	"alloc",
+] }
 
 # Substrate FRAME
 frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
@@ -104,11 +107,12 @@ pallet-cosmos = { path = "frame/cosmos", default-features = false }
 pallet-cosmos-accounts = { path = "frame/cosmos-accounts", default-features = false }
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
-pallet-cosmos-types = { path = "frame/cosmos/types", default-features = false}
-pallet-cosmos-x-auth = { path = "frame/cosmos/x/auth", default-features = false}
-pallet-cosmos-x-auth-signing = { path = "frame/cosmos/x/auth/signing", default-features = false}
-pallet-cosmos-x-bank = { path = "frame/cosmos/x/bank", default-features = false}
-pallet-cosmos-x-bank-types = { path = "frame/cosmos/x/bank/types", default-features = false}
+pallet-cosmos-types = { path = "frame/cosmos/types", default-features = false }
+pallet-cosmos-x-auth = { path = "frame/cosmos/x/auth", default-features = false }
+pallet-cosmos-x-auth-migrations = { path = "frame/cosmos/x/auth/migrations", default-features = false }
+pallet-cosmos-x-auth-signing = { path = "frame/cosmos/x/auth/signing", default-features = false }
+pallet-cosmos-x-bank = { path = "frame/cosmos/x/bank", default-features = false }
+pallet-cosmos-x-bank-types = { path = "frame/cosmos/x/bank/types", default-features = false }
 
 cosmos-sdk-proto = { path = "proto/cosmos-sdk", default-features = false }
 tendermint-proto = { version = "0.38", default-features = false }
