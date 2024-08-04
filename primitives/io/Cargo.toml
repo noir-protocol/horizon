@@ -20,10 +20,10 @@ hp-crypto = { workspace = true }
 [features]
 default = ["std"]
 std = [
-  "cosmrs",
-  "sp-core/std",
-  "sp-std/std",
-  "sp-runtime-interface/std",
-  "pallet-cosmos-types/std",
-  "hp-crypto/std",
+	"cosmrs",
+	"sp-core/std",
+	"sp-std/std",
+	"sp-runtime-interface/std",
+	"pallet-cosmos-types/std",
+	"hp-crypto/std",
 ]

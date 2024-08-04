@@ -32,6 +32,7 @@ use pallet_cosmos_x_auth_signing::{
 	sign_mode_handler::{SignModeHandler, SignerData},
 	sign_verifiable_tx::SigVerifiableTx,
 };
+use ripemd::Digest;
 use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
@@ -128,7 +129,9 @@ where
 					secp256k1::PubKey::decode(&mut &*public_key.value).map_err(|_| {
 						TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
 					})?;
-				let address: H160 = hp_io::cosmos::ripemd160(&sha2_256(&public_key.key)).into();
+				let mut hasher = ripemd::Ripemd160::new();
+				hasher.update(&sha2_256(&public_key.key));
+				let address = H160::from_slice(&hasher.finalize());
 
 				let (_, signer_addr, _) = bech32::decode(&signer_data.address).map_err(|_| {
 					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)

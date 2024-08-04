@@ -19,6 +19,7 @@
 
 use hp_crypto::EcdsaExt;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use ripemd::Digest;
 use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{de, Deserializer, Serializer};
@@ -77,8 +78,11 @@ impl sp_std::fmt::Debug for CosmosSigner {
 
 impl EcdsaExt for CosmosSigner {
 	fn to_cosm_address(&self) -> Option<H160> {
-		let hashed = sp_io::hashing::sha2_256(&self.0 .0);
-		Some(hp_io::cosmos::ripemd160(&hashed).into())
+		let mut hasher = ripemd::Ripemd160::new();
+		hasher.update(&sp_io::hashing::sha2_256(&self.0 .0));
+		let address = H160::from_slice(&hasher.finalize());
+
+		Some(address)
 	}
 }
 

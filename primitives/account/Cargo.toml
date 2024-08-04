@@ -9,6 +9,7 @@ repository = "https://github.com/noirhq/horizon/"
 array-bytes = { workspace = true, optional = true }
 hex = { workspace = true, optional = true }
 serde = { workspace = true, features = ["derive"] }
+ripemd = { workspace = true }
 
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
@@ -30,6 +31,7 @@ default = ["std"]
 std = [
 	"array-bytes",
 	"hex",
+	"ripemd/std",
 	"parity-scale-codec/std",
 	"scale-info/std",
 	"sp-core/std",

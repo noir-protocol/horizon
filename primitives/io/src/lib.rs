@@ -25,11 +25,6 @@ use sp_runtime_interface::runtime_interface;
 /// Interface for working with crypto-related, handling Cosmos transactions and messages.
 #[runtime_interface]
 pub trait Cosmos {
-	/// Hash with ripemd160.
-	fn ripemd160(msg: &[u8]) -> [u8; 20] {
-		hp_crypto::ripemd160(msg)
-	}
-
 	/// Verify with secp256k1.
 	fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
 		hp_crypto::secp256k1_ecdsa_verify(sig, msg, pub_key)
