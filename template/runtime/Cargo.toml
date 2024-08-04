@@ -60,7 +60,8 @@ pallet-cosmos-x-bank = { workspace = true }
 pallet-cosmos-x-bank-types = { workspace = true }
 
 [dev-dependencies]
-base64ct = { workspace = true, features = ["alloc"] }
+base64ct = { workspace = true }
+hex = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }

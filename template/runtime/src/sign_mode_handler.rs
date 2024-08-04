@@ -147,4 +147,35 @@ mod tests {
 
 		assert_eq!(expected_hash, hash);
 	}
+
+	#[test]
+	fn get_std_sign_bytes_test() {
+		let tx_raw =  "CpoBCpcBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEncKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMW41amd4NjR6dzM4c3M3Nm16dXU0dWM3amV5cXcydmZqazYwZmR6GhcKBGFjZHQSDzEwMDAwMDAwMDAwMDAwMBJsCk4KRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECChCRNB/lZkv6F4LV4Ed5aJBoyRawTLNl7DFTdVaE2aESBAoCCH8SGgoSCgRhY2R0EgoxMDQwMDAwMDAwEIDa8esEGkBgXIiPoBpecG7QpKDJPaztFogqvmxjDHF5ORfWBrOoSzf0+AAmch1CXrG4OmiKL0y8v9ITx0QzWYUc7ueXcdIm";
+		let tx_raw = Base64::decode_vec(tx_raw).unwrap();
+		let tx = Tx::decode(&mut &*tx_raw).unwrap();
+
+		let public_key = tx
+			.auth_info
+			.clone()
+			.unwrap()
+			.signer_infos
+			.first()
+			.unwrap()
+			.public_key
+			.clone()
+			.unwrap();
+
+		let mode = ModeInfo { sum: Some(Sum::Single(Single { mode: 127 })) };
+		let data = SignerData {
+			address: String::from_str("cosmos1qd69nuwj95gta4akjgyxtj9ujmz4w8edmqysqw").unwrap(),
+			chain_id: String::from_str("dev").unwrap(),
+			account_number: 0,
+			sequence: 0,
+			pub_key: public_key,
+		};
+		let hash = sha2_256(&SignModeHandler::get_sign_bytes(&mode, &data, &tx).unwrap());
+		let hash = hex::encode(&hash);
+
+		assert_eq!(hash, "714d4bdfdbd0bd630ebdf93b1f6eba7d3c752e92bbab6c9d3d9c93e1777348bb");
+	}
 }
