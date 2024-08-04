@@ -59,6 +59,9 @@ pallet-cosmos-x-auth-signing = { workspace = true }
 pallet-cosmos-x-bank = { workspace = true }
 pallet-cosmos-x-bank-types = { workspace = true }
 
+[dev-dependencies]
+base64ct = { workspace = true, features = ["alloc"] }
+
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
 

@@ -17,9 +17,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-pub mod error;
 pub mod events;
 pub mod handler;
 pub mod msgservice;
-pub mod traits;
 pub mod tx;

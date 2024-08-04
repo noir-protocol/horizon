@@ -97,3 +97,54 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 		Ok(sign_bytes)
 	}
 }
+
+#[cfg(test)]
+mod tests {
+	use crate::sign_mode_handler::SignModeHandler;
+	use base64ct::{Base64, Encoding};
+	use core::str::FromStr;
+	use cosmos_sdk_proto::{
+		cosmos::tx::v1beta1::{
+			mode_info::{Single, Sum},
+			ModeInfo, Tx,
+		},
+		prost::Message,
+	};
+	use pallet_cosmos_x_auth_signing::sign_mode_handler::{SignModeHandler as _, SignerData};
+	use sp_core::sha2_256;
+
+	#[test]
+	fn get_sign_bytes_test() {
+		let tx_raw = "CpMBCpABChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEnAKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMWdtajJleGFnMDN0dGdhZnBya2RjM3Q4ODBncm1hOW53ZWZjZDJ3GhAKBXVhdG9tEgcxMDAwMDAwEnEKTgpGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQIKEJE0H+VmS/oXgtXgR3lokGjJFrBMs2XsMVN1VoTZoRIECgIIARIfChUKBXVhdG9tEgw4ODY4ODAwMDAwMDAQgMDxxZSVFBpA9+DRmMYoIcxYF8jpNfUjMIMB4pgZ9diC8ySbnhc6YU84AA3b/0RsCr+nx9AZ27FwcrKJM/yBh8lz+/A9BFn3bg==";
+
+		let tx_raw = Base64::decode_vec(&tx_raw).unwrap();
+		let tx = Tx::decode(&mut &*tx_raw).unwrap();
+
+		let public_key = tx
+			.auth_info
+			.clone()
+			.unwrap()
+			.signer_infos
+			.first()
+			.unwrap()
+			.public_key
+			.clone()
+			.unwrap();
+
+		let mode = ModeInfo { sum: Some(Sum::Single(Single { mode: 1 })) };
+		let data = SignerData {
+			address: String::from_str("cosmos1qd69nuwj95gta4akjgyxtj9ujmz4w8edmqysqw").unwrap(),
+			chain_id: String::from_str("theta-testnet-001").unwrap(),
+			account_number: 754989,
+			sequence: 0,
+			pub_key: public_key,
+		};
+		let expected_hash = sha2_256(&SignModeHandler::get_sign_bytes(&mode, &data, &tx).unwrap());
+
+		let sign_doc_raw =
+		"CpMBCpABChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEnAKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMWdtajJleGFnMDN0dGdhZnBya2RjM3Q4ODBncm1hOW53ZWZjZDJ3GhAKBXVhdG9tEgcxMDAwMDAwEnEKTgpGCh8vY29zbW9zLmNyeXB0by5zZWNwMjU2azEuUHViS2V5EiMKIQIKEJE0H+VmS/oXgtXgR3lokGjJFrBMs2XsMVN1VoTZoRIECgIIARIfChUKBXVhdG9tEgw4ODY4ODAwMDAwMDAQgMDxxZSVFBoRdGhldGEtdGVzdG5ldC0wMDEgrYou";
+		let hash = sha2_256(&Base64::decode_vec(&sign_doc_raw).unwrap());
+
+		assert_eq!(expected_hash, hash);
+	}
+}
