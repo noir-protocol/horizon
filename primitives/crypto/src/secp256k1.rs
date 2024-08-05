@@ -36,3 +36,20 @@ pub fn secp256k1_ecdsa_verify(sig: &[u8], msg: &[u8], pub_key: &[u8]) -> bool {
 
 	sig.verify(&msg, &pub_key).is_ok()
 }
+
+#[cfg(test)]
+mod tests {
+	use super::secp256k1_ecdsa_verify;
+
+	#[test]
+	fn secp256k1_ecdsa_verify_test() {
+		let pub_key =
+			hex::decode("020a1091341fe5664bfa1782d5e04779689068c916b04cb365ec3153755684d9a1")
+				.unwrap();
+		let sig = hex::decode("605c888fa01a5e706ed0a4a0c93daced16882abe6c630c71793917d606b3a84b37f4f80026721d425eb1b83a688a2f4cbcbfd213c7443359851ceee79771d226").unwrap();
+		let msg = hex::decode("714d4bdfdbd0bd630ebdf93b1f6eba7d3c752e92bbab6c9d3d9c93e1777348bb")
+			.unwrap();
+
+		assert!(secp256k1_ecdsa_verify(&sig, &msg, &pub_key));
+	}
+}

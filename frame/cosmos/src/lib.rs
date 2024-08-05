@@ -20,6 +20,7 @@
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
 pub use self::pallet::*;
+use bech32::FromBase32;
 use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
@@ -77,7 +78,24 @@ where
 	}
 
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
-		None
+		if let Call::transact { tx_bytes } = self {
+			let check = || {
+				let tx = Tx::decode(&mut &tx_bytes[..])
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+				let fee_payer = T::SigVerifiableTx::fee_payer(&tx)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadProof))?;
+				let (_, address, _) = bech32::decode(&fee_payer)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadProof))?;
+				let address = Vec::<u8>::from_base32(&address)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadProof))?;
+
+				Ok(H160::from_slice(&address))
+			};
+
+			Some(check())
+		} else {
+			None
+		}
 	}
 
 	pub fn pre_dispatch_self_contained(

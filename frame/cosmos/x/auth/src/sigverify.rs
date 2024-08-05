@@ -149,9 +149,8 @@ where
 
 				let sign_bytes = T::SignModeHandler::get_sign_bytes(sign_mode, signer_data, tx)
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
-				let msg = sha2_256(&sign_bytes);
 
-				if !secp256k1_ecdsa_verify(signature, &msg, &public_key.key) {
+				if !secp256k1_ecdsa_verify(signature, &sha2_256(&sign_bytes), &public_key.key) {
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
 				}
 
@@ -170,18 +169,20 @@ where
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		let mut sig_count = 0u64;
-		if let Some(auth_info) = &tx.auth_info {
-			for SignerInfo { public_key, .. } in &auth_info.signer_infos {
-				if let Some(public_key) = public_key {
-					sig_count = sig_count.saturating_add(Self::count_sub_keys(public_key)?);
-				}
 
-				if sig_count > T::TxSigLimit::get() {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
-				}
+		let auth_info = tx
+			.auth_info
+			.clone()
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+		for SignerInfo { public_key, .. } in &auth_info.signer_infos {
+			let public_key = public_key
+				.clone()
+				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+			sig_count = sig_count.saturating_add(Self::count_sub_keys(&public_key)?);
+
+			if sig_count > T::TxSigLimit::get() {
+				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
 			}
-		} else {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
 		}
 
 		Ok(ValidTransaction::default())

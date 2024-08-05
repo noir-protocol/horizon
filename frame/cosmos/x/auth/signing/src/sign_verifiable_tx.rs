@@ -23,10 +23,13 @@ use sp_std::vec::Vec;
 pub enum SigVerifiableTxError {
 	EmptyAuthInfo,
 	EmptyFee,
+	EmptySigners,
 	EmptyTxBody,
 	InvalidMsg,
 }
 
 pub trait SigVerifiableTx {
 	fn get_signers(tx: &Tx) -> Result<Vec<String>, SigVerifiableTxError>;
+
+	fn fee_payer(tx: &Tx) -> Result<String, SigVerifiableTxError>;
 }
