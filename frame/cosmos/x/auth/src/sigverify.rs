@@ -130,7 +130,7 @@ where
 						TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
 					})?;
 				let mut hasher = ripemd::Ripemd160::new();
-				hasher.update(&sha2_256(&public_key.key));
+				hasher.update(sha2_256(&public_key.key));
 				let address = H160::from_slice(&hasher.finalize());
 
 				let (_, signer_addr, _) = bech32::decode(&signer_data.address).map_err(|_| {

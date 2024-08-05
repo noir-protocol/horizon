@@ -32,6 +32,22 @@ pub struct SignerData {
 	pub pub_key: Any,
 }
 
+#[derive(Clone, Debug)]
+pub enum SignModeHandlerError {
+	EmptyAuthInfo,
+	EmptyTxBody,
+	EmptyFee,
+	EmptyModeInfo,
+	DecodeTxError,
+	InvalidMsg,
+	InvalidMode,
+	SerializeError,
+}
+
 pub trait SignModeHandler {
-	fn get_sign_bytes(mode: &ModeInfo, data: &SignerData, tx: &Tx) -> Result<Vec<u8>, ()>;
+	fn get_sign_bytes(
+		mode: &ModeInfo,
+		data: &SignerData,
+		tx: &Tx,
+	) -> Result<Vec<u8>, SignModeHandlerError>;
 }

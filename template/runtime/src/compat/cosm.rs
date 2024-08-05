@@ -35,7 +35,7 @@ where
 {
 	fn into_account_id(address: H160) -> T::AccountId {
 		if let Some(x) = pallet_cosmos_accounts::Connections::<T>::get(address) {
-			return x
+			return x;
 		}
 		let mut data = [0u8; 25];
 		data[0..5].copy_from_slice(b"cosm:");

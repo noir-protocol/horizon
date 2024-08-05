@@ -25,6 +25,7 @@ use scale_info::TypeInfo;
 use serde::{de, Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 use sp_core::{ecdsa, H160};
+use sp_io::hashing::sha2_256;
 use sp_runtime::traits::IdentifyAccount;
 
 #[derive(
@@ -79,7 +80,7 @@ impl sp_std::fmt::Debug for CosmosSigner {
 impl EcdsaExt for CosmosSigner {
 	fn to_cosm_address(&self) -> Option<H160> {
 		let mut hasher = ripemd::Ripemd160::new();
-		hasher.update(&sp_io::hashing::sha2_256(&self.0 .0));
+		hasher.update(sha2_256(&self.0 .0));
 		let address = H160::from_slice(&hasher.finalize());
 
 		Some(address)

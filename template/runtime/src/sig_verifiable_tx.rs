@@ -21,23 +21,25 @@ use cosmos_sdk_proto::{
 	prost::alloc::string::String,
 	traits::Message,
 };
+use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTxError;
 use pallet_cosmos_x_bank_types::msgs::msg_send;
 use sp_std::vec::Vec;
 
 pub struct SigVerifiableTx;
 
 impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVerifiableTx {
-	fn get_signers(tx: &Tx) -> Result<Vec<String>, ()> {
+	fn get_signers(tx: &Tx) -> Result<Vec<String>, SigVerifiableTxError> {
 		let mut signers = Vec::<String>::new();
 
-		let body = tx.body.clone().ok_or(())?;
+		let body = tx.body.clone().ok_or(SigVerifiableTxError::EmptyTxBody)?;
 		for msg in body.messages.iter() {
 			let msg_signers = match msg.type_url.as_str() {
 				"/cosmos.bank.v1beta1.MsgSend" => {
-					let msg = MsgSend::decode(&mut &*msg.value).unwrap();
+					let msg =
+						MsgSend::decode(&mut &*msg.value).map_err(SigVerifiableTxError::InvalidMsg);
 					msg_send::get_signers(&msg)
 				},
-				_ => return Err(()),
+				_ => return Err(SigVerifiableTxError::InvalidMsg),
 			};
 
 			for msg_signer in msg_signers.iter() {
@@ -47,8 +49,14 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 			}
 		}
 
-		let fee_payer = tx.auth_info.clone().ok_or(())?.fee.ok_or(())?.payer;
-		if fee_payer.is_empty() && !signers.contains(&fee_payer) {
+		let fee_payer = tx
+			.auth_info
+			.clone()
+			.ok_or(SigVerifiableTxError::EmptyAuthInfo)?
+			.fee
+			.ok_or(SigVerifiableTxError::EmptyFee)?
+			.payer;
+		if !fee_payer.is_empty() && !signers.contains(&fee_payer) {
 			signers.push(fee_payer.clone());
 		}
 

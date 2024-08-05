@@ -19,6 +19,14 @@
 use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::alloc::string::String};
 use sp_std::vec::Vec;
 
+#[derive(Clone, Debug)]
+pub enum SigVerifiableTxError {
+	EmptyAuthInfo,
+	EmptyFee,
+	EmptyTxBody,
+	InvalidMsg,
+}
+
 pub trait SigVerifiableTx {
-	fn get_signers(tx: &Tx) -> Result<Vec<String>, ()>;
+	fn get_signers(tx: &Tx) -> Result<Vec<String>, SigVerifiableTxError>;
 }

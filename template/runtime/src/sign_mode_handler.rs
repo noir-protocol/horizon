@@ -29,7 +29,7 @@ use cosmos_sdk_proto::{
 	traits::Message,
 };
 use pallet_cosmos_x_auth_migrations::legacytx::stdsign::StdSignDoc;
-use pallet_cosmos_x_auth_signing::sign_mode_handler::SignerData;
+use pallet_cosmos_x_auth_signing::sign_mode_handler::{SignModeHandlerError, SignerData};
 use pallet_cosmos_x_bank_types::msgs::msg_send;
 use serde_json::{Map, Value};
 use sp_std::vec::Vec;
@@ -37,12 +37,16 @@ use sp_std::vec::Vec;
 pub struct SignModeHandler;
 
 impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignModeHandler {
-	fn get_sign_bytes(mode: &ModeInfo, data: &SignerData, tx: &Tx) -> Result<Vec<u8>, ()> {
-		let sum = mode.sum.clone().ok_or(())?;
+	fn get_sign_bytes(
+		mode: &ModeInfo,
+		data: &SignerData,
+		tx: &Tx,
+	) -> Result<Vec<u8>, SignModeHandlerError> {
+		let sum = mode.sum.clone().ok_or(SignModeHandlerError::EmptyModeInfo)?;
 		let sign_bytes = match sum {
 			Sum::Single(Single { mode }) => match mode {
 				1 /* SIGN_MODE_DIRECT */ => {
-					let tx_raw = TxRaw::decode(&mut &*tx.encode_to_vec()).unwrap();
+					let tx_raw = TxRaw::decode(&mut &*tx.encode_to_vec()).map_err(|_| SignModeHandlerError::DecodeTxError)?;
 					SignDoc {
 						body_bytes: tx_raw.body_bytes,
 						auth_info_bytes: tx_raw.auth_info_bytes,
@@ -51,15 +55,16 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 					}.encode_to_vec()
 				},
 				127 /* SIGN_MODE_LEGACY_AMINO_JSON */ => {
-					let auth_info = tx.auth_info.clone().ok_or(())?;
-					let fee = auth_info.fee.ok_or(())?;
-					let body = tx.body.clone().ok_or(())?;
+					let auth_info = tx.auth_info.clone().ok_or(SignModeHandlerError::EmptyAuthInfo)?;
+					let fee = auth_info.fee.ok_or(SignModeHandlerError::EmptyFee)?;
+					let body = tx.body.clone().ok_or(SignModeHandlerError::EmptyTxBody)?;
 
 					let mut coins = Vec::<Value>::new();
 					for amt in fee.amount.iter() {
 						let mut coin = Map::new();
 						coin.insert(String::from_str("amount").unwrap(), Value::String(amt.amount.clone()));
 						coin.insert(String::from_str("denom").unwrap(), Value::String(amt.denom.clone()));
+
 						coins.push(Value::Object(coin));
 					}
 
@@ -75,7 +80,7 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 								let msg_json = msg_send::get_sign_bytes(&msg);
 								msgs.push(msg_json);
 							},
-							_ => return Err(()),
+							_ => return Err(SignModeHandlerError::InvalidMsg),
 						}
 					}
 
@@ -87,11 +92,11 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 						msgs,
 						sequence: data.sequence.to_string(),
 					};
-					serde_json::to_value(sign_doc).map_err(|_|())?.to_string().as_bytes().to_vec()
+					serde_json::to_value(sign_doc).map_err(|_| SignModeHandlerError::SerializeError)?.to_string().as_bytes().to_vec()
 				},
-				_ => return Err(()),
+				_ => return Err(SignModeHandlerError::InvalidMode),
 			},
-			_ => return Err(()),
+			_ => return Err(SignModeHandlerError::InvalidMode),
 		};
 
 		Ok(sign_bytes)
