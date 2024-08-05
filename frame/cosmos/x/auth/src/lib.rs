@@ -27,9 +27,9 @@ pub type AnteDecorators<T> = (
 	basic::ValidateBasicDecorator<T>,
 	basic::TxTimeoutHeightDecorator<T>,
 	basic::ValidateMemoDecorator<T>,
-	// sigverify::ValidateSigCountDecorator<T>,
+	sigverify::ValidateSigCountDecorator<T>,
 	msg::KnownMsgDecorator<T>,
-	// sigverify::SigVerificationDecorator<T>,
+	sigverify::SigVerificationDecorator<T>,
 	// TODO: Check fee
-	// sigverify::IncrementSequenceDecorator<T>,
+	sigverify::IncrementSequenceDecorator<T>,
 );
