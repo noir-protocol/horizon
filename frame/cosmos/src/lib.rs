@@ -274,10 +274,40 @@ pub mod pallet {
 	{
 		/// Transact a Cosmos transaction.
 		#[pallet::call_index(0)]
-		#[pallet::weight({ 0 })]
-		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
+		#[pallet::weight({
+			use cosmos_sdk_proto::traits::Message;
+			use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
+
+			match Tx::decode(&mut &tx_bytes[..]) {
+				Ok(tx) => {
+					match tx.auth_info.and_then(|auth_info| auth_info.fee) {
+						Some(fee) => Weight::from_parts(fee.gas_limit, 0),
+						None => T::BlockWeights::get()
+							.get(frame_support::dispatch::DispatchClass::Normal)
+							.base_extrinsic,
+					}
+				}
+				Err(_) => T::BlockWeights::get()
+					.get(frame_support::dispatch::DispatchClass::Normal)
+					.base_extrinsic,
+			}
+		 })]
+		pub fn transact(
+			origin: OriginFor<T>,
+			tx_bytes: sp_std::vec::Vec<u8>,
+		) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
-			let tx = cosmos_sdk_proto::cosmos::tx::v1beta1::Tx::decode(&mut &*tx_bytes).unwrap();
+			let base_weight = T::BlockWeights::get()
+				.get(frame_support::dispatch::DispatchClass::Normal)
+				.base_extrinsic;
+
+			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(base_weight),
+					pays_fee: Pays::Yes,
+				},
+				error: DispatchError::Other("Failed to decode transaction"),
+			})?;
 
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -294,7 +324,8 @@ impl<T: Config> Pallet<T> {
 		tx_bytes: &[u8],
 	) -> Result<(), TransactionValidityError> {
 		let (_who, _) = Self::account(&origin);
-		let tx = cosmos_sdk_proto::cosmos::tx::v1beta1::Tx::decode(&mut &*tx_bytes).unwrap();
+		let tx = Tx::decode(&mut &*tx_bytes)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::ante_handle(&tx, false)?;
 
@@ -304,7 +335,8 @@ impl<T: Config> Pallet<T> {
 	// Controls that must be performed by the pool.
 	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		let tx = Tx::decode(tx_bytes).unwrap();
+		let tx = Tx::decode(tx_bytes)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::ante_handle(&tx, true)?;
 

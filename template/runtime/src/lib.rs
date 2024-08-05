@@ -506,38 +506,56 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 }
 
 impl Runtime {
-	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), ()> {
+	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), TransactionValidityError> {
 		use bech32::FromBase32;
 		use cosmos_sdk_proto::cosmos::crypto::secp256k1;
 		use fungible::{Inspect, Mutate};
 		use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
 		use sp_core::H160;
 
-		let tx = Tx::decode(&mut &*tx_bytes).unwrap();
-		let signers =
-			<Runtime as pallet_cosmos::Config>::SigVerifiableTx::get_signers(&tx).unwrap();
+		let tx = Tx::decode(&mut &*tx_bytes)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let signers = <Runtime as pallet_cosmos::Config>::SigVerifiableTx::get_signers(&tx)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-		let signer_infos = tx.auth_info.ok_or(())?.signer_infos;
+		let signer_infos = tx
+			.auth_info
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?
+			.signer_infos;
 
 		for (i, signer_info) in signer_infos.iter().enumerate() {
 			if signer_info.sequence == 0 {
-				let signer = signers.get(i).ok_or(())?;
-				let (_, address, _) = bech32::decode(signer).unwrap();
-				let address = Vec::<u8>::from_base32(&address).unwrap();
-				let address = H160::from_slice(&address);
+				let signer = signers
+					.get(i)
+					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+				let (_, signer_addr, _) = bech32::decode(signer).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
+				let signer_addr = Vec::<u8>::from_base32(&signer_addr).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
+				let signer_addr = H160::from_slice(&signer_addr);
 
 				let interim_account =
-					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(address);
-				let public_key = signer_info.public_key.clone().ok_or(())?;
+					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(
+						signer_addr,
+					);
+				let public_key = signer_info
+					.public_key
+					.clone()
+					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 				let who = match public_key.type_url.as_str() {
 					SECP256K1_TYPE_URL => {
-						let public_key =
-							secp256k1::PubKey::decode(&mut &*public_key.value).unwrap();
+						let public_key = secp256k1::PubKey::decode(&mut &*public_key.value)
+							.map_err(|_| {
+								TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+							})?;
 						let mut pk = [0u8; 33];
 						pk.copy_from_slice(&public_key.key);
 						CosmosSigner(Public(pk))
 					},
-					_ => return Err(()),
+					_ =>
+						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
 				};
 
 				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
@@ -551,9 +569,10 @@ impl Runtime {
 					balance,
 					Preservation::Expendable,
 				)
-				.map_err(|_| ())?;
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who).map_err(|_| ())?;
+				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 			}
 		}
 

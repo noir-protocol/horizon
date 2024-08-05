@@ -76,9 +76,9 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 					for message in body.messages.iter() {
 						match message.type_url.as_str() {
 							"/cosmos.bank.v1beta1.MsgSend" => {
-								let msg = MsgSend::decode(&mut &*message.value).unwrap();
-								let msg_json = msg_send::get_sign_bytes(&msg);
-								msgs.push(msg_json);
+								let msg = MsgSend::decode(&mut &*message.value).map_err(|_| SignModeHandlerError::InvalidMsg)?;
+								let msg = msg_send::get_sign_bytes(&msg);
+								msgs.push(msg);
 							},
 							_ => return Err(SignModeHandlerError::InvalidMsg),
 						}

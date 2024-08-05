@@ -54,8 +54,11 @@ where
 	fn handle(&self, msg: &Any) -> Result<Weight, MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
-		let MsgSend { from_address, to_address, amount } =
-			MsgSend::decode(&mut &*msg.value).unwrap();
+		let MsgSend { from_address, to_address, amount } = MsgSend::decode(&mut &*msg.value)
+			.map_err(|_| MsgHandlerErrorInfo {
+				weight: total_weight,
+				error: MsgHandlerError::InvalidMsg,
+			})?;
 
 		match Self::send_coins(from_address, to_address, amount) {
 			Ok(weight) => {
@@ -84,11 +87,25 @@ where
 	) -> Result<Weight, MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
-		let (_, data, _) = bech32::decode(&from_address).unwrap();
-		let from_addr = H160::from_slice(&Vec::<u8>::from_base32(&data).unwrap());
+		let (_, from_addr, _) = bech32::decode(&from_address).map_err(|_| MsgHandlerErrorInfo {
+			weight: total_weight,
+			error: MsgHandlerError::InvalidMsg,
+		})?;
+		let from_addr = Vec::<u8>::from_base32(&from_addr).map_err(|_| MsgHandlerErrorInfo {
+			weight: total_weight,
+			error: MsgHandlerError::InvalidMsg,
+		})?;
+		let from_addr = H160::from_slice(&from_addr);
 
-		let (_, data, _) = bech32::decode(&to_address).unwrap();
-		let to_addr = H160::from_slice(&Vec::<u8>::from_base32(&data).unwrap());
+		let (_, to_addr, _) = bech32::decode(&to_address).map_err(|_| MsgHandlerErrorInfo {
+			weight: total_weight,
+			error: MsgHandlerError::InvalidMsg,
+		})?;
+		let to_addr = Vec::<u8>::from_base32(&to_addr).map_err(|_| MsgHandlerErrorInfo {
+			weight: total_weight,
+			error: MsgHandlerError::InvalidMsg,
+		})?;
+		let to_addr = H160::from_slice(&to_addr);
 
 		let from_account = T::AddressMapping::into_account_id(from_addr);
 		let to_account = T::AddressMapping::into_account_id(to_addr);
@@ -99,7 +116,13 @@ where
 				T::Currency::transfer(
 					&from_account,
 					&to_account,
-					amt.amount.parse::<u128>().unwrap().saturated_into(),
+					amt.amount
+						.parse::<u128>()
+						.map_err(|_| MsgHandlerErrorInfo {
+							weight: total_weight,
+							error: MsgHandlerError::ParseAmount,
+						})?
+						.saturated_into(),
 					ExistenceRequirement::KeepAlive,
 				)
 				.map_err(|_| MsgHandlerErrorInfo {
@@ -114,7 +137,7 @@ where
 				// TODO: Asset support planned
 				return Err(MsgHandlerErrorInfo {
 					weight: total_weight,
-					error: MsgHandlerError::Unsupported,
+					error: MsgHandlerError::InvalidMsg,
 				});
 			}
 		}

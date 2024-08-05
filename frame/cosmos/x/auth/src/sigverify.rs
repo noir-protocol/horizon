@@ -49,7 +49,8 @@ where
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		let signatures = &tx.signatures;
-		let signers = T::SigVerifiableTx::get_signers(tx).unwrap();
+		let signers = T::SigVerifiableTx::get_signers(tx)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
 		let auth_info = tx
 			.auth_info
@@ -76,7 +77,8 @@ where
 
 			let (_, signer_addr, _) = bech32::decode(signer)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-			let signer_addr = Vec::<u8>::from_base32(&signer_addr).unwrap();
+			let signer_addr = Vec::<u8>::from_base32(&signer_addr)
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 			let signer_addr = H160::from_slice(&signer_addr);
 
 			let (account, _) = pallet_cosmos::Pallet::<T>::account(&signer_addr);
@@ -136,15 +138,17 @@ where
 				let (_, signer_addr, _) = bech32::decode(&signer_data.address).map_err(|_| {
 					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
 				})?;
-				let signer_addr = Vec::<u8>::from_base32(&signer_addr).unwrap();
+				let signer_addr = Vec::<u8>::from_base32(&signer_addr).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
 				let signer_addr = H160::from_slice(&signer_addr);
 
 				if signer_addr != address {
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 				}
 
-				let sign_bytes =
-					T::SignModeHandler::get_sign_bytes(sign_mode, signer_data, tx).unwrap();
+				let sign_bytes = T::SignModeHandler::get_sign_bytes(sign_mode, signer_data, tx)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 				let msg = sha2_256(&sign_bytes);
 
 				if !secp256k1_ecdsa_verify(signature, &msg, &public_key.key) {
@@ -202,12 +206,15 @@ where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		let signers = T::SigVerifiableTx::get_signers(tx).unwrap();
+		let signers = T::SigVerifiableTx::get_signers(tx)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 		for signer in signers.iter() {
-			let (_, data, _) = bech32::decode(signer).unwrap();
-			let address = Vec::<u8>::from_base32(&data).unwrap();
-			let address = H160::from_slice(&address);
-			let account = T::AddressMapping::into_account_id(address);
+			let (_, signer_addr, _) = bech32::decode(signer)
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+			let signer_addr = Vec::<u8>::from_base32(&signer_addr)
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+			let signer_addr = H160::from_slice(&signer_addr);
+			let account = T::AddressMapping::into_account_id(signer_addr);
 
 			frame_system::pallet::Pallet::<T>::inc_account_nonce(account);
 		}

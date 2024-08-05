@@ -35,8 +35,8 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 		for msg in body.messages.iter() {
 			let msg_signers = match msg.type_url.as_str() {
 				"/cosmos.bank.v1beta1.MsgSend" => {
-					let msg =
-						MsgSend::decode(&mut &*msg.value).map_err(SigVerifiableTxError::InvalidMsg);
+					let msg = MsgSend::decode(&mut &*msg.value)
+						.map_err(|_| SigVerifiableTxError::InvalidMsg)?;
 					msg_send::get_signers(&msg)
 				},
 				_ => return Err(SigVerifiableTxError::InvalidMsg),

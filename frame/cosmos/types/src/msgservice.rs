@@ -27,7 +27,7 @@ pub struct MsgHandlerErrorInfo {
 #[derive(Debug)]
 pub enum MsgHandlerError {
 	InvalidMsg,
-	Unsupported,
+	ParseAmount,
 	Custom(RuntimeString),
 }
 

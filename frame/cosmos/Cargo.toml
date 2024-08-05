@@ -46,3 +46,4 @@ std = [
 	"pallet-cosmos-x-auth-signing/std",
 	"pallet-cosmos-types/std",
 ]
+try-runtime = []

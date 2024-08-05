@@ -37,6 +37,7 @@ pub mod msg_send {
 			let mut coin = Map::new();
 			coin.insert(String::from_str("amount").unwrap(), Value::String(amt.amount.clone()));
 			coin.insert(String::from_str("denom").unwrap(), Value::String(amt.denom.clone()));
+
 			coins.push(Value::Object(coin));
 		}
 
