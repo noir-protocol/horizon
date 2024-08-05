@@ -24,10 +24,10 @@ pub struct MsgHandlerErrorInfo {
 	pub error: MsgHandlerError,
 }
 
-#[derive(Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum MsgHandlerError {
 	InvalidMsg,
-	ParseAmount,
+	ParseAmountError,
 	Custom(RuntimeString),
 }
 

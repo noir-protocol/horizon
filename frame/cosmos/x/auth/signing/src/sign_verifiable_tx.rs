@@ -19,7 +19,7 @@
 use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::alloc::string::String};
 use sp_std::vec::Vec;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SigVerifiableTxError {
 	EmptyAuthInfo,
 	EmptyFee,

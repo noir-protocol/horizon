@@ -507,11 +507,10 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 
 impl Runtime {
 	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), TransactionValidityError> {
-		use bech32::FromBase32;
 		use cosmos_sdk_proto::cosmos::crypto::secp256k1;
 		use fungible::{Inspect, Mutate};
+		use pallet_cosmos_types::address::address_from_bech32;
 		use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
-		use sp_core::H160;
 
 		let tx = Tx::decode(&mut &*tx_bytes)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
@@ -528,13 +527,9 @@ impl Runtime {
 				let signer = signers
 					.get(i)
 					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-				let (_, signer_addr, _) = bech32::decode(signer).map_err(|_| {
+				let signer_addr = address_from_bech32(signer).map_err(|_| {
 					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
 				})?;
-				let signer_addr = Vec::<u8>::from_base32(&signer_addr).map_err(|_| {
-					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-				})?;
-				let signer_addr = H160::from_slice(&signer_addr);
 
 				let interim_account =
 					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(

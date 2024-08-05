@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use bech32::FromBase32;
 use core::str::FromStr;
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin},
@@ -31,11 +30,11 @@ use frame_support::{
 use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
+	address::address_from_bech32,
 	events::{EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
 	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
-use sp_core::H160;
 use sp_runtime::{format_runtime_string, SaturatedConversion};
 use sp_std::vec::Vec;
 
@@ -87,25 +86,15 @@ where
 	) -> Result<Weight, MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
-		let (_, from_addr, _) = bech32::decode(&from_address).map_err(|_| MsgHandlerErrorInfo {
+		let from_addr = address_from_bech32(&from_address).map_err(|_| MsgHandlerErrorInfo {
 			weight: total_weight,
 			error: MsgHandlerError::InvalidMsg,
 		})?;
-		let from_addr = Vec::<u8>::from_base32(&from_addr).map_err(|_| MsgHandlerErrorInfo {
-			weight: total_weight,
-			error: MsgHandlerError::InvalidMsg,
-		})?;
-		let from_addr = H160::from_slice(&from_addr);
 
-		let (_, to_addr, _) = bech32::decode(&to_address).map_err(|_| MsgHandlerErrorInfo {
+		let to_addr = address_from_bech32(&to_address).map_err(|_| MsgHandlerErrorInfo {
 			weight: total_weight,
 			error: MsgHandlerError::InvalidMsg,
 		})?;
-		let to_addr = Vec::<u8>::from_base32(&to_addr).map_err(|_| MsgHandlerErrorInfo {
-			weight: total_weight,
-			error: MsgHandlerError::InvalidMsg,
-		})?;
-		let to_addr = H160::from_slice(&to_addr);
 
 		let from_account = T::AddressMapping::into_account_id(from_addr);
 		let to_account = T::AddressMapping::into_account_id(to_addr);
@@ -120,7 +109,7 @@ where
 						.parse::<u128>()
 						.map_err(|_| MsgHandlerErrorInfo {
 							weight: total_weight,
-							error: MsgHandlerError::ParseAmount,
+							error: MsgHandlerError::ParseAmountError,
 						})?
 						.saturated_into(),
 					ExistenceRequirement::KeepAlive,

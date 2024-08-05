@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use bech32::FromBase32;
 use cosmos_sdk_proto::{
 	cosmos::{
 		crypto::{multisig::LegacyAminoPubKey, secp256k1},
@@ -27,7 +26,7 @@ use cosmos_sdk_proto::{
 };
 use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::handler::AnteDecorator;
+use pallet_cosmos_types::{address::address_from_bech32, handler::AnteDecorator};
 use pallet_cosmos_x_auth_signing::{
 	sign_mode_handler::{SignModeHandler, SignerData},
 	sign_verifiable_tx::SigVerifiableTx,
@@ -37,7 +36,7 @@ use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 };
-use sp_std::{marker::PhantomData, vec::Vec};
+use sp_std::marker::PhantomData;
 
 pub const SECP256K1_TYPE_URL: &str = "/cosmos.crypto.secp256k1.PubKey";
 
@@ -75,11 +74,8 @@ where
 				.get(i)
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-			let (_, signer_addr, _) = bech32::decode(signer)
+			let signer_addr = address_from_bech32(signer)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-			let signer_addr = Vec::<u8>::from_base32(&signer_addr)
-				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-			let signer_addr = H160::from_slice(&signer_addr);
 
 			let (account, _) = pallet_cosmos::Pallet::<T>::account(&signer_addr);
 			if signer_info.sequence > account.sequence {
@@ -135,13 +131,9 @@ where
 				hasher.update(sha2_256(&public_key.key));
 				let address = H160::from_slice(&hasher.finalize());
 
-				let (_, signer_addr, _) = bech32::decode(&signer_data.address).map_err(|_| {
+				let signer_addr = address_from_bech32(&signer_data.address).map_err(|_| {
 					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
 				})?;
-				let signer_addr = Vec::<u8>::from_base32(&signer_addr).map_err(|_| {
-					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-				})?;
-				let signer_addr = H160::from_slice(&signer_addr);
 
 				if signer_addr != address {
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
@@ -210,11 +202,8 @@ where
 		let signers = T::SigVerifiableTx::get_signers(tx)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 		for signer in signers.iter() {
-			let (_, signer_addr, _) = bech32::decode(signer)
+			let signer_addr = address_from_bech32(&signer)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-			let signer_addr = Vec::<u8>::from_base32(&signer_addr)
-				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-			let signer_addr = H160::from_slice(&signer_addr);
 			let account = T::AddressMapping::into_account_id(signer_addr);
 
 			frame_system::pallet::Pallet::<T>::inc_account_nonce(account);

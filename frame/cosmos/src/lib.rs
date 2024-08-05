@@ -20,7 +20,6 @@
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
 pub use self::pallet::*;
-use bech32::FromBase32;
 use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
@@ -33,6 +32,7 @@ use frame_support::{
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use pallet_cosmos_types::{
+	address::address_from_bech32,
 	handler::AnteDecorator,
 	msgservice::MsgServiceRouter,
 	tx::{Account, Gas},
@@ -84,12 +84,9 @@ where
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 				let fee_payer = T::SigVerifiableTx::fee_payer(&tx)
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadProof))?;
-				let (_, address, _) = bech32::decode(&fee_payer)
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadProof))?;
-				let address = Vec::<u8>::from_base32(&address)
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadProof))?;
 
-				Ok(H160::from_slice(&address))
+				address_from_bech32(&fee_payer)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
 			};
 
 			Some(check())

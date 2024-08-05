@@ -32,7 +32,7 @@ pub struct SignerData {
 	pub pub_key: Any,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SignModeHandlerError {
 	EmptyAuthInfo,
 	EmptyTxBody,
