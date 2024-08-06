@@ -46,12 +46,12 @@ fp-self-contained = { workspace = true, features = ["serde"] }
 
 # Horizon
 hp-account = { workspace = true }
-pallet-cosmos-types = { workspace = true, features = ["with-codec"] }
 hp-crypto = { workspace = true }
 hp-io = { workspace = true }
 hp-rpc = { workspace = true }
 pallet-cosmos = { workspace = true }
 pallet-cosmos-accounts = { workspace = true }
+pallet-cosmos-types = { workspace = true, features = ["with-codec"] }
 pallet-cosmos-x-auth = { workspace = true }
 pallet-cosmos-x-auth-migrations = { workspace = true }
 pallet-cosmos-x-auth-signing = { workspace = true }

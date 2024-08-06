@@ -592,11 +592,18 @@ impl_runtime_apis! {
 				Ok(post_info) => post_info.actual_weight,
 				Err(e) => e.post_info.actual_weight,
 			};
+			let mut events = Vec::<pallet_cosmos_types::events::Event>::new();
+			for record in System::read_events_no_consensus() {
+				if let RuntimeEvent::Cosmos(pallet_cosmos::Event::Executed(event)) = record.event {
+					events.push(event);
+				}
+			}
 			SimulateResponse {
 				gas_info: GasInfo {
 					gas_wanted: 0,
 					gas_used: actual_weight.unwrap().ref_time(),
-				}
+				},
+				events
 			}
 		}
 	}
