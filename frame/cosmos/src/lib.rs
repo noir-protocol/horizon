@@ -346,13 +346,8 @@ impl<T: Config> Pallet<T> {
 
 		T::AnteHandler::ante_handle(&tx, true)?;
 
-		let transaction_nonce = tx
-			.auth_info
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?
-			.signer_infos
-			.first()
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?
-			.sequence;
+		let transaction_nonce = T::SigVerifiableTx::sequence(&tx)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		let mut builder =
 			ValidTransactionBuilder::default().and_provides((origin, transaction_nonce));
