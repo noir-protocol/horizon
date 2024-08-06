@@ -19,7 +19,10 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
+pub mod weights;
+
 pub use self::pallet::*;
+use crate::weights::WeightInfo;
 use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
@@ -267,6 +270,8 @@ pub mod pallet {
 		/// Handler for managing different signature modes in transactions.
 		#[pallet::no_default]
 		type SignModeHandler: SignModeHandler;
+		#[pallet::no_default]
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
@@ -290,14 +295,10 @@ pub mod pallet {
 				Ok(tx) => {
 					match tx.auth_info.and_then(|auth_info| auth_info.fee) {
 						Some(fee) => Weight::from_parts(fee.gas_limit, 0),
-						None => T::BlockWeights::get()
-							.get(frame_support::dispatch::DispatchClass::Normal)
-							.base_extrinsic,
+						None => T::WeightInfo::default_weight(),
 					}
 				}
-				Err(_) => T::BlockWeights::get()
-					.get(frame_support::dispatch::DispatchClass::Normal)
-					.base_extrinsic,
+				Err(_) => T::WeightInfo::default_weight(),
 			}
 		 })]
 		pub fn transact(
@@ -308,11 +309,7 @@ pub mod pallet {
 
 			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| DispatchErrorWithPostInfo {
 				post_info: PostDispatchInfo {
-					actual_weight: Some(
-						T::BlockWeights::get()
-							.get(frame_support::dispatch::DispatchClass::Normal)
-							.base_extrinsic,
-					),
+					actual_weight: Some(T::WeightInfo::default_weight()),
 					pays_fee: Pays::Yes,
 				},
 				error: DispatchError::Other("Failed to decode transaction"),
@@ -375,7 +372,7 @@ impl<T: Config> Pallet<T> {
 		_source: H160,
 		tx: cosmos_sdk_proto::cosmos::tx::v1beta1::Tx,
 	) -> DispatchResultWithPostInfo {
-		let mut total_weight = Self::default_weight();
+		let mut total_weight = T::WeightInfo::default_weight();
 
 		let body = tx.body.ok_or(DispatchErrorWithPostInfo {
 			post_info: PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes },
@@ -429,11 +426,5 @@ impl<T: Config> Pallet<T> {
 			},
 			T::DbWeight::get().reads(2),
 		)
-	}
-
-	fn default_weight() -> Weight {
-		T::BlockWeights::get()
-			.get(frame_support::dispatch::DispatchClass::Normal)
-			.base_extrinsic
 	}
 }

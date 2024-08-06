@@ -356,6 +356,8 @@ impl pallet_cosmos::Config for Runtime {
 	type SigVerifiableTx = sig_verifiable_tx::SigVerifiableTx;
 	/// Handler for managing different signature modes in transactions.
 	type SignModeHandler = sign_mode_handler::SignModeHandler;
+
+	type WeightInfo = pallet_cosmos::weights::CosmosWeight<Runtime>;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
