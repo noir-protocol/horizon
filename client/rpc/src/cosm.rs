@@ -18,7 +18,7 @@
 
 use crate::internal_error;
 use futures::future::TryFutureExt;
-use hp_rpc::ConvertTxRuntimeApi;
+use hp_rpc::CosmosTxRuntimeApi;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
@@ -26,7 +26,6 @@ use jsonrpsee::{
 use parity_scale_codec::Encode;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
-use sp_block_builder::BlockBuilder;
 use sp_blockchain::HeaderBackend;
 use sp_core::{sha2_256, Bytes, H256};
 use sp_runtime::{traits::Block as BlockT, transaction_validity::TransactionSource};
@@ -61,8 +60,7 @@ where
 	C: Send + Sync + 'static,
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + 'static,
-	C::Api: hp_rpc::ConvertTxRuntimeApi<Block>,
-	C::Api: sp_block_builder::BlockBuilder<Block>,
+	C::Api: hp_rpc::CosmosTxRuntimeApi<Block>,
 	P: TransactionPool<Block = Block> + 'static,
 {
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256> {
@@ -83,16 +81,10 @@ where
 
 	async fn simulate(&self, tx_bytes: Bytes) -> RpcResult<Bytes> {
 		let best_hash = self.client.info().best_hash;
-		let extrinsic = self
-			.client
-			.runtime_api()
-			.convert_tx(best_hash, tx_bytes.to_vec())
-			.map_err(internal_error)?;
-
 		let result = self
 			.client
 			.runtime_api()
-			.apply_extrinsic(best_hash, extrinsic)
+			.simulate(best_hash, tx_bytes.to_vec())
 			.map_err(internal_error)?;
 
 		Ok(Encode::encode(&result).into())

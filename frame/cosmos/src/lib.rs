@@ -360,7 +360,7 @@ impl<T: Config> Pallet<T> {
 		builder.build()
 	}
 
-	fn apply_validated_transaction(_source: H160, tx: Tx) -> DispatchResultWithPostInfo {
+	pub fn apply_validated_transaction(_source: H160, tx: Tx) -> DispatchResultWithPostInfo {
 		let mut total_weight = T::WeightInfo::default_weight();
 
 		let body = tx.body.ok_or(DispatchErrorWithPostInfo {

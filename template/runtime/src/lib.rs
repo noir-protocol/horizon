@@ -49,6 +49,7 @@ use frame_support::{
 };
 use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
+use hp_rpc::{GasInfo, SimulateResponse};
 use msgs::MsgServiceRouter;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::tx::Gas;
@@ -59,7 +60,7 @@ use pallet_grandpa::{
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata, H160};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
@@ -578,11 +579,25 @@ impl Runtime {
 }
 
 impl_runtime_apis! {
-	impl hp_rpc::ConvertTxRuntimeApi<Block> for Runtime {
+	impl hp_rpc::CosmosTxRuntimeApi<Block> for Runtime {
 		fn convert_tx(tx_bytes: Vec<u8>) -> <Block as BlockT>::Extrinsic {
 			UncheckedExtrinsic::new_unsigned(
 				pallet_cosmos::Call::<Runtime>::transact { tx_bytes }.into(),
 			)
+		}
+
+		fn simulate(tx_bytes: Vec<u8>) -> SimulateResponse {
+			let tx = Tx::decode(&mut &*tx_bytes).unwrap();
+			let actual_weight = match pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx) {
+				Ok(post_info) => post_info.actual_weight,
+				Err(e) => e.post_info.actual_weight,
+			};
+			SimulateResponse {
+				gas_info: GasInfo {
+					gas_wanted: 0,
+					gas_used: actual_weight.unwrap().ref_time(),
+				}
+			}
 		}
 	}
 

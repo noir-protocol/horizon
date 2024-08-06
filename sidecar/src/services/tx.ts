@@ -141,7 +141,8 @@ export class TxService implements ApiService {
     const rawTx = `0x${Buffer.from(txBytes, "base64").toString("hex")}`;
     console.debug(`raw transaction: ${rawTx} `)
 
-    const res = await this.chainApi.rpc["cosm"]["simulate"](rawTx);
+    const result = await this.chainApi.rpc["cosm"]["simulate"](rawTx);
+
     return {
       gasInfo: {
         gasWanted: Long.fromNumber(0),
