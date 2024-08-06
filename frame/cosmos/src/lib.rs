@@ -226,10 +226,10 @@ pub mod pallet {
 
 	#[pallet::config(with_default)]
 	pub trait Config: frame_system::Config {
-		/// Mapping from address to account id.
+		/// Mapping an address to an account id.
 		#[pallet::no_default]
 		type AddressMapping: AddressMapping<Self::AccountId>;
-		/// Currency type for withdraw and balance storage.
+		/// Currency type used for withdrawals and balance storage.
 		#[pallet::no_default]
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
 		/// The overarching event type.
@@ -237,7 +237,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Verify the validity of a Cosmos transaction.
 		type AnteHandler: AnteDecorator;
-		/// The maximum size of the memo.
+		/// The maximum number of characters allowed in a memo.
 		#[pallet::constant]
 		type MaxMemoCharacters: Get<u64>;
 		/// The native denomination for the currency.
@@ -246,22 +246,24 @@ pub mod pallet {
 		/// The maximum length of string value.
 		#[pallet::constant]
 		type StringLimit: Get<u32>;
-		/// Router for message service handling.
+		/// Router for handling message services.
 		type MsgServiceRouter: MsgServiceRouter;
 		/// The chain ID.
 		#[pallet::constant]
 		type ChainId: Get<BoundedVec<u8, Self::StringLimit>>;
 		/// The message filter.
 		type MsgFilter: Contains<Vec<u8>>;
-		/// The converter for converting Gas to Weight.
+		/// Converter for converting Gas to Weight.
 		type GasToWeight: Convert<Gas, Weight>;
-		/// The converter for converting Weight to Gas.
+		/// Converter for converting Weight to Gas.
 		type WeightToGas: Convert<Weight, Gas>;
 		/// The maximum number of transaction signatures allowed.
 		#[pallet::constant]
 		type TxSigLimit: Get<u64>;
+		/// Defines the features for all signature verification handlers.
 		#[pallet::no_default]
 		type SigVerifiableTx: SigVerifiableTx;
+		/// Handler for managing different signature modes in transactions.
 		#[pallet::no_default]
 		type SignModeHandler: SignModeHandler;
 	}
@@ -270,16 +272,6 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub fn deposit_event)]
 	pub enum Event {
 		Executed(pallet_cosmos_types::events::Event),
-	}
-
-	#[pallet::error]
-	pub enum Error<T> {
-		InvalidTx,
-		Unauthorized,
-		InsufficientFunds,
-		OutOfGas,
-		InsufficientFee,
-		InvalidType,
 	}
 
 	#[pallet::call]
@@ -312,13 +304,14 @@ pub mod pallet {
 			tx_bytes: sp_std::vec::Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
-			let base_weight = T::BlockWeights::get()
-				.get(frame_support::dispatch::DispatchClass::Normal)
-				.base_extrinsic;
 
 			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| DispatchErrorWithPostInfo {
 				post_info: PostDispatchInfo {
-					actual_weight: Some(base_weight),
+					actual_weight: Some(
+						T::BlockWeights::get()
+							.get(frame_support::dispatch::DispatchClass::Normal)
+							.base_extrinsic,
+					),
 					pays_fee: Pays::Yes,
 				},
 				error: DispatchError::Other("Failed to decode transaction"),

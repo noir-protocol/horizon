@@ -202,7 +202,7 @@ where
 		let signers = T::SigVerifiableTx::get_signers(tx)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 		for signer in signers.iter() {
-			let signer_addr = address_from_bech32(&signer)
+			let signer_addr = address_from_bech32(signer)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 			let account = T::AddressMapping::into_account_id(signer_addr);
 

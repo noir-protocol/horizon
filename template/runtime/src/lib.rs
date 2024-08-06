@@ -326,35 +326,35 @@ parameter_types! {
 }
 
 impl pallet_cosmos::Config for Runtime {
-	/// Mapping from address to account id.
+	/// Mapping an address to an account id.
 	type AddressMapping = compat::cosm::HashedAddressMapping<Self, BlakeTwo256>;
-	/// Currency type for withdraw and balance storage.
+	/// Currency type used for withdrawals and balance storage.
 	type Currency = Balances;
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
 	/// Verify the validity of a Cosmos transaction.
 	type AnteHandler = ante::AnteHandler<Self>;
-	/// The maximum size of the memo.
+	/// The maximum number of characters allowed in a memo.
 	type MaxMemoCharacters = MaxMemoCharacters;
 	/// The native denomination for the currency.
 	type NativeDenom = NativeDenom;
 	/// The maximum length of string value.
 	type StringLimit = StringLimit;
-	/// Router for message service handling.
+	/// Router for handling message services.
 	type MsgServiceRouter = MsgServiceRouter<Self>;
 	/// The chain ID.
 	type ChainId = ChainId;
 	/// The message filter.
 	type MsgFilter = MsgFilter;
-	/// The converter for converting Gas to Weight.
+	/// Converter for converting Gas to Weight.
 	type GasToWeight = GasToWeight;
-	/// The converter for converting Weight to Gas.
+	/// Converter for converting Weight to Gas.
 	type WeightToGas = WeightToGas;
 	/// The maximum number of transaction signatures allowed.
 	type TxSigLimit = TxSigLimit;
-
+	/// Defines the features for all signature verification handlers.
 	type SigVerifiableTx = sig_verifiable_tx::SigVerifiableTx;
-
+	/// Handler for managing different signature modes in transactions.
 	type SignModeHandler = sign_mode_handler::SignModeHandler;
 }
 
