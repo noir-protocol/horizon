@@ -303,7 +303,7 @@ pub mod pallet {
 		 })]
 		pub fn transact(
 			origin: OriginFor<T>,
-			tx_bytes: sp_std::vec::Vec<u8>,
+			tx_bytes: Vec<u8>,
 		) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
 
@@ -365,7 +365,7 @@ impl<T: Config> Pallet<T> {
 
 	fn apply_validated_transaction(
 		_source: H160,
-		tx: cosmos_sdk_proto::cosmos::tx::v1beta1::Tx,
+		tx: Tx,
 	) -> DispatchResultWithPostInfo {
 		let mut total_weight = T::WeightInfo::default_weight();
 
@@ -405,7 +405,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Get the base account info.
-	pub fn account(address: &H160) -> (Account, frame_support::weights::Weight) {
+	pub fn account(address: &H160) -> (Account, Weight) {
 		let account_id = T::AddressMapping::into_account_id(*address);
 
 		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
