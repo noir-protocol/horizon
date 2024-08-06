@@ -301,10 +301,7 @@ pub mod pallet {
 				Err(_) => T::WeightInfo::default_weight(),
 			}
 		 })]
-		pub fn transact(
-			origin: OriginFor<T>,
-			tx_bytes: Vec<u8>,
-		) -> DispatchResultWithPostInfo {
+		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
 
 			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| DispatchErrorWithPostInfo {
@@ -363,10 +360,7 @@ impl<T: Config> Pallet<T> {
 		builder.build()
 	}
 
-	fn apply_validated_transaction(
-		_source: H160,
-		tx: Tx,
-	) -> DispatchResultWithPostInfo {
+	fn apply_validated_transaction(_source: H160, tx: Tx) -> DispatchResultWithPostInfo {
 		let mut total_weight = T::WeightInfo::default_weight();
 
 		let body = tx.body.ok_or(DispatchErrorWithPostInfo {

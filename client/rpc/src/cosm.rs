@@ -16,14 +16,17 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::internal_err;
+use crate::internal_error;
 use futures::future::TryFutureExt;
+use hp_rpc::ConvertTxRuntimeApi;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
 };
+use parity_scale_codec::Encode;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
+use sp_block_builder::BlockBuilder;
 use sp_blockchain::HeaderBackend;
 use sp_core::{sha2_256, Bytes, H256};
 use sp_runtime::{traits::Block as BlockT, transaction_validity::TransactionSource};
@@ -34,6 +37,9 @@ use std::{marker::PhantomData, sync::Arc};
 pub trait CosmApi {
 	#[method(name = "cosm_broadcastTx")]
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256>;
+
+	#[method(name = "cosm_simulate")]
+	async fn simulate(&self, tx_bytes: Bytes) -> RpcResult<Bytes>;
 }
 
 pub struct Cosm<B: BlockT, C, P> {
@@ -49,30 +55,46 @@ impl<B: BlockT, C, P> Cosm<B, C, P> {
 }
 
 #[async_trait]
-impl<B, C, P> CosmApiServer for Cosm<B, C, P>
+impl<Block, C, P> CosmApiServer for Cosm<Block, C, P>
 where
-	B: BlockT,
+	Block: BlockT,
 	C: Send + Sync + 'static,
-	C: ProvideRuntimeApi<B>,
-	C: HeaderBackend<B> + 'static,
-	C::Api: hp_rpc::ConvertTxRuntimeApi<B>,
-	P: TransactionPool<Block = B> + 'static,
+	C: ProvideRuntimeApi<Block>,
+	C: HeaderBackend<Block> + 'static,
+	C::Api: hp_rpc::ConvertTxRuntimeApi<Block>,
+	C::Api: sp_block_builder::BlockBuilder<Block>,
+	P: TransactionPool<Block = Block> + 'static,
 {
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256> {
-		use hp_rpc::ConvertTxRuntimeApi;
-
-		let block_hash = self.client.info().best_hash;
+		let best_hash = self.client.info().best_hash;
 		let extrinsic = self
 			.client
 			.runtime_api()
-			.convert_tx(block_hash, tx_bytes.to_vec())
-			.map_err(|_| internal_err("Cannot access runtime api"))?;
+			.convert_tx(best_hash, tx_bytes.to_vec())
+			.map_err(internal_error)?;
 
 		let tx_hash = H256(sha2_256(&tx_bytes));
 		self.pool
-			.submit_one(block_hash, TransactionSource::Local, extrinsic)
+			.submit_one(best_hash, TransactionSource::Local, extrinsic)
 			.map_ok(move |_| tx_hash)
-			.map_err(|e| internal_err(e.to_string()))
+			.map_err(internal_error)
 			.await
+	}
+
+	async fn simulate(&self, tx_bytes: Bytes) -> RpcResult<Bytes> {
+		let best_hash = self.client.info().best_hash;
+		let extrinsic = self
+			.client
+			.runtime_api()
+			.convert_tx(best_hash, tx_bytes.to_vec())
+			.map_err(internal_error)?;
+
+		let result = self
+			.client
+			.runtime_api()
+			.apply_extrinsic(best_hash, extrinsic)
+			.map_err(internal_error)?;
+
+		Ok(Encode::encode(&result).into())
 	}
 }

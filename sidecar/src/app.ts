@@ -249,14 +249,14 @@ export class App {
 
     this.server.post(
       "/cosmos/tx/v1beta1/simulate",
-      (
+      async (
         request: FastifyRequest<{
           Body: { tx_bytes: string };
         }>
-      ): unknown => {
+      ): Promise<unknown> => {
         const { tx_bytes } = request.body;
         const response = SimulateResponse.toJSON(
-          this.services.get<TxService>("tx").simulateTx(tx_bytes)
+          await this.services.get<TxService>("tx").simulate(tx_bytes)
         );
         return toSnakeCase(response);
       }

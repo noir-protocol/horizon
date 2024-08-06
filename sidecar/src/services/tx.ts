@@ -137,25 +137,15 @@ export class TxService implements ApiService {
     return result[0];
   }
 
-  public simulateTx(txBytes: string): SimulateResponse {
-    const {
-      body,
-      authInfo: {
-        fee: { gasLimit },
-      },
-    } = Tx.decode(Buffer.from(txBytes, "base64"));
-    const { messages } = body;
+  public async simulate(txBytes: string): Promise<SimulateResponse> {
+    const rawTx = `0x${Buffer.from(txBytes, "base64").toString("hex")}`;
+    console.debug(`raw transaction: ${rawTx} `)
 
-    let gasUsed = 0;
-    // Multi message type is not supported yet.
-    if (messages[0].typeUrl === "/cosmos.bank.v1beta1.MsgSend") {
-      gasUsed += Weights.MsgSend;
-    }
-
+    const res = await this.chainApi.rpc["cosm"]["simulate"](rawTx);
     return {
       gasInfo: {
-        gasWanted: gasLimit,
-        gasUsed: Long.fromNumber(gasUsed),
+        gasWanted: Long.fromNumber(0),
+        gasUsed: Long.fromNumber(0),
       },
       result: {
         data: new Uint8Array(),
