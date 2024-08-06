@@ -9,12 +9,12 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-cosmrs = { workspace = true, optional = true }
+cosmos-sdk-proto = { workspace = true }
 parity-scale-codec = { workspace = true, features = [
-    "derive",
+	"derive",
 ], optional = true }
 scale-info = { workspace = true, optional = true }
-serde_json = { workspace = true, optional = true }
+serde_json = { workspace = true }
 
 sp-std = { workspace = true }
 
@@ -23,14 +23,10 @@ pallet-cosmos-types = { workspace = true, features = ["with-codec"] }
 [features]
 default = ["std"]
 std = [
-    "cosmrs",
-    "parity-scale-codec/std",
-    "scale-info/std",
-    "serde_json",
-    "sp-std/std",
-    "pallet-cosmos-types/std",
+	"cosmos-sdk-proto/std",
+	"parity-scale-codec/std",
+	"scale-info/std",
+	"sp-std/std",
+	"pallet-cosmos-types/std",
 ]
-with-codec = [
-    "parity-scale-codec", 
-    "scale-info"
-]
+with-codec = ["parity-scale-codec", "scale-info"]

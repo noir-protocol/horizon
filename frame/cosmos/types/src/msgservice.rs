@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::tx::Any;
+use cosmos_sdk_proto::Any;
 use frame_support::weights::Weight;
 use sp_runtime::RuntimeString;
 
@@ -24,10 +24,10 @@ pub struct MsgHandlerErrorInfo {
 	pub error: MsgHandlerError,
 }
 
-#[derive(Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum MsgHandlerError {
 	InvalidMsg,
-	Unsupported,
+	ParseAmountError,
 	Custom(RuntimeString),
 }
 
@@ -36,11 +36,11 @@ pub trait MsgHandler {
 }
 
 pub trait MsgServiceRouter {
-	fn route(type_url: &[u8]) -> Option<sp_std::boxed::Box<dyn MsgHandler>>;
+	fn route(type_url: &str) -> Option<sp_std::boxed::Box<dyn MsgHandler>>;
 }
 
 impl MsgServiceRouter for () {
-	fn route(_type_url: &[u8]) -> Option<sp_std::boxed::Box<dyn MsgHandler>> {
+	fn route(_type_url: &str) -> Option<sp_std::boxed::Box<dyn MsgHandler>> {
 		None
 	}
 }

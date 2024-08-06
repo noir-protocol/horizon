@@ -17,7 +17,6 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
-//#![deny(unused_crate_dependencies)]
 
 use sp_runtime::traits::Block as BlockT;
 use sp_std::vec::Vec;

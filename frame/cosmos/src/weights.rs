@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizon.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -16,19 +16,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use pallet_cosmos_types::msgservice::MsgHandler;
-use pallet_cosmos_x_bank::msgs::MsgSendHandler;
+use frame_support::{dispatch::DispatchClass, weights::Weight};
+use sp_core::Get;
+use sp_std::marker::PhantomData;
 
-pub struct MsgServiceRouter<T>(sp_std::marker::PhantomData<T>);
-impl<T> pallet_cosmos_types::msgservice::MsgServiceRouter for MsgServiceRouter<T>
+pub trait WeightInfo {
+	fn default_weight() -> Weight;
+}
+
+pub struct CosmosWeight<T>(PhantomData<T>);
+impl<T> WeightInfo for CosmosWeight<T>
 where
-	T: frame_system::Config + pallet_cosmos::Config,
+	T: frame_system::Config,
 {
-	fn route(type_url: &str) -> Option<sp_std::boxed::Box<dyn MsgHandler>> {
-		match type_url {
-			"/cosmos.bank.v1beta1.MsgSend" =>
-				Some(sp_std::boxed::Box::<MsgSendHandler<T>>::default()),
-			_ => None,
-		}
+	fn default_weight() -> Weight {
+		T::BlockWeights::get().get(DispatchClass::Normal).base_extrinsic
 	}
 }

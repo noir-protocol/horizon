@@ -19,21 +19,29 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
+pub mod weights;
+
 pub use self::pallet::*;
+use crate::weights::WeightInfo;
+use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
-	pallet_prelude::{DispatchResultWithPostInfo, Pays},
+	pallet_prelude::{DispatchResultWithPostInfo, InvalidTransaction, Pays},
 	traits::{
 		tokens::{fungible::Inspect, Fortitude, Preservation},
 		Currency, Get,
 	},
-	weights::{constants::ExtrinsicBaseWeight, Weight},
+	weights::Weight,
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use pallet_cosmos_types::{
+	address::address_from_bech32,
 	handler::AnteDecorator,
 	msgservice::MsgServiceRouter,
 	tx::{Account, Gas},
+};
+use pallet_cosmos_x_auth_signing::{
+	sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -41,7 +49,7 @@ use sp_core::H160;
 use sp_runtime::{
 	traits::{BadOrigin, Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
-		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
+		TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
 	DispatchError, RuntimeDebug,
 };
@@ -74,9 +82,18 @@ where
 
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx_bytes } = self {
-			let tx = hp_io::cosmos::decode_tx(tx_bytes)?;
+			let check = || {
+				let tx = Tx::decode(&mut &tx_bytes[..])
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+				let fee_payer = T::SigVerifiableTx::fee_payer(&tx).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
 
-			hp_io::cosmos::fee_payer(&tx).map(|fee_payer| Ok(fee_payer.address))
+				address_from_bech32(&fee_payer)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
+			};
+
+			Some(check())
 		} else {
 			None
 		}
@@ -213,10 +230,10 @@ pub mod pallet {
 
 	#[pallet::config(with_default)]
 	pub trait Config: frame_system::Config {
-		/// Mapping from address to account id.
+		/// Mapping an address to an account id.
 		#[pallet::no_default]
 		type AddressMapping: AddressMapping<Self::AccountId>;
-		/// Currency type for withdraw and balance storage.
+		/// Currency type used for withdrawals and balance storage.
 		#[pallet::no_default]
 		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
 		/// The overarching event type.
@@ -224,7 +241,7 @@ pub mod pallet {
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 		/// Verify the validity of a Cosmos transaction.
 		type AnteHandler: AnteDecorator;
-		/// The maximum size of the memo.
+		/// The maximum number of characters allowed in a memo.
 		#[pallet::constant]
 		type MaxMemoCharacters: Get<u64>;
 		/// The native denomination for the currency.
@@ -233,36 +250,34 @@ pub mod pallet {
 		/// The maximum length of string value.
 		#[pallet::constant]
 		type StringLimit: Get<u32>;
-		/// Router for message service handling.
+		/// Router for handling message services.
 		type MsgServiceRouter: MsgServiceRouter;
 		/// The chain ID.
 		#[pallet::constant]
 		type ChainId: Get<BoundedVec<u8, Self::StringLimit>>;
 		/// The message filter.
 		type MsgFilter: Contains<Vec<u8>>;
-		/// The converter for converting Gas to Weight.
+		/// Converter for converting Gas to Weight.
 		type GasToWeight: Convert<Gas, Weight>;
-		/// The converter for converting Weight to Gas.
+		/// Converter for converting Weight to Gas.
 		type WeightToGas: Convert<Weight, Gas>;
 		/// The maximum number of transaction signatures allowed.
 		#[pallet::constant]
 		type TxSigLimit: Get<u64>;
+		/// Defines the features for all signature verification handlers.
+		#[pallet::no_default]
+		type SigVerifiableTx: SigVerifiableTx;
+		/// Handler for managing different signature modes in transactions.
+		#[pallet::no_default]
+		type SignModeHandler: SignModeHandler;
+		#[pallet::no_default]
+		type WeightInfo: WeightInfo;
 	}
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub fn deposit_event)]
 	pub enum Event {
 		Executed(pallet_cosmos_types::events::Event),
-	}
-
-	#[pallet::error]
-	pub enum Error<T> {
-		InvalidTx,
-		Unauthorized,
-		InsufficientFunds,
-		OutOfGas,
-		InsufficientFee,
-		InvalidType,
 	}
 
 	#[pallet::call]
@@ -273,12 +288,32 @@ pub mod pallet {
 		/// Transact a Cosmos transaction.
 		#[pallet::call_index(0)]
 		#[pallet::weight({
-			let tx = hp_io::cosmos::decode_tx(tx_bytes).unwrap();
-			T::GasToWeight::convert(tx.auth_info.fee.gas_limit)
-		})]
-		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
+			use cosmos_sdk_proto::traits::Message;
+			use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
+
+			match Tx::decode(&mut &tx_bytes[..]) {
+				Ok(tx) => {
+					match tx.auth_info.and_then(|auth_info| auth_info.fee) {
+						Some(fee) => Weight::from_parts(fee.gas_limit, 0),
+						None => T::WeightInfo::default_weight(),
+					}
+				}
+				Err(_) => T::WeightInfo::default_weight(),
+			}
+		 })]
+		pub fn transact(
+			origin: OriginFor<T>,
+			tx_bytes: Vec<u8>,
+		) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
-			let tx = hp_io::cosmos::decode_tx(&tx_bytes).unwrap();
+
+			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(T::WeightInfo::default_weight()),
+					pays_fee: Pays::Yes,
+				},
+				error: DispatchError::Other("Failed to decode transaction"),
+			})?;
 
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -295,8 +330,8 @@ impl<T: Config> Pallet<T> {
 		tx_bytes: &[u8],
 	) -> Result<(), TransactionValidityError> {
 		let (_who, _) = Self::account(&origin);
-		let tx = hp_io::cosmos::decode_tx(tx_bytes)
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let tx = Tx::decode(&mut &*tx_bytes)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::ante_handle(&tx, false)?;
 
@@ -306,17 +341,13 @@ impl<T: Config> Pallet<T> {
 	// Controls that must be performed by the pool.
 	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		let tx = hp_io::cosmos::decode_tx(tx_bytes)
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let tx = Tx::decode(&mut &*tx_bytes)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::ante_handle(&tx, true)?;
 
-		let transaction_nonce = tx
-			.auth_info
-			.signer_infos
-			.first()
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?
-			.sequence;
+		let transaction_nonce = T::SigVerifiableTx::sequence(&tx)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		let mut builder =
 			ValidTransactionBuilder::default().and_provides((origin, transaction_nonce));
@@ -333,12 +364,17 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn apply_validated_transaction(
-		source: H160,
-		tx: pallet_cosmos_types::tx::Tx,
+		_source: H160,
+		tx: Tx,
 	) -> DispatchResultWithPostInfo {
-		let mut total_weight = ExtrinsicBaseWeight::get();
+		let mut total_weight = T::WeightInfo::default_weight();
 
-		for msg in tx.body.messages.iter() {
+		let body = tx.body.ok_or(DispatchErrorWithPostInfo {
+			post_info: PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes },
+			error: DispatchError::Other("Empty transaction body"),
+		})?;
+
+		for msg in body.messages.iter() {
 			let handler =
 				T::MsgServiceRouter::route(&msg.type_url).ok_or(DispatchErrorWithPostInfo {
 					post_info: PostDispatchInfo {
@@ -369,7 +405,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// Get the base account info.
-	pub fn account(address: &H160) -> (Account, frame_support::weights::Weight) {
+	pub fn account(address: &H160) -> (Account, Weight) {
 		let account_id = T::AddressMapping::into_account_id(*address);
 
 		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);

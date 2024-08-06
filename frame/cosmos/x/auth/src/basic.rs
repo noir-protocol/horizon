@@ -16,7 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use pallet_cosmos_types::{handler::AnteDecorator, tx::Tx};
+use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
+use pallet_cosmos_types::handler::AnteDecorator;
 use sp_runtime::{
 	traits::Get,
 	transaction_validity::{
@@ -36,11 +37,16 @@ where
 		if tx.signatures.is_empty() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
 		}
-		if tx.auth_info.signer_infos.len() != tx.signatures.len() {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
-		}
+		let auth_info = tx
+			.auth_info
+			.as_ref()
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-		Ok(ValidTransaction::default())
+		if auth_info.signer_infos.len() == tx.signatures.len() {
+			Ok(ValidTransaction::default())
+		} else {
+			Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
+		}
 	}
 }
 
@@ -51,13 +57,17 @@ where
 	T: frame_system::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		if tx.body.timeout_height > 0 &&
+		let body = tx
+			.body
+			.as_ref()
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+
+		if body.timeout_height > 0 &&
 			frame_system::Pallet::<T>::block_number().saturated_into::<u64>() >
-				tx.body.timeout_height
+				body.timeout_height
 		{
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
 		}
-
 		Ok(ValidTransaction::default())
 	}
 }
@@ -69,11 +79,15 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		if tx.body.memo.len().saturated_into::<u64>() > T::MaxMemoCharacters::get() {
-			// TODO: Consider use InvalidTransaction::Custom
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
-		}
+		let body = tx
+			.body
+			.as_ref()
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-		Ok(ValidTransaction::default())
+		if body.memo.len().saturated_into::<u64>() > T::MaxMemoCharacters::get() {
+			Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
+		} else {
+			Ok(ValidTransaction::default())
+		}
 	}
 }

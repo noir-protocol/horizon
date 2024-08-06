@@ -16,6 +16,13 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use core::str::FromStr;
+use cosmos_sdk_proto::{
+	cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin},
+	prost::alloc::string::String,
+	traits::Message,
+	Any,
+};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{Currency, ExistenceRequirement},
@@ -23,17 +30,13 @@ use frame_support::{
 use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
-	coin::Coin,
+	address::address_from_bech32,
 	events::{EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
 	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
-	traits::ToStringBytes,
-	tx::{AccountId, Any},
 };
-use pallet_cosmos_x_bank_types::{
-	events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER},
-	tx::MsgSend,
-};
+use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
 use sp_runtime::{format_runtime_string, SaturatedConversion};
+use sp_std::vec::Vec;
 
 pub struct MsgSendHandler<T>(PhantomData<T>);
 
@@ -50,8 +53,11 @@ where
 	fn handle(&self, msg: &Any) -> Result<Weight, MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
-		let MsgSend { from_address, to_address, amount } = Self::to_msg(msg)
-			.map_err(|e| MsgHandlerErrorInfo { weight: total_weight, error: e })?;
+		let MsgSend { from_address, to_address, amount } = MsgSend::decode(&mut &*msg.value)
+			.map_err(|_| MsgHandlerErrorInfo {
+				weight: total_weight,
+				error: MsgHandlerError::InvalidMsg,
+			})?;
 
 		match Self::send_coins(from_address, to_address, amount) {
 			Ok(weight) => {
@@ -73,30 +79,39 @@ impl<T> MsgSendHandler<T>
 where
 	T: pallet_cosmos::Config,
 {
-	fn to_msg(msg: &Any) -> Result<MsgSend, MsgHandlerError> {
-		hp_io::cosmos::protobuf_to_scale(msg)
-			.map(|value| Decode::decode(&mut &value[..]))
-			.ok_or(MsgHandlerError::InvalidMsg)?
-			.map_err(|_| MsgHandlerError::InvalidMsg)
-	}
-
 	fn send_coins(
-		from: AccountId,
-		to: AccountId,
-		amount: sp_std::vec::Vec<Coin>,
+		from_address: String,
+		to_address: String,
+		amount: Vec<Coin>,
 	) -> Result<Weight, MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
-		let from_acc = T::AddressMapping::into_account_id(from.address);
-		let to_acc = T::AddressMapping::into_account_id(to.address);
+		let from_addr = address_from_bech32(&from_address).map_err(|_| MsgHandlerErrorInfo {
+			weight: total_weight,
+			error: MsgHandlerError::InvalidMsg,
+		})?;
+
+		let to_addr = address_from_bech32(&to_address).map_err(|_| MsgHandlerErrorInfo {
+			weight: total_weight,
+			error: MsgHandlerError::InvalidMsg,
+		})?;
+
+		let from_account = T::AddressMapping::into_account_id(from_addr);
+		let to_account = T::AddressMapping::into_account_id(to_addr);
 		total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
 
 		for amt in amount.iter() {
-			if T::NativeDenom::get() == amt.denom {
+			if T::NativeDenom::get() == amt.denom.as_bytes().to_vec() {
 				T::Currency::transfer(
-					&from_acc,
-					&to_acc,
-					amt.amount.saturated_into(),
+					&from_account,
+					&to_account,
+					amt.amount
+						.parse::<u128>()
+						.map_err(|_| MsgHandlerErrorInfo {
+							weight: total_weight,
+							error: MsgHandlerError::ParseAmountError,
+						})?
+						.saturated_into(),
 					ExistenceRequirement::KeepAlive,
 				)
 				.map_err(|_| MsgHandlerErrorInfo {
@@ -111,7 +126,7 @@ where
 				// TODO: Asset support planned
 				return Err(MsgHandlerErrorInfo {
 					weight: total_weight,
-					error: MsgHandlerError::Unsupported,
+					error: MsgHandlerError::InvalidMsg,
 				});
 			}
 		}
@@ -120,19 +135,57 @@ where
 			pallet_cosmos_types::events::Event {
 				r#type: EVENT_TYPE_TRANSFER.into(),
 				attributes: sp_std::vec![
-					EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from.bech32 },
-					EventAttribute { key: ATTRIBUTE_KEY_RECIPIENT.into(), value: to.bech32 },
+					EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from_address.into() },
+					EventAttribute {
+						key: ATTRIBUTE_KEY_RECIPIENT.into(),
+						value: to_address.into()
+					},
 					EventAttribute {
 						key: ATTRIBUTE_KEY_AMOUNT.into(),
-						value: amount.to_bytes().map_err(|_| MsgHandlerErrorInfo {
-							weight: total_weight,
-							error: MsgHandlerError::InvalidMsg
-						})?
+						value: amount_to_string(&amount).into()
 					},
 				],
 			},
 		));
 
 		Ok(total_weight)
+	}
+}
+
+pub fn amount_to_string(amount: &[Coin]) -> String {
+	let mut ret = String::from_str("").unwrap();
+	for (i, coin) in amount.iter().enumerate() {
+		ret.push_str(&coin.amount);
+		ret.push_str(&coin.denom);
+		if i < amount.len() - 1 {
+			ret.push(',');
+		}
+	}
+	ret
+}
+
+#[cfg(test)]
+mod tests {
+	use crate::msgs::amount_to_string;
+	use core::str::FromStr;
+	use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
+
+	#[test]
+	fn amount_to_string_test() {
+		let mut amounts = Vec::<Coin>::new();
+		assert_eq!(amount_to_string(&amounts), "");
+
+		amounts.push(Coin {
+			denom: String::from_str("uatom").unwrap(),
+			amount: String::from_str("1000").unwrap(),
+		});
+		assert_eq!(amount_to_string(&amounts), "1000uatom");
+
+		amounts.push(Coin {
+			denom: String::from_str("uatom").unwrap(),
+			amount: String::from_str("2000").unwrap(),
+		});
+
+		assert_eq!(amount_to_string(&amounts), "1000uatom,2000uatom");
 	}
 }

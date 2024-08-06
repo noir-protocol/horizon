@@ -29,7 +29,10 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 mod ante;
 mod compat;
 mod msgs;
+mod sig_verifiable_tx;
+mod sign_mode_handler;
 
+use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use frame_support::{
 	construct_runtime, derive_impl,
 	genesis_builder_helper::{build_config, create_default_config},
@@ -48,7 +51,8 @@ use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use msgs::MsgServiceRouter;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::tx::{Gas, PublicKey};
+use pallet_cosmos_types::tx::Gas;
+use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -322,32 +326,38 @@ parameter_types! {
 }
 
 impl pallet_cosmos::Config for Runtime {
-	/// Mapping from address to account id.
+	/// Mapping an address to an account id.
 	type AddressMapping = compat::cosm::HashedAddressMapping<Self, BlakeTwo256>;
-	/// Currency type for withdraw and balance storage.
+	/// Currency type used for withdrawals and balance storage.
 	type Currency = Balances;
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
 	/// Verify the validity of a Cosmos transaction.
 	type AnteHandler = ante::AnteHandler<Self>;
-	/// The maximum size of the memo.
+	/// The maximum number of characters allowed in a memo.
 	type MaxMemoCharacters = MaxMemoCharacters;
 	/// The native denomination for the currency.
 	type NativeDenom = NativeDenom;
 	/// The maximum length of string value.
 	type StringLimit = StringLimit;
-	/// Router for message service handling.
+	/// Router for handling message services.
 	type MsgServiceRouter = MsgServiceRouter<Self>;
 	/// The chain ID.
 	type ChainId = ChainId;
 	/// The message filter.
 	type MsgFilter = MsgFilter;
-	/// The converter for converting Gas to Weight.
+	/// Converter for converting Gas to Weight.
 	type GasToWeight = GasToWeight;
-	/// The converter for converting Weight to Gas.
+	/// Converter for converting Weight to Gas.
 	type WeightToGas = WeightToGas;
 	/// The maximum number of transaction signatures allowed.
 	type TxSigLimit = TxSigLimit;
+	/// Defines the features for all signature verification handlers.
+	type SigVerifiableTx = sig_verifiable_tx::SigVerifiableTx;
+	/// Handler for managing different signature modes in transactions.
+	type SignModeHandler = sign_mode_handler::SignModeHandler;
+
+	type WeightInfo = pallet_cosmos::weights::CosmosWeight<Runtime>;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
@@ -498,28 +508,51 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 }
 
 impl Runtime {
-	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), ()> {
+	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), TransactionValidityError> {
+		use cosmos_sdk_proto::cosmos::crypto::secp256k1;
 		use fungible::{Inspect, Mutate};
+		use pallet_cosmos_types::address::address_from_bech32;
+		use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
 
-		let tx = hp_io::cosmos::decode_tx(tx_bytes).ok_or(())?;
-		let signers = hp_io::cosmos::get_signers(&tx).ok_or(())?;
-		let signer_infos = tx.auth_info.signer_infos;
+		let tx = Tx::decode(&mut &*tx_bytes)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let signers = <Runtime as pallet_cosmos::Config>::SigVerifiableTx::get_signers(&tx)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+
+		let signer_infos = tx
+			.auth_info
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?
+			.signer_infos;
 
 		for (i, signer_info) in signer_infos.iter().enumerate() {
 			if signer_info.sequence == 0 {
-				let signer = signers.get(i).ok_or(())?;
+				let signer = signers
+					.get(i)
+					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+				let signer_addr = address_from_bech32(signer).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
 
 				let interim_account =
 					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(
-						signer.address,
+						signer_addr,
 					);
-				let who = if let pallet_cosmos_types::tx::SignerPublicKey::Single(
-					PublicKey::Secp256k1(pk),
-				) = signer_info.public_key.clone().ok_or(())?
-				{
-					CosmosSigner(Public(pk))
-				} else {
-					return Err(());
+				let public_key = signer_info
+					.public_key
+					.as_ref()
+					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+				let who = match public_key.type_url.as_str() {
+					SECP256K1_TYPE_URL => {
+						let public_key = secp256k1::PubKey::decode(&mut &*public_key.value)
+							.map_err(|_| {
+								TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+							})?;
+						let mut pk = [0u8; 33];
+						pk.copy_from_slice(&public_key.key);
+						CosmosSigner(Public(pk))
+					},
+					_ =>
+						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
 				};
 
 				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
@@ -533,9 +566,10 @@ impl Runtime {
 					balance,
 					Preservation::Expendable,
 				)
-				.map_err(|_| ())?;
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who).map_err(|_| ())?;
+				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 			}
 		}
 

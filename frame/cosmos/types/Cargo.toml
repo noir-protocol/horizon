@@ -9,13 +9,14 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-cosmrs = { workspace = true, optional = true }
+bech32 = { workspace = true }
 parity-scale-codec = { workspace = true, features = [
-    "derive",
+	"derive",
 ], optional = true }
 scale-info = { workspace = true, features = ["derive"], optional = true }
 serde = { workspace = true, features = ["derive"], optional = true }
 serde_json = { workspace = true, optional = true }
+cosmos-sdk-proto = { workspace = true }
 
 # Substrate
 frame-support = { workspace = true }
@@ -32,15 +33,16 @@ base64ct = { workspace = true, features = ["alloc"] }
 [features]
 default = ["std"]
 std = [
-    "cosmrs",
-    "frame-support/std",
-    "parity-scale-codec/std",
-    "scale-info/std",
-    "serde",
-    "serde_json",
-    "sp-core/std",
-    "sp-runtime-interface/std",
-    "sp-runtime/std",
-    "sp-std/std",
+	"bech32/std",
+	"cosmos-sdk-proto/std",
+	"frame-support/std",
+	"parity-scale-codec/std",
+	"scale-info/std",
+	"serde",
+	"serde_json",
+	"sp-core/std",
+	"sp-runtime-interface/std",
+	"sp-runtime/std",
+	"sp-std/std",
 ]
 with-codec = ["parity-scale-codec", "scale-info"]

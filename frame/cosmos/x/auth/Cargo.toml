@@ -9,19 +9,25 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+cosmos-sdk-proto = { workspace = true }
+ripemd = { workspace = true }
+
 frame-system = { workspace = true }
 frame-support = { workspace = true }
 sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
-pallet-cosmos-types = { workspace = true }
 hp-io = { workspace = true }
 pallet-cosmos = { workspace = true }
+pallet-cosmos-types = { workspace = true }
+pallet-cosmos-x-auth-signing = { workspace = true }
 
 [features]
 default = ["std"]
 std = [
+	"ripemd/std",
+	"cosmos-sdk-proto/std",
 	"frame-system/std",
 	"frame-support/std",
 	"sp-core/std",
@@ -30,4 +36,5 @@ std = [
 	"hp-io/std",
 	"pallet-cosmos/std",
 	"pallet-cosmos-types/std",
+	"pallet-cosmos-x-auth-signing/std",
 ]
