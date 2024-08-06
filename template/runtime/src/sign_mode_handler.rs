@@ -42,7 +42,7 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 		data: &SignerData,
 		tx: &Tx,
 	) -> Result<Vec<u8>, SignModeHandlerError> {
-		let sum = mode.sum.clone().ok_or(SignModeHandlerError::EmptyModeInfo)?;
+		let sum = mode.sum.as_ref().ok_or(SignModeHandlerError::EmptyModeInfo)?;
 		let sign_bytes = match sum {
 			Sum::Single(Single { mode }) => match mode {
 				1 /* SIGN_MODE_DIRECT */ => {
@@ -55,9 +55,9 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 					}.encode_to_vec()
 				},
 				127 /* SIGN_MODE_LEGACY_AMINO_JSON */ => {
-					let auth_info = tx.auth_info.clone().ok_or(SignModeHandlerError::EmptyAuthInfo)?;
-					let fee = auth_info.fee.ok_or(SignModeHandlerError::EmptyFee)?;
-					let body = tx.body.clone().ok_or(SignModeHandlerError::EmptyTxBody)?;
+					let auth_info = tx.auth_info.as_ref().ok_or(SignModeHandlerError::EmptyAuthInfo)?;
+					let fee = auth_info.fee.as_ref().ok_or(SignModeHandlerError::EmptyFee)?;
+					let body = tx.body.as_ref().ok_or(SignModeHandlerError::EmptyTxBody)?;
 
 					let mut coins = Vec::<Value>::new();
 					for amt in fee.amount.iter() {
@@ -88,7 +88,7 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 						account_number: data.account_number.to_string(),
 						chain_id: data.chain_id.clone(),
 						fee: Value::Object(std_fee),
-						memo: body.memo,
+						memo: body.memo.clone(),
 						msgs,
 						sequence: data.sequence.to_string(),
 					};
@@ -127,13 +127,13 @@ mod tests {
 
 		let public_key = tx
 			.auth_info
-			.clone()
+			.as_ref()
 			.unwrap()
 			.signer_infos
 			.first()
 			.unwrap()
 			.public_key
-			.clone()
+			.as_ref()
 			.unwrap();
 
 		let mode = ModeInfo { sum: Some(Sum::Single(Single { mode: 1 })) };
@@ -142,7 +142,7 @@ mod tests {
 			chain_id: String::from_str("theta-testnet-001").unwrap(),
 			account_number: 754989,
 			sequence: 0,
-			pub_key: public_key,
+			pub_key: public_key.clone(),
 		};
 		let expected_hash = sha2_256(&SignModeHandler::get_sign_bytes(&mode, &data, &tx).unwrap());
 
@@ -161,13 +161,13 @@ mod tests {
 
 		let public_key = tx
 			.auth_info
-			.clone()
+			.as_ref()
 			.unwrap()
 			.signer_infos
 			.first()
 			.unwrap()
 			.public_key
-			.clone()
+			.as_ref()
 			.unwrap();
 
 		let mode = ModeInfo { sum: Some(Sum::Single(Single { mode: 127 })) };
@@ -176,7 +176,7 @@ mod tests {
 			chain_id: String::from_str("dev").unwrap(),
 			account_number: 0,
 			sequence: 0,
-			pub_key: public_key,
+			pub_key: public_key.clone(),
 		};
 		let hash = sha2_256(&SignModeHandler::get_sign_bytes(&mode, &data, &tx).unwrap());
 		let hash = hex::encode(&hash);

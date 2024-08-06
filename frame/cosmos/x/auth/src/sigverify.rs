@@ -53,15 +53,13 @@ where
 
 		let auth_info = tx
 			.auth_info
-			.clone()
+			.as_ref()
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 		if signatures.len() != signers.len() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 		}
 
-		let signer_infos = auth_info.signer_infos;
-
-		if signatures.len() != signer_infos.len() {
+		if signatures.len() != auth_info.signer_infos.len() {
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 		}
 
@@ -70,7 +68,8 @@ where
 				.get(i)
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-			let signer_info = signer_infos
+			let signer_info = auth_info
+				.signer_infos
 				.get(i)
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
@@ -86,7 +85,7 @@ where
 
 			let public_key = signer_info
 				.public_key
-				.clone()
+				.as_ref()
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 			let chain_id = T::ChainId::get();
 			let chain_id = String::from_utf8(chain_id.to_vec()).unwrap();
@@ -100,10 +99,10 @@ where
 
 			let sign_mode = signer_info
 				.mode_info
-				.clone()
+				.as_ref()
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-			Self::verify_signature(&public_key, &signer_data, &sign_mode, sig, tx)?;
+			Self::verify_signature(public_key, &signer_data, sign_mode, sig, tx)?;
 		}
 
 		Ok(ValidTransaction::default())
@@ -164,13 +163,13 @@ where
 
 		let auth_info = tx
 			.auth_info
-			.clone()
+			.as_ref()
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-		for SignerInfo { public_key, .. } in &auth_info.signer_infos {
+		for SignerInfo { public_key, .. } in auth_info.signer_infos.iter() {
 			let public_key = public_key
-				.clone()
+				.as_ref()
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-			sig_count = sig_count.saturating_add(Self::count_sub_keys(&public_key)?);
+			sig_count = sig_count.saturating_add(Self::count_sub_keys(public_key)?);
 
 			if sig_count > T::TxSigLimit::get() {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));

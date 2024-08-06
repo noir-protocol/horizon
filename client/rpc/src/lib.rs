@@ -21,26 +21,22 @@
 mod cosm;
 
 pub use cosm::{Cosm, CosmApiServer};
+pub use jsonrpsee::{
+	core,
+	types::{error, ErrorObject, ErrorObjectOwned},
+};
 
-pub fn err<T: ToString>(
-	code: i32,
-	message: T,
-	data: Option<&[u8]>,
-) -> jsonrpsee::types::ErrorObjectOwned {
-	jsonrpsee::types::error::ErrorObject::owned(
+pub fn err<T: ToString>(code: i32, message: T, data: Option<&[u8]>) -> ErrorObjectOwned {
+	ErrorObject::owned(
 		code,
 		message.to_string(),
 		data.map(|bytes| {
-			jsonrpsee::core::to_json_raw_value(&format!("0x{}", hex::encode(bytes)))
-				.expect("fail to serialize data")
+			core::to_json_raw_value(&format!("0x{}", hex::encode(bytes)))
+				.expect("Failed to serialize data")
 		}),
 	)
 }
 
-pub fn request_err<T: ToString>(message: T) -> jsonrpsee::types::ErrorObjectOwned {
-	err(jsonrpsee::types::error::INVALID_REQUEST_CODE, message, None)
-}
-
-pub fn internal_err<T: ToString>(message: T) -> jsonrpsee::types::ErrorObjectOwned {
-	err(jsonrpsee::types::error::INTERNAL_ERROR_CODE, message, None)
+pub fn internal_err<T: ToString>(message: T) -> ErrorObjectOwned {
+	err(error::INTERNAL_ERROR_CODE, message, None)
 }

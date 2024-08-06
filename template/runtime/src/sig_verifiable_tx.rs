@@ -31,7 +31,7 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 	fn get_signers(tx: &Tx) -> Result<Vec<String>, SigVerifiableTxError> {
 		let mut signers = Vec::<String>::new();
 
-		let body = tx.body.clone().ok_or(SigVerifiableTxError::EmptyTxBody)?;
+		let body = tx.body.as_ref().ok_or(SigVerifiableTxError::EmptyTxBody)?;
 		for msg in body.messages.iter() {
 			let msg_signers = match msg.type_url.as_str() {
 				"/cosmos.bank.v1beta1.MsgSend" => {
@@ -49,14 +49,15 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 			}
 		}
 
-		let fee_payer = tx
+		let fee_payer = &tx
 			.auth_info
-			.clone()
+			.as_ref()
 			.ok_or(SigVerifiableTxError::EmptyAuthInfo)?
 			.fee
+			.as_ref()
 			.ok_or(SigVerifiableTxError::EmptyFee)?
 			.payer;
-		if !fee_payer.is_empty() && !signers.contains(&fee_payer) {
+		if !fee_payer.is_empty() && !signers.contains(fee_payer) {
 			signers.push(fee_payer.clone());
 		}
 
@@ -64,8 +65,8 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 	}
 
 	fn fee_payer(tx: &Tx) -> Result<String, SigVerifiableTxError> {
-		let auth_info = tx.auth_info.clone().ok_or(SigVerifiableTxError::EmptyAuthInfo)?;
-		let fee = auth_info.fee.ok_or(SigVerifiableTxError::EmptyFee)?;
+		let auth_info = tx.auth_info.as_ref().ok_or(SigVerifiableTxError::EmptyAuthInfo)?;
+		let fee = auth_info.fee.as_ref().ok_or(SigVerifiableTxError::EmptyFee)?;
 
 		let fee_payer = if fee.payer.is_empty() {
 			Self::get_signers(tx)?
@@ -73,9 +74,30 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 				.ok_or(SigVerifiableTxError::EmptySigners)?
 				.clone()
 		} else {
-			fee.payer
+			fee.payer.clone()
 		};
 
 		Ok(fee_payer)
+	}
+
+	fn sequence(tx: &Tx) -> Result<u64, SigVerifiableTxError> {
+		let auth_info = tx.auth_info.as_ref().ok_or(SigVerifiableTxError::EmptyAuthInfo)?;
+		let fee = auth_info.fee.as_ref().ok_or(SigVerifiableTxError::EmptyFee)?;
+
+		let sequence = if !fee.payer.is_empty() {
+			auth_info
+				.signer_infos
+				.first()
+				.ok_or(SigVerifiableTxError::EmptySigners)?
+				.sequence
+		} else {
+			auth_info
+				.signer_infos
+				.last()
+				.ok_or(SigVerifiableTxError::EmptySigners)?
+				.sequence
+		};
+
+		Ok(sequence)
 	}
 }

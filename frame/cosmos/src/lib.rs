@@ -28,7 +28,7 @@ use frame_support::{
 		tokens::{fungible::Inspect, Fortitude, Preservation},
 		Currency, Get,
 	},
-	weights::{constants::ExtrinsicBaseWeight, Weight},
+	weights::Weight,
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use pallet_cosmos_types::{
@@ -82,8 +82,9 @@ where
 			let check = || {
 				let tx = Tx::decode(&mut &tx_bytes[..])
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
-				let fee_payer = T::SigVerifiableTx::fee_payer(&tx)
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadProof))?;
+				let fee_payer = T::SigVerifiableTx::fee_payer(&tx).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
 
 				address_from_bech32(&fee_payer)
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
@@ -343,7 +344,7 @@ impl<T: Config> Pallet<T> {
 	// Controls that must be performed by the pool.
 	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		let tx = Tx::decode(tx_bytes)
+		let tx = Tx::decode(&mut &*tx_bytes)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		T::AnteHandler::ante_handle(&tx, true)?;
@@ -371,46 +372,41 @@ impl<T: Config> Pallet<T> {
 	}
 
 	fn apply_validated_transaction(
-		source: H160,
+		_source: H160,
 		tx: cosmos_sdk_proto::cosmos::tx::v1beta1::Tx,
 	) -> DispatchResultWithPostInfo {
-		let mut total_weight = ExtrinsicBaseWeight::get();
+		let mut total_weight = Self::default_weight();
 
-		if let Some(body) = tx.body {
-			for msg in body.messages.iter() {
-				let handler =
-					T::MsgServiceRouter::route(&msg.type_url).ok_or(DispatchErrorWithPostInfo {
+		let body = tx.body.ok_or(DispatchErrorWithPostInfo {
+			post_info: PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes },
+			error: DispatchError::Other("Empty transaction body"),
+		})?;
+
+		for msg in body.messages.iter() {
+			let handler =
+				T::MsgServiceRouter::route(&msg.type_url).ok_or(DispatchErrorWithPostInfo {
+					post_info: PostDispatchInfo {
+						actual_weight: Some(total_weight),
+						pays_fee: Pays::Yes,
+					},
+					error: DispatchError::Other("Unknown message type"),
+				})?;
+			match handler.handle(msg) {
+				Ok(weight) => {
+					total_weight = total_weight.saturating_add(weight);
+				},
+				Err(e) => {
+					total_weight = total_weight.saturating_add(e.weight);
+
+					return Err(DispatchErrorWithPostInfo {
 						post_info: PostDispatchInfo {
 							actual_weight: Some(total_weight),
 							pays_fee: Pays::Yes,
 						},
-						error: DispatchError::Other("Unknown message type"),
-					})?;
-				match handler.handle(msg) {
-					Ok(weight) => {
-						total_weight = total_weight.saturating_add(weight);
-					},
-					Err(e) => {
-						total_weight = total_weight.saturating_add(e.weight);
-
-						return Err(DispatchErrorWithPostInfo {
-							post_info: PostDispatchInfo {
-								actual_weight: Some(total_weight),
-								pays_fee: Pays::Yes,
-							},
-							error: DispatchError::Other("Failed to handle message"),
-						});
-					},
-				}
-			}
-		} else {
-			return Err(DispatchErrorWithPostInfo {
-				post_info: PostDispatchInfo {
-					actual_weight: Some(total_weight),
-					pays_fee: Pays::Yes,
+						error: DispatchError::Other("Failed to handle message"),
+					});
 				},
-				error: DispatchError::Other("Invalid tx"),
-			});
+			}
 		}
 
 		Ok(PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes })
@@ -433,5 +429,11 @@ impl<T: Config> Pallet<T> {
 			},
 			T::DbWeight::get().reads(2),
 		)
+	}
+
+	fn default_weight() -> Weight {
+		T::BlockWeights::get()
+			.get(frame_support::dispatch::DispatchClass::Normal)
+			.base_extrinsic
 	}
 }

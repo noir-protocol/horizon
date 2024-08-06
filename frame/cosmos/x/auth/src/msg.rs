@@ -30,14 +30,15 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		if let Some(body) = &tx.body {
-			for msg in body.messages.iter() {
-				if !T::MsgFilter::contains(&msg.type_url.as_bytes().to_vec()) {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
-				}
+		let body = tx
+			.body
+			.as_ref()
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+
+		for msg in body.messages.iter() {
+			if !T::MsgFilter::contains(&msg.type_url.as_bytes().to_vec()) {
+				return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 			}
-		} else {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 		}
 
 		Ok(ValidTransaction::default())

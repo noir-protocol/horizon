@@ -13,13 +13,10 @@ sp-api = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
-pallet-cosmos-types = { workspace = true, features = ["with-codec"] }
-
 [features]
 default = ["std"]
 std = [
 	"sp-api/std",
 	"sp-runtime/std",
-	"sp-std/std",
-	"pallet-cosmos-types/std",
+	"sp-std/std"
 ]

@@ -10,7 +10,6 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 cosmos-sdk-proto = { workspace = true }
-cosmrs = { workspace = true, optional = true }
 parity-scale-codec = { workspace = true, features = [
 	"derive",
 ], optional = true }
@@ -25,7 +24,6 @@ pallet-cosmos-types = { workspace = true, features = ["with-codec"] }
 default = ["std"]
 std = [
 	"cosmos-sdk-proto/std",
-	"cosmrs",
 	"parity-scale-codec/std",
 	"scale-info/std",
 	"sp-std/std",

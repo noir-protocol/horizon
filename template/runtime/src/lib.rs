@@ -537,7 +537,7 @@ impl Runtime {
 					);
 				let public_key = signer_info
 					.public_key
-					.clone()
+					.as_ref()
 					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 				let who = match public_key.type_url.as_str() {
 					SECP256K1_TYPE_URL => {
