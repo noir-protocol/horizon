@@ -103,7 +103,7 @@ export class App {
           key: 'Vec<u8>',
           value: 'Vec<u8>',
         },
-        Event: {
+        AbciEvent: {
           type: 'Vec<u8>',
           attributes: 'Vec<EventAttribute>',
 

@@ -595,7 +595,7 @@ impl_runtime_apis! {
 				Ok(post_info) => post_info.actual_weight,
 				Err(e) => e.post_info.actual_weight,
 			};
-			let events: Vec<pallet_cosmos_types::events::Event> = System::read_events_no_consensus()
+			let events: Vec<pallet_cosmos_types::events::AbciEvent> = System::read_events_no_consensus()
 				.filter_map(|record| {
 					if let RuntimeEvent::Cosmos(pallet_cosmos::Event::Executed(event)) = record.event {
 						Some(event)

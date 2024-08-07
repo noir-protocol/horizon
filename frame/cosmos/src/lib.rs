@@ -277,7 +277,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub fn deposit_event)]
 	pub enum Event {
-		Executed(pallet_cosmos_types::events::Event),
+		Executed(pallet_cosmos_types::events::AbciEvent),
 	}
 
 	#[pallet::call]

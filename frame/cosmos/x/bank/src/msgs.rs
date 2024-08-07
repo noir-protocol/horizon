@@ -132,7 +132,7 @@ where
 		}
 
 		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::Executed(
-			pallet_cosmos_types::events::Event {
+			pallet_cosmos_types::events::AbciEvent {
 				r#type: EVENT_TYPE_TRANSFER.into(),
 				attributes: sp_std::vec![
 					EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from_address.into() },

@@ -18,7 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
 
-use pallet_cosmos_types::events::Event;
+use pallet_cosmos_types::events::AbciEvent;
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
@@ -34,7 +34,7 @@ pub struct GasInfo {
 #[derive(Clone, Decode, Encode, Debug, TypeInfo, Serialize, Deserialize)]
 pub struct SimulateResponse {
 	pub gas_info: GasInfo,
-	pub events: Vec<Event>,
+	pub events: Vec<AbciEvent>,
 }
 
 sp_api::decl_runtime_apis! {

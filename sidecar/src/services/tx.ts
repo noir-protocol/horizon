@@ -2,8 +2,6 @@ import { ApiPromise } from "@pinot/api";
 import { ResultTx, ResultTxSearch } from "../types/index.js";
 import { ApiService } from "./service.js";
 import { Database } from "lmdb";
-import { Tx } from "cosmjs-types/cosmos/tx/v1beta1/tx.js";
-import Weights from "../constants/weights.js";
 import {
   BroadcastTxResponse,
   SimulateResponse,
@@ -26,18 +24,17 @@ export class TxService implements ApiService {
     const rawTx = `0x${Buffer.from(txBytes, "base64").toString("hex")}`;
     console.debug(`raw transaction: ${rawTx} `)
 
-    const res = await this.chainApi.rpc["cosm"]["broadcastTx"](rawTx);
-    let txhash = res.toString();
+    let txHash = (await this.chainApi.rpc["cosm"]["broadcastTx"](rawTx)).toString();
 
-    if (txhash.startsWith("0x")) {
-      txhash = txhash.substring(2);
+    if (txHash.startsWith("0x")) {
+      txHash = txHash.substring(2);
     }
 
-    await this.db.put(`tx::origin::${txhash.toLowerCase()}`, txBytes);
+    await this.db.put(`tx::origin::${txHash.toLowerCase()}`, txBytes);
     return {
       txResponse: {
         height: Long.ZERO,
-        txhash: txhash.toUpperCase(),
+        txhash: txHash.toUpperCase(),
         codespace: "",
         code: 0,
         data: "",
@@ -111,25 +108,18 @@ export class TxService implements ApiService {
         const { applyExtrinsic } = JSON.parse(phase.toString());
         return (
           applyExtrinsic === extrinsicIndex &&
-          (`${section}::${method}` === "cosmos::Executed" ||
+          (`${section}::${method}` === "system::ExtrinsicSuccess" ||
             `${section}::${method}` === "system::ExtrinsicFailed")
         );
       })
       .map(({ event: { data, section, method } }) => {
-        if (`${section}::${method}` === "cosmos::Executed") {
-          const result = JSON.parse(data.toString());
-          const code = result[0];
-          const { refTime } = result[1];
-          return { code, gasUsed: refTime };
+        if (`${section}::${method}` === "system::ExtrinsicSuccess") {
+          const events = JSON.parse(data);
+          const { refTime } = events[0].weight;
+
+          return { code: 0, gasUsed: refTime };
         } else {
-          const _data = JSON.parse(data.toString());
-          console.debug({ _data });
-          // const { refTime } = JSON.parse(data.toString())[1]["weight"];
-          // let code = error;
-          // if (code.startsWith("0x")) {
-          //   code = code.substring(2);
-          // }
-          // code = Buffer.from(code, "hex").readUint32LE();
+          console.debug(JSON.parse(data));
 
           return { code: 0, gasUsed: 0 };
         }
