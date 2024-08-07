@@ -18,12 +18,11 @@
 
 use crate::internal_error;
 use futures::future::TryFutureExt;
-use hp_rpc::CosmosTxRuntimeApi;
+use hp_rpc::{CosmosTxRuntimeApi, SimulateResponse};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
 };
-use parity_scale_codec::Encode;
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -38,7 +37,7 @@ pub trait CosmApi {
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256>;
 
 	#[method(name = "cosm_simulate")]
-	async fn simulate(&self, tx_bytes: Bytes) -> RpcResult<Bytes>;
+	async fn simulate(&self, tx_bytes: Bytes) -> RpcResult<SimulateResponse>;
 }
 
 pub struct Cosm<B: BlockT, C, P> {
@@ -79,14 +78,11 @@ where
 			.await
 	}
 
-	async fn simulate(&self, tx_bytes: Bytes) -> RpcResult<Bytes> {
+	async fn simulate(&self, tx_bytes: Bytes) -> RpcResult<SimulateResponse> {
 		let best_hash = self.client.info().best_hash;
-		let result = self
-			.client
+		self.client
 			.runtime_api()
 			.simulate(best_hash, tx_bytes.to_vec())
-			.map_err(internal_error)?;
-
-		Ok(Encode::encode(&result).into())
+			.map_err(internal_error)
 	}
 }

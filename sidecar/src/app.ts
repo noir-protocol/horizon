@@ -94,6 +94,25 @@ export class App {
     const provider = new WsProvider(endpoint);
     this.chainApi = await ApiPromise.create({
       provider,
+      types: {
+        GasInfo: {
+          gas_used: 'u64',
+          gas_wanted: 'u64',
+        },
+        EventAttribute: {
+          key: 'Vec<u8>',
+          value: 'Vec<u8>',
+        },
+        Event: {
+          type: 'Vec<u8>',
+          attributes: 'Vec<EventAttribute>',
+
+        },
+        SimulateResponse: {
+          gas_info: 'GasInfo',
+          events: 'Vec<Event>',
+        }
+      },
       rpc,
     });
     let accountService: IAccountService;

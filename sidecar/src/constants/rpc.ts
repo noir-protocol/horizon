@@ -18,7 +18,7 @@ const rpc = {
           type: "Bytes",
         },
       ],
-      type: "Bytes",
+      type: "SimulateResponse",
     },
   },
 };

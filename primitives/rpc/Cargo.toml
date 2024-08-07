@@ -9,6 +9,7 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+serde = { workspace = true }
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
 
@@ -16,7 +17,7 @@ sp-api = { workspace = true }
 sp-runtime = { workspace = true }
 sp-std = { workspace = true }
 
-pallet-cosmos-types = { workspace = true, features = ["with-codec"] }
+pallet-cosmos-types = { workspace = true, features = ["with-codec", "with-serde"] }
 
 [features]
 default = ["std"]

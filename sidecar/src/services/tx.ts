@@ -137,21 +137,40 @@ export class TxService implements ApiService {
     return result[0];
   }
 
-  public async simulate(txBytes: string): Promise<SimulateResponse> {
-    const rawTx = `0x${Buffer.from(txBytes, "base64").toString("hex")}`;
-    console.debug(`raw transaction: ${rawTx} `)
+  convert(str: string, from: BufferEncoding, to: BufferEncoding) {
+    if (from === 'hex') {
+      str = str.startsWith('0x') ? str.slice(2) : str;
+    }
+    return Buffer.from(str, from).toString(to);
+  }
 
-    const result = await this.chainApi.rpc["cosm"]["simulate"](rawTx);
+  public async simulate(txBytes: string): Promise<SimulateResponse> {
+    const txRaw = `0x${this.convert(txBytes, 'base64', 'hex')}`;
+    console.debug(`raw transaction: ${txRaw}`);
+
+    const { gas_info, events } = (await this.chainApi.rpc["cosm"]["simulate"](txRaw)).toJSON();
+    console.debug(`gasWanted: ${gas_info.gas_wanted}, gasUsed: ${gas_info.gas_used}`);
+
+    for (const { type, attributes } of events) {
+      const eventType = this.convert(type, 'hex', 'utf8');
+
+      for (const { key, value } of attributes) {
+        const eventKey = this.convert(key, 'hex', 'utf8');
+        const eventValue = this.convert(value, 'hex', 'utf8');
+
+        console.debug(`type: ${eventType}, key: ${eventKey}, value: ${eventValue}`);
+      }
+    }
 
     return {
       gasInfo: {
-        gasWanted: Long.fromNumber(0),
-        gasUsed: Long.fromNumber(0),
+        gasWanted: Long.fromNumber(gas_info.gas_wanted),
+        gasUsed: Long.fromNumber(gas_info.gas_used),
       },
       result: {
         data: new Uint8Array(),
         log: "",
-        events: [],
+        events,
         msgResponses: [],
       },
     };

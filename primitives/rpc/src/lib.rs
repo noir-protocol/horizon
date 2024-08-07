@@ -21,16 +21,17 @@
 use pallet_cosmos_types::events::Event;
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
+use serde::{Deserialize, Serialize};
 use sp_runtime::traits::Block as BlockT;
 use sp_std::vec::Vec;
 
-#[derive(Clone, Decode, Encode, Debug, TypeInfo)]
+#[derive(Clone, Decode, Encode, Debug, TypeInfo, Serialize, Deserialize)]
 pub struct GasInfo {
 	pub gas_wanted: u64,
 	pub gas_used: u64,
 }
 
-#[derive(Clone, Decode, Encode, Debug, TypeInfo)]
+#[derive(Clone, Decode, Encode, Debug, TypeInfo, Serialize, Deserialize)]
 pub struct SimulateResponse {
 	pub gas_info: GasInfo,
 	pub events: Vec<Event>,

@@ -588,20 +588,27 @@ impl_runtime_apis! {
 
 		fn simulate(tx_bytes: Vec<u8>) -> SimulateResponse {
 			let tx = Tx::decode(&mut &*tx_bytes).unwrap();
-			let actual_weight = match pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx) {
+			let auth_info = tx.auth_info.as_ref().unwrap();
+			let gas_wanted = auth_info.fee.as_ref().unwrap().gas_limit;
+
+			let actual_weight = match pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx.clone()) {
 				Ok(post_info) => post_info.actual_weight,
 				Err(e) => e.post_info.actual_weight,
 			};
-			let mut events = Vec::<pallet_cosmos_types::events::Event>::new();
-			for record in System::read_events_no_consensus() {
-				if let RuntimeEvent::Cosmos(pallet_cosmos::Event::Executed(event)) = record.event {
-					events.push(event);
-				}
-			}
+			let events: Vec<pallet_cosmos_types::events::Event> = System::read_events_no_consensus()
+				.filter_map(|record| {
+					if let RuntimeEvent::Cosmos(pallet_cosmos::Event::Executed(event)) = record.event {
+						Some(event)
+					} else {
+						None
+					}
+				})
+				.collect();
+
 			SimulateResponse {
 				gas_info: GasInfo {
-					gas_wanted: 0,
-					gas_used: actual_weight.unwrap().ref_time(),
+					gas_wanted,
+					gas_used: <Runtime as pallet_cosmos::Config>::WeightToGas::convert(actual_weight.unwrap()),
 				},
 				events
 			}

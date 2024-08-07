@@ -294,7 +294,7 @@ pub mod pallet {
 			match Tx::decode(&mut &tx_bytes[..]) {
 				Ok(tx) => {
 					match tx.auth_info.and_then(|auth_info| auth_info.fee) {
-						Some(fee) => Weight::from_parts(fee.gas_limit, 0),
+						Some(fee) => T::GasToWeight::convert(fee.gas_limit),
 						None => T::WeightInfo::default_weight(),
 					}
 				}
