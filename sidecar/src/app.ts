@@ -110,7 +110,7 @@ export class App {
         },
         SimulateResponse: {
           gas_info: 'GasInfo',
-          events: 'Vec<Event>',
+          events: 'Vec<AbciEvent>',
         }
       },
       rpc,
