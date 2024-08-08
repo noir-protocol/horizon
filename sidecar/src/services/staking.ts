@@ -6,7 +6,7 @@ import {
 } from "cosmjs-types/cosmos/staking/v1beta1/query.js";
 
 export class StakingService implements ApiService {
-  public deligations(delegatorAddr: string): QueryDelegatorDelegationsResponse {
+  public delegations(delegatorAddr: string): QueryDelegatorDelegationsResponse {
     return {
       delegationResponses: [],
       pagination: {
@@ -16,7 +16,7 @@ export class StakingService implements ApiService {
     };
   }
 
-  public unbondingDeligations(
+  public unbondingDelegations(
     delegatorAddr: string
   ): QueryDelegatorUnbondingDelegationsResponse {
     return {

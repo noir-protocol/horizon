@@ -26,7 +26,7 @@ pub use jsonrpsee::{
 	types::{error, ErrorObject, ErrorObjectOwned},
 };
 
-pub fn err<T: ToString>(code: i32, message: T, data: Option<&[u8]>) -> ErrorObjectOwned {
+pub fn error<T: ToString>(code: i32, message: T, data: Option<&[u8]>) -> ErrorObjectOwned {
 	ErrorObject::owned(
 		code,
 		message.to_string(),
@@ -37,6 +37,6 @@ pub fn err<T: ToString>(code: i32, message: T, data: Option<&[u8]>) -> ErrorObje
 	)
 }
 
-pub fn internal_err<T: ToString>(message: T) -> ErrorObjectOwned {
-	err(error::INTERNAL_ERROR_CODE, message, None)
+pub fn internal_error<T: ToString>(message: T) -> ErrorObjectOwned {
+	error(error::INTERNAL_ERROR_CODE, message, None)
 }

@@ -18,11 +18,29 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
 
+use pallet_cosmos_types::events::AbciEvent;
+use parity_scale_codec::{Decode, Encode};
+use scale_info::TypeInfo;
+use serde::{Deserialize, Serialize};
 use sp_runtime::traits::Block as BlockT;
 use sp_std::vec::Vec;
 
+#[derive(Clone, Decode, Encode, Debug, TypeInfo, Serialize, Deserialize)]
+pub struct GasInfo {
+	pub gas_wanted: u64,
+	pub gas_used: u64,
+}
+
+#[derive(Clone, Decode, Encode, Debug, TypeInfo, Serialize, Deserialize)]
+pub struct SimulateResponse {
+	pub gas_info: GasInfo,
+	pub events: Vec<AbciEvent>,
+}
+
 sp_api::decl_runtime_apis! {
-	pub trait ConvertTxRuntimeApi {
+	pub trait CosmosTxRuntimeApi {
 		fn convert_tx(tx_bytes: Vec<u8>) -> <Block as BlockT>::Extrinsic;
+
+		fn simulate(tx_bytes: Vec<u8>) -> SimulateResponse;
 	}
 }

@@ -42,11 +42,11 @@ where
 			.as_ref()
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-		if auth_info.signer_infos.len() == tx.signatures.len() {
-			Ok(ValidTransaction::default())
-		} else {
-			Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
+		if auth_info.signer_infos.len() != tx.signatures.len() {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 		}
+
+		Ok(ValidTransaction::default())
 	}
 }
 
@@ -68,6 +68,7 @@ where
 		{
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
 		}
+
 		Ok(ValidTransaction::default())
 	}
 }
@@ -85,9 +86,9 @@ where
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		if body.memo.len().saturated_into::<u64>() > T::MaxMemoCharacters::get() {
-			Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
-		} else {
-			Ok(ValidTransaction::default())
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 		}
+
+		Ok(ValidTransaction::default())
 	}
 }

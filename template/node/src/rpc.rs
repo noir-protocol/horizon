@@ -37,7 +37,7 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool<Block = Block> + 'static,
-	C::Api: hp_rpc::ConvertTxRuntimeApi<Block>,
+	C::Api: hp_rpc::CosmosTxRuntimeApi<Block>,
 {
 	use hc_rpc::{Cosm, CosmApiServer};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};

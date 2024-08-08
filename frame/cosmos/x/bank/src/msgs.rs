@@ -31,7 +31,7 @@ use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	address::address_from_bech32,
-	events::{EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
+	events::{AbciEvent, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
 	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
@@ -50,7 +50,7 @@ impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgSendHandler<T>
 where
 	T: pallet_cosmos::Config,
 {
-	fn handle(&self, msg: &Any) -> Result<Weight, MsgHandlerErrorInfo> {
+	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<AbciEvent>), MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
 		let MsgSend { from_address, to_address, amount } = MsgSend::decode(&mut &*msg.value)
@@ -60,18 +60,15 @@ where
 			})?;
 
 		match Self::send_coins(from_address, to_address, amount) {
-			Ok(weight) => {
+			Ok((weight, msg_events)) => {
 				total_weight = total_weight.saturating_add(weight);
+				Ok((total_weight, msg_events))
 			},
-			Err(e) => {
-				return Err(MsgHandlerErrorInfo {
-					weight: total_weight.saturating_add(e.weight),
-					error: e.error,
-				});
-			},
-		};
-
-		Ok(total_weight)
+			Err(e) => Err(MsgHandlerErrorInfo {
+				weight: total_weight.saturating_add(e.weight),
+				error: e.error,
+			}),
+		}
 	}
 }
 
@@ -83,7 +80,7 @@ where
 		from_address: String,
 		to_address: String,
 		amount: Vec<Coin>,
-	) -> Result<Weight, MsgHandlerErrorInfo> {
+	) -> Result<(Weight, Vec<AbciEvent>), MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
 		let from_addr = address_from_bech32(&from_address).map_err(|_| MsgHandlerErrorInfo {
@@ -131,24 +128,19 @@ where
 			}
 		}
 
-		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::Executed(
-			pallet_cosmos_types::events::Event {
-				r#type: EVENT_TYPE_TRANSFER.into(),
-				attributes: sp_std::vec![
-					EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from_address.into() },
-					EventAttribute {
-						key: ATTRIBUTE_KEY_RECIPIENT.into(),
-						value: to_address.into()
-					},
-					EventAttribute {
-						key: ATTRIBUTE_KEY_AMOUNT.into(),
-						value: amount_to_string(&amount).into()
-					},
-				],
-			},
-		));
+		let msg_event = pallet_cosmos_types::events::AbciEvent {
+			r#type: EVENT_TYPE_TRANSFER.into(),
+			attributes: sp_std::vec![
+				EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from_address.into() },
+				EventAttribute { key: ATTRIBUTE_KEY_RECIPIENT.into(), value: to_address.into() },
+				EventAttribute {
+					key: ATTRIBUTE_KEY_AMOUNT.into(),
+					value: amount_to_string(&amount).into()
+				},
+			],
+		};
 
-		Ok(total_weight)
+		Ok((total_weight, sp_std::vec![msg_event]))
 	}
 }
 

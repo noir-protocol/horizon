@@ -1,6 +1,6 @@
 export interface ResultTxSearch {
   txs: ResultTx[];
-  total_count: number;
+  total_count: string;
 }
 
 export interface ResultTx {
@@ -16,8 +16,8 @@ export interface ResponseDeliverTx {
   data: string;
   log: string;
   info: string;
-  gas_wanted: number;
-  gas_used: number;
+  gas_wanted: string;
+  gas_used: string;
   events: Event[];
   codespace: string;
 }

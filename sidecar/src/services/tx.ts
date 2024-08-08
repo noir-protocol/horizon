@@ -2,14 +2,13 @@ import { ApiPromise } from "@pinot/api";
 import { ResultTx, ResultTxSearch } from "../types/index.js";
 import { ApiService } from "./service.js";
 import { Database } from "lmdb";
-import { Tx } from "cosmjs-types/cosmos/tx/v1beta1/tx.js";
-import Weights from "../constants/weights.js";
 import {
   BroadcastTxResponse,
   SimulateResponse,
 } from "cosmjs-types/cosmos/tx/v1beta1/service.js";
 import Long from "long";
 import { createHash } from "crypto";
+import { Tx } from "cosmjs-types/cosmos/tx/v1beta1/tx.js";
 
 type TransactResult = { code: number; gasUsed: number };
 
@@ -23,40 +22,43 @@ export class TxService implements ApiService {
   }
 
   public async broadcastTx(txBytes: string): Promise<BroadcastTxResponse> {
-    const rawTx = `0x${Buffer.from(txBytes, "base64").toString("hex")}`;
-    console.debug(`raw transaction: ${rawTx} `)
+    const rawTx = `0x${Buffer.from(txBytes, 'base64').toString('hex')}`;
 
-    const res = await this.chainApi.rpc["cosm"]["broadcastTx"](rawTx);
-    let txhash = res.toString();
-
-    if (txhash.startsWith("0x")) {
-      txhash = txhash.substring(2);
+    let txHash = (await this.chainApi.rpc['cosm']['broadcastTx'](rawTx)).toString();
+    if (txHash.startsWith('0x')) {
+      txHash = txHash.substring(2);
     }
+    console.debug(`txHash: ${txHash.toLowerCase()}`);
 
-    await this.db.put(`tx::origin::${txhash.toLowerCase()}`, txBytes);
     return {
       txResponse: {
         height: Long.ZERO,
-        txhash: txhash.toUpperCase(),
-        codespace: "",
+        txhash: txHash.toUpperCase(),
+        codespace: '',
         code: 0,
-        data: "",
-        rawLog: "",
+        data: '',
+        rawLog: '',
         logs: [],
-        info: "",
+        info: '',
         gasWanted: Long.ZERO,
         gasUsed: Long.ZERO,
         tx: {
-          typeUrl: "",
+          typeUrl: '',
           value: new Uint8Array(),
         },
-        timestamp: "",
+        timestamp: '',
         events: [],
       },
     };
   }
 
   public searchTx(hash: string): ResultTxSearch {
+    if (hash.startsWith('0x')) {
+      hash = hash.slice(2);
+    }
+
+    console.debug(`txHash: ${hash.toLowerCase()}`);
+
     const resultTx = this.db.get(`tx::result::${hash.toLowerCase()}`);
     const txs: ResultTx[] = [];
     if (resultTx) {
@@ -64,7 +66,7 @@ export class TxService implements ApiService {
     }
     return {
       txs,
-      total_count: txs.length,
+      total_count: txs.length.toString(),
     };
   }
 
@@ -73,12 +75,14 @@ export class TxService implements ApiService {
     extrinsicIndex: number,
     header: any
   ): Promise<void> {
-    if (txRaw.startsWith("0x")) {
+    if (txRaw.startsWith('0x')) {
       txRaw = txRaw.substring(2);
     }
+    const txBytes = Buffer.from(txRaw, 'hex');
+    const gasLimit = Tx.decode(txBytes).authInfo!.fee!.gasLimit;
+
     const txHash = createHash('sha256').update(Buffer.from(txRaw, 'hex')).digest('hex');
 
-    const rawTx = this.db.get(`tx::origin::${txHash.toLowerCase()}`);
     const { code, gasUsed } = await this.checkResult(header, extrinsicIndex);
     const txResult: ResultTx = {
       hash: `${txHash.toUpperCase()}`,
@@ -86,15 +90,15 @@ export class TxService implements ApiService {
       index: extrinsicIndex,
       tx_result: {
         code,
-        data: "",
-        log: "",
-        info: "",
-        gas_wanted: 0,
-        gas_used: gasUsed,
+        data: '',
+        log: '',
+        info: '',
+        gas_wanted: gasLimit.toString(),
+        gas_used: gasUsed.toString(),
         events: [],
-        codespace: "",
+        codespace: '',
       },
-      tx: rawTx,
+      tx: txBytes.toString('base64'),
     };
     await this.db.put(`tx::result::${txHash.toLowerCase()}`, txResult);
   }
@@ -111,25 +115,21 @@ export class TxService implements ApiService {
         const { applyExtrinsic } = JSON.parse(phase.toString());
         return (
           applyExtrinsic === extrinsicIndex &&
-          (`${section}::${method}` === "cosmos::Executed" ||
-            `${section}::${method}` === "system::ExtrinsicFailed")
+          (`${section}::${method}` === 'cosmos::Executed' ||
+            `${section}::${method}` === 'system::ExtrinsicFailed')
         );
       })
       .map(({ event: { data, section, method } }) => {
-        if (`${section}::${method}` === "cosmos::Executed") {
-          const result = JSON.parse(data.toString());
-          const code = result[0];
-          const { refTime } = result[1];
-          return { code, gasUsed: refTime };
+        if (`${section}::${method}` === 'cosmos::Executed') {
+          const [gas_wanted, gas_used, events] = JSON.parse(data);
+
+          console.debug(`gasWanted: ${gas_wanted}`);
+          console.debug(`gasUsed: ${gas_used}`);
+          console.debug(`events: ${JSON.stringify(events)}`);
+
+          return { code: 0, gasUsed: gas_used };
         } else {
-          const _data = JSON.parse(data.toString());
-          console.debug({ _data });
-          // const { refTime } = JSON.parse(data.toString())[1]["weight"];
-          // let code = error;
-          // if (code.startsWith("0x")) {
-          //   code = code.substring(2);
-          // }
-          // code = Buffer.from(code, "hex").readUint32LE();
+          console.debug(JSON.parse(data));
 
           return { code: 0, gasUsed: 0 };
         }
@@ -137,30 +137,49 @@ export class TxService implements ApiService {
     return result[0];
   }
 
-  public simulateTx(txBytes: string): SimulateResponse {
-    const {
-      body,
-      authInfo: {
-        fee: { gasLimit },
-      },
-    } = Tx.decode(Buffer.from(txBytes, "base64"));
-    const { messages } = body;
-
-    let gasUsed = 0;
-    // Multi message type is not supported yet.
-    if (messages[0].typeUrl === "/cosmos.bank.v1beta1.MsgSend") {
-      gasUsed += Weights.MsgSend;
+  convert(str: string, from: BufferEncoding, to: BufferEncoding) {
+    if (from === 'hex') {
+      str = str.startsWith('0x') ? str.slice(2) : str;
     }
+    return Buffer.from(str, from).toString(to);
+  }
+
+  public async simulate(txBytes: string): Promise<SimulateResponse> {
+    const txRaw = `0x${this.convert(txBytes, 'base64', 'hex')}`;
+
+    const { gas_info, events } = (await this.chainApi.rpc['cosm']['simulate'](txRaw)).toJSON();
+
+    const cosmosEvents = events.map(({ type, attributes }) => {
+      const eventType = this.convert(type, 'hex', 'utf8');
+
+      const eventAttributes = attributes.map(({ key, value }) => {
+        const eventKey = this.convert(key, 'hex', 'utf8');
+        const eventValue = this.convert(value, 'hex', 'utf8');
+
+        return {
+          key: eventKey,
+          value: eventValue,
+        }
+      });
+
+      return {
+        type: eventType,
+        attributes: eventAttributes,
+      }
+    });
+
+    console.debug(`gasInfo: ${JSON.stringify(gas_info)}`);
+    console.debug(`events: ${JSON.stringify(cosmosEvents)}`);
 
     return {
       gasInfo: {
-        gasWanted: gasLimit,
-        gasUsed: Long.fromNumber(gasUsed),
+        gasWanted: Long.fromNumber(gas_info.gas_wanted),
+        gasUsed: Long.fromNumber(gas_info.gas_used),
       },
       result: {
         data: new Uint8Array(),
-        log: "",
-        events: [],
+        log: '',
+        events: cosmosEvents,
         msgResponses: [],
       },
     };

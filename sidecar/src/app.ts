@@ -28,7 +28,7 @@ import FastifyWebsocket, { SocketStream } from "@fastify/websocket";
 import { JSONRPCServer } from "json-rpc-2.0";
 import { IConfig } from "config";
 import { Database, open } from "lmdb";
-import quertstring from "node:querystring";
+import querystring from "node:querystring";
 import rpc from "./constants/rpc.js";
 import { QueryAccountRequest } from "cosmjs-types/cosmos/auth/v1beta1/query.js";
 import {
@@ -94,6 +94,25 @@ export class App {
     const provider = new WsProvider(endpoint);
     this.chainApi = await ApiPromise.create({
       provider,
+      types: {
+        GasInfo: {
+          gas_used: 'u64',
+          gas_wanted: 'u64',
+        },
+        EventAttribute: {
+          key: 'Vec<u8>',
+          value: 'Vec<u8>',
+        },
+        AbciEvent: {
+          type: 'Vec<u8>',
+          attributes: 'Vec<EventAttribute>',
+
+        },
+        SimulateResponse: {
+          gas_info: 'GasInfo',
+          events: 'Vec<AbciEvent>',
+        }
+      },
       rpc,
     });
     let accountService: IAccountService;
@@ -207,7 +226,7 @@ export class App {
         const response = QueryDelegatorDelegationsResponse.toJSON(
           this.services
             .get<StakingService>("staking")
-            .deligations(delegatorAddr)
+            .delegations(delegatorAddr)
         );
         return toSnakeCase(response);
       }
@@ -241,7 +260,7 @@ export class App {
         const response = QueryDelegatorUnbondingDelegationsResponse.toJSON(
           this.services
             .get<StakingService>("staking")
-            .unbondingDeligations(delegatorAddr)
+            .unbondingDelegations(delegatorAddr)
         );
         return toSnakeCase(response);
       }
@@ -249,14 +268,14 @@ export class App {
 
     this.server.post(
       "/cosmos/tx/v1beta1/simulate",
-      (
+      async (
         request: FastifyRequest<{
           Body: { tx_bytes: string };
         }>
-      ): unknown => {
+      ): Promise<unknown> => {
         const { tx_bytes } = request.body;
         const response = SimulateResponse.toJSON(
-          this.services.get<TxService>("tx").simulateTx(tx_bytes)
+          await this.services.get<TxService>("tx").simulate(tx_bytes)
         );
         return toSnakeCase(response);
       }
@@ -301,7 +320,7 @@ export class App {
     );
 
     this.jsonrpc.addMethod("tx_search", ({ query }): ResultTxSearch => {
-      const args = quertstring.parse(query);
+      const args = querystring.parse(query);
       let hash = args["tx.hash"] as string;
       if (hash.includes("'")) {
         hash = hash.replace(/'/gi, "");
