@@ -6,10 +6,6 @@ export class AccountResponse {
   constructor(account: BaseAccount) {
     this.account = account;
   }
-
-  public isInterim(): boolean {
-    return this.account.pub_key.key === Dummy.Secp256k1PublicKey;
-  }
 }
 
 export interface BaseAccount {

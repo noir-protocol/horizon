@@ -8,6 +8,7 @@ import {
 } from "cosmjs-types/cosmos/tx/v1beta1/service.js";
 import Long from "long";
 import { createHash } from "crypto";
+import { Tx } from "cosmjs-types/cosmos/tx/v1beta1/tx.js";
 
 type TransactResult = { code: number; gasUsed: number };
 
@@ -29,7 +30,6 @@ export class TxService implements ApiService {
     }
     console.debug(`txHash: ${txHash.toLowerCase()}`);
 
-    await this.db.put(`tx::origin::${txHash.toLowerCase()}`, txBytes);
     return {
       txResponse: {
         height: Long.ZERO,
@@ -78,9 +78,11 @@ export class TxService implements ApiService {
     if (txRaw.startsWith('0x')) {
       txRaw = txRaw.substring(2);
     }
+    const txBytes = Buffer.from(txRaw, 'hex');
+    const gasLimit = Tx.decode(txBytes).authInfo!.fee!.gasLimit;
+
     const txHash = createHash('sha256').update(Buffer.from(txRaw, 'hex')).digest('hex');
 
-    const rawTx = this.db.get(`tx::origin::${txHash.toLowerCase()}`);
     const { code, gasUsed } = await this.checkResult(header, extrinsicIndex);
     const txResult: ResultTx = {
       hash: `${txHash.toUpperCase()}`,
@@ -91,12 +93,12 @@ export class TxService implements ApiService {
         data: '',
         log: '',
         info: '',
-        gas_wanted: '0',
+        gas_wanted: gasLimit.toString(),
         gas_used: gasUsed.toString(),
         events: [],
         codespace: '',
       },
-      tx: rawTx,
+      tx: txBytes.toString('base64'),
     };
     await this.db.put(`tx::result::${txHash.toLowerCase()}`, txResult);
   }
@@ -141,7 +143,6 @@ export class TxService implements ApiService {
 
   public async simulate(txBytes: string): Promise<SimulateResponse> {
     const txRaw = `0x${this.convert(txBytes, 'base64', 'hex')}`;
-    console.debug(`raw transaction: ${txRaw}`);
 
     const { gas_info, events } = (await this.chainApi.rpc['cosm']['simulate'](txRaw)).toJSON();
 
