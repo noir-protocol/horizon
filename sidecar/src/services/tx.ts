@@ -115,16 +115,19 @@ export class TxService implements ApiService {
         const { applyExtrinsic } = JSON.parse(phase.toString());
         return (
           applyExtrinsic === extrinsicIndex &&
-          (`${section}::${method}` === 'system::ExtrinsicSuccess' ||
+          (`${section}::${method}` === 'cosmos::Executed' ||
             `${section}::${method}` === 'system::ExtrinsicFailed')
         );
       })
       .map(({ event: { data, section, method } }) => {
-        if (`${section}::${method}` === 'system::ExtrinsicSuccess') {
-          const events = JSON.parse(data);
-          const { refTime } = events[0].weight;
+        if (`${section}::${method}` === 'cosmos::Executed') {
+          const [gas_wanted, gas_used, events] = JSON.parse(data);
 
-          return { code: 0, gasUsed: refTime };
+          console.debug(`gasWanted: ${gas_wanted}`);
+          console.debug(`gasUsed: ${gas_used}`);
+          console.debug(`events: ${JSON.stringify(events)}`);
+
+          return { code: 0, gasUsed: gas_used };
         } else {
           console.debug(JSON.parse(data));
 

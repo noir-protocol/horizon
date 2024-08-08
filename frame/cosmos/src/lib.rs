@@ -36,6 +36,7 @@ use frame_support::{
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use pallet_cosmos_types::{
 	address::address_from_bech32,
+	events::AbciEvent,
 	handler::AnteDecorator,
 	msgservice::MsgServiceRouter,
 	tx::{Account, Gas},
@@ -277,7 +278,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub fn deposit_event)]
 	pub enum Event {
-		Executed(pallet_cosmos_types::events::AbciEvent),
+		Executed { gas_wanted: u64, gas_used: u64, events: Vec<AbciEvent> },
 	}
 
 	#[pallet::call]
@@ -362,6 +363,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn apply_validated_transaction(_source: H160, tx: Tx) -> DispatchResultWithPostInfo {
 		let mut total_weight = T::WeightInfo::default_weight();
+		let mut events = Vec::<AbciEvent>::new();
 
 		let body = tx.body.ok_or(DispatchErrorWithPostInfo {
 			post_info: PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes },
@@ -378,8 +380,9 @@ impl<T: Config> Pallet<T> {
 					error: DispatchError::Other("Unknown message type"),
 				})?;
 			match handler.handle(msg) {
-				Ok(weight) => {
+				Ok((weight, msg_events)) => {
 					total_weight = total_weight.saturating_add(weight);
+					events.extend(msg_events);
 				},
 				Err(e) => {
 					total_weight = total_weight.saturating_add(e.weight);
@@ -394,6 +397,22 @@ impl<T: Config> Pallet<T> {
 				},
 			}
 		}
+
+		let fee = tx.auth_info.as_ref().and_then(|auth_info| auth_info.fee.as_ref()).ok_or(
+			DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(total_weight),
+					pays_fee: Pays::Yes,
+				},
+				error: DispatchError::Other("Failed to handle message"),
+			},
+		)?;
+
+		Self::deposit_event(Event::Executed {
+			gas_wanted: fee.gas_limit,
+			gas_used: T::WeightToGas::convert(total_weight),
+			events,
+		});
 
 		Ok(PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes })
 	}
