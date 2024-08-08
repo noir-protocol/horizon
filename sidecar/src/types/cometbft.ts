@@ -1,6 +1,6 @@
 export interface ResultTxSearch {
   txs: ResultTx[];
-  total_count: number;
+  total_count: string;
 }
 
 export interface ResultTx {

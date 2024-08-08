@@ -66,7 +66,7 @@ export class TxService implements ApiService {
     }
     return {
       txs,
-      total_count: txs.length,
+      total_count: txs.length.toString(),
     };
   }
 
