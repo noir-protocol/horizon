@@ -281,6 +281,11 @@ pub mod pallet {
 		Executed { gas_wanted: u64, gas_used: u64, events: Vec<AbciEvent> },
 	}
 
+	#[pallet::error]
+	pub enum Error<T> {
+		ModuleError { codespace: u8, code: u8 },
+	}
+
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	where
