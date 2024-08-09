@@ -64,8 +64,11 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 	}
 
 	fn fee_payer(tx: &Tx) -> Result<String, SigVerifiableTxError> {
-		let auth_info = tx.auth_info.as_ref().ok_or(SigVerifiableTxError::EmptyAuthInfo)?;
-		let fee = auth_info.fee.as_ref().ok_or(SigVerifiableTxError::EmptyFee)?;
+		let fee = tx
+			.auth_info
+			.as_ref()
+			.and_then(|auth_info| auth_info.fee.as_ref())
+			.ok_or(SigVerifiableTxError::EmptyFee)?;
 
 		let fee_payer = if fee.payer.is_empty() {
 			Self::get_signers(tx)?

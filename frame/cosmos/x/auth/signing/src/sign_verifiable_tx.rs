@@ -23,7 +23,6 @@ use sp_std::vec::Vec;
 pub enum SigVerifiableTxError {
 	EmptyAuthInfo,
 	EmptyFee,
-	EmptyPublicKey,
 	EmptySigners,
 	EmptyTxBody,
 	InvalidMsg,
