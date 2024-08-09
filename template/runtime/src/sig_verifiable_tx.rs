@@ -52,11 +52,10 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 		let fee_payer = &tx
 			.auth_info
 			.as_ref()
-			.ok_or(SigVerifiableTxError::EmptyAuthInfo)?
-			.fee
-			.as_ref()
+			.and_then(|auth_info| auth_info.fee.as_ref())
 			.ok_or(SigVerifiableTxError::EmptyFee)?
 			.payer;
+
 		if !fee_payer.is_empty() && !signers.contains(fee_payer) {
 			signers.push(fee_payer.clone());
 		}
