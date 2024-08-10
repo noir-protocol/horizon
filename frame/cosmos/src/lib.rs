@@ -36,7 +36,7 @@ use frame_support::{
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use pallet_cosmos_types::{
 	address::address_from_bech32,
-	events::AbciEvent,
+	events::CosmosEvent,
 	handler::AnteDecorator,
 	msgservice::MsgServiceRouter,
 	tx::{Account, Gas},
@@ -278,12 +278,12 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub fn deposit_event)]
 	pub enum Event {
-		Executed { gas_wanted: u64, gas_used: u64, events: Vec<AbciEvent> },
+		Executed { gas_wanted: u64, gas_used: u64, events: Vec<CosmosEvent> },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		ModuleError { codespace: u8, code: u8 },
+		CosmosError { codespace: u8, code: u8 },
 	}
 
 	#[pallet::call]
@@ -368,7 +368,7 @@ impl<T: Config> Pallet<T> {
 
 	pub fn apply_validated_transaction(_source: H160, tx: Tx) -> DispatchResultWithPostInfo {
 		let mut total_weight = T::WeightInfo::default_weight();
-		let mut events = Vec::<AbciEvent>::new();
+		let mut events = Vec::<CosmosEvent>::new();
 
 		let body = tx.body.ok_or(DispatchErrorWithPostInfo {
 			post_info: PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes },

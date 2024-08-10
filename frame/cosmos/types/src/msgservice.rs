@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::events::AbciEvent;
+use crate::events::CosmosEvent;
 use cosmos_sdk_proto::Any;
 use frame_support::weights::Weight;
 use sp_runtime::RuntimeString;
@@ -34,7 +34,7 @@ pub enum MsgHandlerError {
 }
 
 pub trait MsgHandler {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<AbciEvent>), MsgHandlerErrorInfo>;
+	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo>;
 }
 
 pub trait MsgServiceRouter {

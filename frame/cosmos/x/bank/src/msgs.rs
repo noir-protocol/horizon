@@ -31,7 +31,7 @@ use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	address::address_from_bech32,
-	events::{AbciEvent, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
+	events::{CosmosEvent, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
 	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
@@ -50,7 +50,7 @@ impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgSendHandler<T>
 where
 	T: pallet_cosmos::Config,
 {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<AbciEvent>), MsgHandlerErrorInfo> {
+	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
 		let MsgSend { from_address, to_address, amount } = MsgSend::decode(&mut &*msg.value)
@@ -80,7 +80,7 @@ where
 		from_address: String,
 		to_address: String,
 		amount: Vec<Coin>,
-	) -> Result<(Weight, Vec<AbciEvent>), MsgHandlerErrorInfo> {
+	) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
 		let from_addr = address_from_bech32(&from_address).map_err(|_| MsgHandlerErrorInfo {
@@ -128,7 +128,7 @@ where
 			}
 		}
 
-		let msg_event = pallet_cosmos_types::events::AbciEvent {
+		let msg_event = pallet_cosmos_types::events::CosmosEvent {
 			r#type: EVENT_TYPE_TRANSFER.into(),
 			attributes: sp_std::vec![
 				EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from_address.into() },
