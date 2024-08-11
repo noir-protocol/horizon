@@ -15,22 +15,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::events::CosmosEvent;
+use crate::{errors::CosmosError, events::CosmosEvent};
 use cosmos_sdk_proto::Any;
 use frame_support::weights::Weight;
-use sp_runtime::RuntimeString;
 use sp_std::vec::Vec;
 
 pub struct MsgHandlerErrorInfo {
 	pub weight: Weight,
-	pub error: MsgHandlerError,
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum MsgHandlerError {
-	InvalidMsg,
-	ParseAmountError,
-	Custom(RuntimeString),
+	pub error: CosmosError,
 }
 
 pub trait MsgHandler {

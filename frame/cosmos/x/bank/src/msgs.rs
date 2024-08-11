@@ -31,11 +31,12 @@ use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	address::address_from_bech32,
+	errors::RootError,
 	events::{CosmosEvent, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
-	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
+	msgservice::MsgHandlerErrorInfo,
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
-use sp_runtime::{format_runtime_string, SaturatedConversion};
+use sp_runtime::SaturatedConversion;
 use sp_std::vec::Vec;
 
 pub struct MsgSendHandler<T>(PhantomData<T>);
@@ -56,7 +57,7 @@ where
 		let MsgSend { from_address, to_address, amount } = MsgSend::decode(&mut &*msg.value)
 			.map_err(|_| MsgHandlerErrorInfo {
 				weight: total_weight,
-				error: MsgHandlerError::InvalidMsg,
+				error: RootError::UnpackAnyError.into(),
 			})?;
 
 		match Self::send_coins(from_address, to_address, amount) {
@@ -85,12 +86,12 @@ where
 
 		let from_addr = address_from_bech32(&from_address).map_err(|_| MsgHandlerErrorInfo {
 			weight: total_weight,
-			error: MsgHandlerError::InvalidMsg,
+			error: RootError::InvalidAddress.into(),
 		})?;
 
 		let to_addr = address_from_bech32(&to_address).map_err(|_| MsgHandlerErrorInfo {
 			weight: total_weight,
-			error: MsgHandlerError::InvalidMsg,
+			error: RootError::InvalidAddress.into(),
 		})?;
 
 		let from_account = T::AddressMapping::into_account_id(from_addr);
@@ -106,14 +107,14 @@ where
 						.parse::<u128>()
 						.map_err(|_| MsgHandlerErrorInfo {
 							weight: total_weight,
-							error: MsgHandlerError::ParseAmountError,
+							error: RootError::InvalidCoins.into(),
 						})?
 						.saturated_into(),
 					ExistenceRequirement::KeepAlive,
 				)
 				.map_err(|_| MsgHandlerErrorInfo {
 					weight: total_weight,
-					error: MsgHandlerError::Custom(format_runtime_string!("Failed to transfer")),
+					error: RootError::InsufficientFunds.into(),
 				})?;
 
 				total_weight = total_weight.saturating_add(
@@ -123,7 +124,7 @@ where
 				// TODO: Asset support planned
 				return Err(MsgHandlerErrorInfo {
 					weight: total_weight,
-					error: MsgHandlerError::InvalidMsg,
+					error: RootError::NotSupported.into(),
 				});
 			}
 		}

@@ -36,6 +36,7 @@ use frame_support::{
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use pallet_cosmos_types::{
 	address::address_from_bech32,
+	errors::{CosmosError, RootError},
 	events::CosmosEvent,
 	handler::AnteDecorator,
 	msgservice::MsgServiceRouter,
@@ -283,7 +284,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		CosmosError { codespace: u8, code: u8 },
+		CosmosError(CosmosError),
 	}
 
 	#[pallet::call]
@@ -315,7 +316,7 @@ pub mod pallet {
 					actual_weight: Some(T::WeightInfo::default_weight()),
 					pays_fee: Pays::Yes,
 				},
-				error: DispatchError::Other("Failed to decode transaction"),
+				error: Error::<T>::CosmosError(RootError::TxDecodeError.into()).into(),
 			})?;
 
 			Self::apply_validated_transaction(source, tx)
@@ -372,7 +373,7 @@ impl<T: Config> Pallet<T> {
 
 		let body = tx.body.ok_or(DispatchErrorWithPostInfo {
 			post_info: PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes },
-			error: DispatchError::Other("Empty transaction body"),
+			error: Error::<T>::CosmosError(RootError::TxDecodeError.into()).into(),
 		})?;
 
 		for msg in body.messages.iter() {
@@ -382,7 +383,7 @@ impl<T: Config> Pallet<T> {
 						actual_weight: Some(total_weight),
 						pays_fee: Pays::Yes,
 					},
-					error: DispatchError::Other("Unknown message type"),
+					error: Error::<T>::CosmosError(RootError::UnknownRequest.into()).into(),
 				})?;
 			match handler.handle(msg) {
 				Ok((weight, msg_events)) => {
@@ -397,7 +398,7 @@ impl<T: Config> Pallet<T> {
 							actual_weight: Some(total_weight),
 							pays_fee: Pays::Yes,
 						},
-						error: DispatchError::Other("Failed to handle message"),
+						error: Error::<T>::CosmosError(e.error).into(),
 					});
 				},
 			}
