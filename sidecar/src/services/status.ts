@@ -21,10 +21,7 @@ export class StatusService implements ApiService {
       await (await this.chainApi.at(hash)).query.timestamp.now()
     ).toString();
     const blockTime = new Date(parseInt(timestamp)).toISOString();
-    let blockHash = hash;
-    if (blockHash.startsWith("0x")) {
-      blockHash = blockHash.substring(2);
-    }
+    const blockHash = hash.startsWith("0x") ? hash.slice(2) : hash;
 
     const endpoint = this.config.get<string>("server.endpoint");
     const network = this.config.get<string>("chain.network");

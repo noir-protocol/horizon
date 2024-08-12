@@ -25,9 +25,8 @@ export class TxService implements ApiService {
     const rawTx = `0x${Buffer.from(txBytes, 'base64').toString('hex')}`;
 
     let txHash = (await this.chainApi.rpc['cosm']['broadcastTx'](rawTx)).toString();
-    if (txHash.startsWith('0x')) {
-      txHash = txHash.substring(2);
-    }
+    txHash = txHash.startsWith('0x') ? txHash.slice(2) : txHash;
+
     console.debug(`txHash: ${txHash.toLowerCase()}`);
 
     return {
@@ -75,9 +74,7 @@ export class TxService implements ApiService {
     extrinsicIndex: number,
     header: any
   ): Promise<void> {
-    if (txRaw.startsWith('0x')) {
-      txRaw = txRaw.substring(2);
-    }
+    txRaw = txRaw.startsWith('0x') ? txRaw.slice(2) : txRaw;
     const txBytes = Buffer.from(txRaw, 'hex');
     const gasLimit = Tx.decode(txBytes).authInfo!.fee!.gasLimit;
 
