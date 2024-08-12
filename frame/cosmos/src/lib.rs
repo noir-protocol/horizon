@@ -221,7 +221,6 @@ pub mod pallet {
 			type MaxMemoCharacters = MaxMemoCharacters;
 			type NativeDenom = NativeDenom;
 			type StringLimit = StringLimit;
-			type MsgServiceRouter = ();
 			type ChainId = ChainId;
 			type MsgFilter = MsgFilter;
 			type GasToWeight = GasToWeight;
@@ -253,6 +252,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type StringLimit: Get<u32>;
 		/// Router for handling message services.
+		#[pallet::no_default]
 		type MsgServiceRouter: MsgServiceRouter;
 		/// The chain ID.
 		#[pallet::constant]

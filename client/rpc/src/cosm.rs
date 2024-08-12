@@ -18,7 +18,7 @@
 
 use crate::internal_error;
 use futures::future::TryFutureExt;
-use hp_rpc::{CosmosTxRuntimeApi, SimulateResponse};
+use hp_rpc::{CosmosTxRuntimeApi, SimulateError, SimulateResponse};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
@@ -83,6 +83,10 @@ where
 		self.client
 			.runtime_api()
 			.simulate(best_hash, tx_bytes.to_vec())
-			.map_err(internal_error)
+			.map_err(internal_error)?
+			.map_err(|e| match e {
+				SimulateError::InvalidTx => internal_error("invalid tx"),
+				SimulateError::UnknownError => internal_error("unknown error"),
+			})
 	}
 }

@@ -49,18 +49,18 @@ use frame_support::{
 };
 use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
-use hp_rpc::{GasInfo, SimulateResponse};
-use msgs::MsgServiceRouter;
+use hp_rpc::{GasInfo, SimulateError, SimulateResponse};
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::tx::Gas;
+use pallet_cosmos_types::{address::address_from_bech32, tx::Gas};
 use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
+use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata, H160};
+use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata};
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	traits::{
@@ -342,7 +342,7 @@ impl pallet_cosmos::Config for Runtime {
 	/// The maximum length of string value.
 	type StringLimit = StringLimit;
 	/// Router for handling message services.
-	type MsgServiceRouter = MsgServiceRouter<Self>;
+	type MsgServiceRouter = msgs::MsgServiceRouter<Self>;
 	/// The chain ID.
 	type ChainId = ChainId;
 	/// The message filter.
@@ -586,39 +586,22 @@ impl_runtime_apis! {
 			)
 		}
 
-		fn simulate(tx_bytes: Vec<u8>) -> SimulateResponse {
-			let tx = Tx::decode(&mut &*tx_bytes).unwrap();
-			let auth_info = tx.auth_info.as_ref().unwrap();
+		fn simulate(tx_bytes: Vec<u8>) -> Result<SimulateResponse, SimulateError> {
+			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| SimulateError::InvalidTx)?;
 
-			let actual_weight = match pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx.clone()) {
-				Ok(post_info) => post_info.actual_weight,
-				Err(e) => e.post_info.actual_weight,
-			};
+			let fee_payer = <Runtime as pallet_cosmos::Config>::SigVerifiableTx::fee_payer(&tx).map_err(|_| SimulateError::InvalidTx)?;
+			let address = address_from_bech32(&fee_payer).map_err(|_| SimulateError::InvalidTx)?;
 
-			if let Some((gas_wanted, gas_used, events)) = System::read_events_no_consensus()
+			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(address, tx.clone()).map_err(|_| SimulateError::UnknownError)?;
+
+			System::read_events_no_consensus()
 				.find_map(|record| {
 					if let RuntimeEvent::Cosmos(pallet_cosmos::Event::Executed { gas_wanted, gas_used, events }) = record.event {
-						Some((gas_wanted, gas_used, events))
+						Some(SimulateResponse{gas_info: GasInfo { gas_wanted, gas_used }, events})
 					} else {
 						None
 					}
-				}) {
-					SimulateResponse {
-						gas_info: GasInfo {
-							gas_wanted,
-							gas_used,
-						},
-						events
-					}
-				} else {
-					SimulateResponse {
-						gas_info: GasInfo {
-							gas_wanted: auth_info.fee.as_ref().unwrap().gas_limit,
-							gas_used: <Runtime as pallet_cosmos::Config>::WeightToGas::convert(actual_weight.unwrap()),
-						},
-						events: Vec::new(),
-					}
-				}
+				}).ok_or(SimulateError::UnknownError)
 		}
 	}
 
