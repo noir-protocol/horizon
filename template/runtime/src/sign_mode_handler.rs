@@ -55,8 +55,7 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 					}.encode_to_vec()
 				},
 				127 /* SIGN_MODE_LEGACY_AMINO_JSON */ => {
-					let auth_info = tx.auth_info.as_ref().ok_or(SignModeHandlerError::EmptyAuthInfo)?;
-					let fee = auth_info.fee.as_ref().ok_or(SignModeHandlerError::EmptyFee)?;
+					let fee = tx.auth_info.as_ref().and_then(|auth_info| auth_info.fee.as_ref()).ok_or(SignModeHandlerError::EmptyFee)?;
 					let body = tx.body.as_ref().ok_or(SignModeHandlerError::EmptyTxBody)?;
 
 					let mut coins = Vec::<Value>::new();

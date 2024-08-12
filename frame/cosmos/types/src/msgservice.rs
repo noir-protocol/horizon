@@ -15,34 +15,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::events::AbciEvent;
+use crate::{errors::CosmosError, events::CosmosEvent};
 use cosmos_sdk_proto::Any;
 use frame_support::weights::Weight;
-use sp_runtime::RuntimeString;
 use sp_std::vec::Vec;
 
 pub struct MsgHandlerErrorInfo {
 	pub weight: Weight,
-	pub error: MsgHandlerError,
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum MsgHandlerError {
-	InvalidMsg,
-	ParseAmountError,
-	Custom(RuntimeString),
+	pub error: CosmosError,
 }
 
 pub trait MsgHandler {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<AbciEvent>), MsgHandlerErrorInfo>;
+	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo>;
 }
 
 pub trait MsgServiceRouter {
 	fn route(type_url: &str) -> Option<sp_std::boxed::Box<dyn MsgHandler>>;
-}
-
-impl MsgServiceRouter for () {
-	fn route(_type_url: &str) -> Option<sp_std::boxed::Box<dyn MsgHandler>> {
-		None
-	}
 }

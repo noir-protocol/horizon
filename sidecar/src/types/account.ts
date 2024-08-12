@@ -1,5 +1,3 @@
-import Dummy from "../constants/dummy.js";
-
 export class AccountResponse {
   account: BaseAccount;
 

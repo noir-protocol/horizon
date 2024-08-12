@@ -31,11 +31,12 @@ use pallet_balances::WeightInfo;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	address::address_from_bech32,
-	events::{AbciEvent, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
-	msgservice::{MsgHandlerError, MsgHandlerErrorInfo},
+	errors::RootError,
+	events::{CosmosEvent, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
+	msgservice::MsgHandlerErrorInfo,
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
-use sp_runtime::{format_runtime_string, SaturatedConversion};
+use sp_runtime::SaturatedConversion;
 use sp_std::vec::Vec;
 
 pub struct MsgSendHandler<T>(PhantomData<T>);
@@ -50,13 +51,13 @@ impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgSendHandler<T>
 where
 	T: pallet_cosmos::Config,
 {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<AbciEvent>), MsgHandlerErrorInfo> {
+	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
 		let MsgSend { from_address, to_address, amount } = MsgSend::decode(&mut &*msg.value)
 			.map_err(|_| MsgHandlerErrorInfo {
 				weight: total_weight,
-				error: MsgHandlerError::InvalidMsg,
+				error: RootError::UnpackAnyError.into(),
 			})?;
 
 		match Self::send_coins(from_address, to_address, amount) {
@@ -80,17 +81,17 @@ where
 		from_address: String,
 		to_address: String,
 		amount: Vec<Coin>,
-	) -> Result<(Weight, Vec<AbciEvent>), MsgHandlerErrorInfo> {
+	) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
 		let mut total_weight = Weight::zero();
 
 		let from_addr = address_from_bech32(&from_address).map_err(|_| MsgHandlerErrorInfo {
 			weight: total_weight,
-			error: MsgHandlerError::InvalidMsg,
+			error: RootError::InvalidAddress.into(),
 		})?;
 
 		let to_addr = address_from_bech32(&to_address).map_err(|_| MsgHandlerErrorInfo {
 			weight: total_weight,
-			error: MsgHandlerError::InvalidMsg,
+			error: RootError::InvalidAddress.into(),
 		})?;
 
 		let from_account = T::AddressMapping::into_account_id(from_addr);
@@ -106,14 +107,14 @@ where
 						.parse::<u128>()
 						.map_err(|_| MsgHandlerErrorInfo {
 							weight: total_weight,
-							error: MsgHandlerError::ParseAmountError,
+							error: RootError::InvalidCoins.into(),
 						})?
 						.saturated_into(),
 					ExistenceRequirement::KeepAlive,
 				)
 				.map_err(|_| MsgHandlerErrorInfo {
 					weight: total_weight,
-					error: MsgHandlerError::Custom(format_runtime_string!("Failed to transfer")),
+					error: RootError::InsufficientFunds.into(),
 				})?;
 
 				total_weight = total_weight.saturating_add(
@@ -123,12 +124,12 @@ where
 				// TODO: Asset support planned
 				return Err(MsgHandlerErrorInfo {
 					weight: total_weight,
-					error: MsgHandlerError::InvalidMsg,
+					error: RootError::NotSupported.into(),
 				});
 			}
 		}
 
-		let msg_event = pallet_cosmos_types::events::AbciEvent {
+		let msg_event = pallet_cosmos_types::events::CosmosEvent {
 			r#type: EVENT_TYPE_TRANSFER.into(),
 			attributes: sp_std::vec![
 				EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from_address.into() },

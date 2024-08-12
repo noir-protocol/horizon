@@ -27,7 +27,7 @@ export class HorizonAccountService implements IAccountService {
     let origin = originRaw.toString();
     if (origin) {
       key = Buffer.from(
-        origin.startsWith("0x") ? origin.substring(2) : origin,
+        origin.startsWith("0x") ? origin.slice(2) : origin,
         "hex"
       ).toString("base64");
     } else {

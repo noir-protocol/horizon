@@ -18,16 +18,16 @@
 
 use pallet_cosmos_types::msgservice::MsgHandler;
 use pallet_cosmos_x_bank::msgs::MsgSendHandler;
+use sp_std::{boxed::Box, marker::PhantomData};
 
-pub struct MsgServiceRouter<T>(sp_std::marker::PhantomData<T>);
+pub struct MsgServiceRouter<T>(PhantomData<T>);
 impl<T> pallet_cosmos_types::msgservice::MsgServiceRouter for MsgServiceRouter<T>
 where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
-	fn route(type_url: &str) -> Option<sp_std::boxed::Box<dyn MsgHandler>> {
+	fn route(type_url: &str) -> Option<Box<dyn MsgHandler>> {
 		match type_url {
-			"/cosmos.bank.v1beta1.MsgSend" =>
-				Some(sp_std::boxed::Box::<MsgSendHandler<T>>::default()),
+			"/cosmos.bank.v1beta1.MsgSend" => Some(Box::<MsgSendHandler<T>>::default()),
 			_ => None,
 		}
 	}

@@ -32,8 +32,8 @@ pub const ATTRIBUTE_KEY_AMOUNT: &str = "amount";
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
 #[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
-pub struct AbciEvent {
-	#[serde(rename = "type")]
+pub struct CosmosEvent {
+	#[cfg_attr(feature = "with-serde", serde(rename = "type"))]
 	pub r#type: Vec<u8>,
 	pub attributes: Vec<EventAttribute>,
 }
