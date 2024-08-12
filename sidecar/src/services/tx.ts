@@ -10,7 +10,7 @@ import Long from "long";
 import { createHash } from "crypto";
 import { Tx } from "cosmjs-types/cosmos/tx/v1beta1/tx.js";
 
-type TransactResult = { code: number; gasUsed: number };
+type TransactResult = { codespace: string, code: number; gasUsed: number };
 
 export class TxService implements ApiService {
   chainApi: ApiPromise;
@@ -83,7 +83,7 @@ export class TxService implements ApiService {
 
     const txHash = createHash('sha256').update(Buffer.from(txRaw, 'hex')).digest('hex');
 
-    const { code, gasUsed } = await this.checkResult(header, extrinsicIndex);
+    const { codespace, code, gasUsed } = await this.checkResult(header, extrinsicIndex);
     const txResult: ResultTx = {
       hash: `${txHash.toUpperCase()}`,
       height: header.number.toString(),
@@ -96,7 +96,7 @@ export class TxService implements ApiService {
         gas_wanted: gasLimit.toString(),
         gas_used: gasUsed.toString(),
         events: [],
-        codespace: '',
+        codespace,
       },
       tx: txBytes.toString('base64'),
     };
@@ -127,11 +127,23 @@ export class TxService implements ApiService {
           console.debug(`gasUsed: ${gas_used}`);
           console.debug(`events: ${JSON.stringify(events)}`);
 
-          return { code: 0, gasUsed: gas_used };
+          return { codespace: '', code: 0, gasUsed: gas_used };
         } else {
           console.debug(JSON.parse(data));
+          let [{ module: { index, error } }, info] = JSON.parse(data);
 
-          return { code: 0, gasUsed: 0 };
+          if (error.startsWith('0x')) {
+            error = error.slice(2);
+          }
+          const errors = Uint8Array.from(Buffer.from(error, 'hex'));
+
+          const codespace = errors[1];
+          const code = errors[2]; 
+
+          const weight = info.weight.refTime;
+
+          // TODO: codespace and gasUsed will be transformed proper values 
+          return { codespace: 'sdk', code, gasUsed: weight };
         }
       });
     return result[0];
