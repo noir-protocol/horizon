@@ -40,13 +40,14 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::{fungible, Fortitude, Preservation},
-		ConstBool, ConstU32, ConstU8, Contains, OnTimestampSet,
+		AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU32, ConstU8, Contains, OnTimestampSet,
 	},
 	weights::{
 		constants::{RocksDbWeight as RuntimeDbWeight, WEIGHT_REF_TIME_PER_MILLIS},
 		IdentityFee, Weight,
 	},
 };
+use frame_system::EnsureRoot;
 use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use hp_rpc::{GasInfo, SimulateError, SimulateResponse};
@@ -62,7 +63,7 @@ use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
 use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata};
 use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys,
+	codec, create_runtime_str, generic, impl_opaque_keys,
 	traits::{
 		AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, DispatchInfoOf, Dispatchable,
 		IdentifyAccount, NumberFor, One, PostDispatchInfoOf, Verify,
@@ -207,6 +208,29 @@ impl frame_system::Config for Runtime {
 	type MaxConsumers = ConstU32<16>;
 }
 
+type AssetId = u32;
+
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type AssetIdParameter = codec::Compact<AssetId>;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = ConstU128<2>;
+	type AssetAccountDeposit = ConstU128<2>;
+	type MetadataDepositBase = ConstU128<0>;
+	type MetadataDepositPerByte = ConstU128<0>;
+	type ApprovalDeposit = ConstU128<0>;
+	type StringLimit = ConstU32<20>;
+	type Freezer = ();
+	type Extra = ();
+	type CallbackHandle = ();
+	type WeightInfo = ();
+	type RemoveItemsLimit = ConstU32<1000>;
+}
+
 parameter_types! {
 	pub const MaxAuthorities: u32 = 100;
 }
@@ -329,8 +353,15 @@ parameter_types! {
 impl pallet_cosmos::Config for Runtime {
 	/// Mapping an address to an account id.
 	type AddressMapping = compat::cosm::HashedAddressMapping<Self, BlakeTwo256>;
-	/// Currency type used for withdrawals and balance storage.
-	type Currency = Balances;
+	/// Native asset type.
+	type NativeAsset = Balances;
+	/// Type of an account balance.
+	type Balance = Balance;
+	/// Type of a tradable asset id.
+	/// The [`Ord`] constraint is required for [`BoundedBTreeMap`].
+	type AssetId = AssetId;
+	/// Interface from which we are going to execute assets operations.
+	type Assets = Assets;
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
 	/// Verify the validity of a Cosmos transaction.
@@ -377,13 +408,14 @@ impl pallet_sudo::Config for Runtime {
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime {
-		Aura: pallet_aura,
+		System: frame_system,
 		Balances: pallet_balances,
+		Assets: pallet_assets,
+		Aura: pallet_aura,
 		Cosmos: pallet_cosmos,
 		CosmosAccounts: pallet_cosmos_accounts,
 		Grandpa: pallet_grandpa,
 		Sudo: pallet_sudo,
-		System: frame_system,
 		Timestamp: pallet_timestamp,
 		TransactionPayment: pallet_transaction_payment,
 	}

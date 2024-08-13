@@ -100,7 +100,7 @@ where
 
 		for amt in amount.iter() {
 			if T::NativeDenom::get() == amt.denom.as_bytes().to_vec() {
-				T::Currency::transfer(
+				T::NativeAsset::transfer(
 					&from_account,
 					&to_account,
 					amt.amount

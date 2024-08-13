@@ -28,7 +28,7 @@ use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchResultWithPostInfo, InvalidTransaction, Pays},
 	traits::{
-		tokens::{fungible::Inspect, Fortitude, Preservation},
+		tokens::{fungible::Inspect, fungibles, AssetId, Balance, Fortitude, Preservation},
 		Currency, Get,
 	},
 	weights::Weight,
@@ -171,10 +171,6 @@ pub mod pallet {
 	#[pallet::origin]
 	pub type Origin = RawOrigin;
 
-	/// Type alias for currency balance.
-	pub type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
 	/// Default implementations of [`DefaultConfig`], which can be used to implement [`Config`].
 	pub mod config_preludes {
 		use super::*;
@@ -218,6 +214,8 @@ pub mod pallet {
 			#[inject_runtime_type]
 			type RuntimeEvent = ();
 			type AnteHandler = ();
+			type Balance = u64;
+			type AssetId = u32;
 			type MaxMemoCharacters = MaxMemoCharacters;
 			type NativeDenom = NativeDenom;
 			type StringLimit = StringLimit;
@@ -234,9 +232,18 @@ pub mod pallet {
 		/// Mapping an address to an account id.
 		#[pallet::no_default]
 		type AddressMapping: AddressMapping<Self::AccountId>;
-		/// Currency type used for withdrawals and balance storage.
+		/// Native asset type.
 		#[pallet::no_default]
-		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
+		type NativeAsset: Currency<Self::AccountId> + Inspect<Self::AccountId>;
+		/// Type of an account balance.
+		type Balance: Balance + Into<u128>;
+		/// Type of a tradable asset id.
+		/// The [`Ord`] constraint is required for [`BoundedBTreeMap`].
+		type AssetId: AssetId + Ord;
+		/// Interface from which we are going to execute assets operations.
+		#[pallet::no_default]
+		type Assets: fungibles::Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
+			+ fungibles::Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
 		/// The overarching event type.
 		#[pallet::no_default_bounds]
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -430,8 +437,11 @@ impl<T: Config> Pallet<T> {
 		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
 		// keepalive `true` takes into account ExistentialDeposit as part of what's considered
 		// liquid balance.
-		let balance =
-			T::Currency::reducible_balance(&account_id, Preservation::Preserve, Fortitude::Polite);
+		let balance = T::NativeAsset::reducible_balance(
+			&account_id,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		);
 
 		(
 			Account {
