@@ -99,7 +99,7 @@ where
 		total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
 
 		for amt in amount.iter() {
-			if T::NativeDenom::get() == amt.denom.as_bytes().to_vec() {
+			if T::NativeDenom::get() == amt.denom {
 				T::NativeAsset::transfer(
 					&from_account,
 					&to_account,

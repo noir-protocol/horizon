@@ -23,7 +23,10 @@ pub mod weights;
 
 pub use self::pallet::*;
 use crate::weights::WeightInfo;
-use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
+use cosmos_sdk_proto::{
+	cosmos::tx::v1beta1::Tx,
+	prost::{alloc::string::String, Message},
+};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchResultWithPostInfo, InvalidTransaction, Pays},
@@ -165,7 +168,6 @@ pub mod pallet {
 	use frame_support::{pallet_prelude::*, traits::Contains};
 
 	#[pallet::pallet]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::origin]
@@ -203,9 +205,8 @@ pub mod pallet {
 
 		parameter_types! {
 			pub const MaxMemoCharacters: u64 = 256;
-			pub const StringLimit: u32 = 128;
-			pub NativeDenom: BoundedVec<u8, StringLimit> = (*b"acdt").to_vec().try_into().unwrap();
-			pub ChainId: BoundedVec<u8, StringLimit> = (*b"dev").to_vec().try_into().unwrap();
+			pub NativeDenom: &'static str = "acdt";
+			pub ChainId: &'static str = "dev";
 			pub const TxSigLimit: u64 = 7;
 		}
 
@@ -218,7 +219,6 @@ pub mod pallet {
 			type AssetId = u32;
 			type MaxMemoCharacters = MaxMemoCharacters;
 			type NativeDenom = NativeDenom;
-			type StringLimit = StringLimit;
 			type ChainId = ChainId;
 			type MsgFilter = MsgFilter;
 			type GasToWeight = GasToWeight;
@@ -254,16 +254,13 @@ pub mod pallet {
 		type MaxMemoCharacters: Get<u64>;
 		/// The native denomination for the currency.
 		#[pallet::constant]
-		type NativeDenom: Get<BoundedVec<u8, Self::StringLimit>>;
-		/// The maximum length of string value.
-		#[pallet::constant]
-		type StringLimit: Get<u32>;
+		type NativeDenom: Get<&'static str>;
 		/// Router for handling message services.
 		#[pallet::no_default]
 		type MsgServiceRouter: MsgServiceRouter;
 		/// The chain ID.
 		#[pallet::constant]
-		type ChainId: Get<BoundedVec<u8, Self::StringLimit>>;
+		type ChainId: Get<&'static str>;
 		/// The message filter.
 		type MsgFilter: Contains<Vec<u8>>;
 		/// Converter for converting Gas to Weight.
@@ -281,6 +278,9 @@ pub mod pallet {
 		type SignModeHandler: SignModeHandler;
 		#[pallet::no_default]
 		type WeightInfo: WeightInfo;
+		#[pallet::no_default]
+		/// A way to convert from cosmos coin denom to asset id.
+		type DenomToAssetId: Convert<String, Result<Self::AssetId, ()>>;
 	}
 
 	#[pallet::event]
@@ -305,15 +305,10 @@ pub mod pallet {
 			use cosmos_sdk_proto::traits::Message;
 			use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
 
-			match Tx::decode(&mut &tx_bytes[..]) {
-				Ok(tx) => {
-					match tx.auth_info.and_then(|auth_info| auth_info.fee) {
-						Some(fee) => T::GasToWeight::convert(fee.gas_limit),
-						None => T::WeightInfo::default_weight(),
-					}
-				}
-				Err(_) => T::WeightInfo::default_weight(),
-			}
+			Tx::decode(&mut &tx_bytes[..])
+				.ok()
+				.and_then(|tx| tx.auth_info.and_then(|auth_info| auth_info.fee))
+				.map_or(T::WeightInfo::default_weight(), |fee| T::GasToWeight::convert(fee.gas_limit))
 		 })]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;

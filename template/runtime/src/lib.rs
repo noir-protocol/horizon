@@ -28,6 +28,7 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod ante;
 mod compat;
+mod denom;
 mod msgs;
 mod sig_verifiable_tx;
 mod sign_mode_handler;
@@ -69,7 +70,7 @@ use sp_runtime::{
 		IdentifyAccount, NumberFor, One, PostDispatchInfoOf, Verify,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
-	ApplyExtrinsicResult, BoundedVec, ExtrinsicInclusionMode, Perbill,
+	ApplyExtrinsicResult, ExtrinsicInclusionMode, Perbill,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -208,7 +209,7 @@ impl frame_system::Config for Runtime {
 	type MaxConsumers = ConstU32<16>;
 }
 
-type AssetId = u32;
+type AssetId = u128;
 
 impl pallet_assets::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
@@ -344,9 +345,8 @@ impl Convert<Weight, Gas> for WeightToGas {
 
 parameter_types! {
 	pub const MaxMemoCharacters: u64 = 256;
-	pub const StringLimit: u32 = 128;
-	pub NativeDenom: BoundedVec<u8, StringLimit> = (*b"acdt").to_vec().try_into().unwrap();
-	pub ChainId: BoundedVec<u8, StringLimit> = (*b"dev").to_vec().try_into().unwrap();
+	pub NativeDenom: &'static str = "acdt";
+	pub ChainId: &'static str = "dev";
 	pub const TxSigLimit: u64 = 7;
 }
 
@@ -370,8 +370,6 @@ impl pallet_cosmos::Config for Runtime {
 	type MaxMemoCharacters = MaxMemoCharacters;
 	/// The native denomination for the currency.
 	type NativeDenom = NativeDenom;
-	/// The maximum length of string value.
-	type StringLimit = StringLimit;
 	/// Router for handling message services.
 	type MsgServiceRouter = msgs::MsgServiceRouter<Self>;
 	/// The chain ID.
@@ -390,6 +388,8 @@ impl pallet_cosmos::Config for Runtime {
 	type SignModeHandler = sign_mode_handler::SignModeHandler;
 
 	type WeightInfo = pallet_cosmos::weights::CosmosWeight<Runtime>;
+
+	type DenomToAssetId = denom::DenomToAssetId;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
