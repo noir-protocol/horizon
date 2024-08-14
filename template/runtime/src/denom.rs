@@ -23,8 +23,10 @@ use sp_runtime::traits::Convert;
 pub struct DenomToAssetId;
 impl Convert<String, Result<AssetId, ()>> for DenomToAssetId {
 	fn convert(denom: String) -> Result<AssetId, ()> {
-		let re = regex::Regex::new("^[a-zA-Z][a-zA-Z0-9/:._-]{2,15}$").unwrap();
-		if !re.is_match(&denom) {
+		if denom.len() < 3 || denom.len() > 16 {
+			return Err(());
+		}
+		if denom.chars().any(|c| !c.is_alphanumeric() && !"/:._-".contains(c)) {
 			return Err(());
 		}
 
@@ -47,11 +49,17 @@ mod tests {
 		let denom = "uatom".to_string();
 		assert_eq!(DenomToAssetId::convert(denom).unwrap(), 470021333365);
 
+		let denom = "stake".to_string();
+		assert_eq!(DenomToAssetId::convert(denom).unwrap(), 435593245811);
+
 		let denom = "deadbeafdeadbeaf".to_string();
 		assert_eq!(
 			DenomToAssetId::convert(denom).unwrap(),
 			136086964684135438130477273377637754212
 		);
+
+		let denom = "/:_".to_string();
+		assert_eq!(DenomToAssetId::convert(denom).unwrap(), 6240815);
 
 		let denom = "".to_string();
 		assert_err!(DenomToAssetId::convert(denom), ());
@@ -63,6 +71,9 @@ mod tests {
 		assert_err!(DenomToAssetId::convert(denom), ());
 
 		let denom = "deadbeafdeadbeafd".to_string();
+		assert_err!(DenomToAssetId::convert(denom), ());
+
+		let denom = "+++".to_string();
 		assert_err!(DenomToAssetId::convert(denom), ());
 	}
 }

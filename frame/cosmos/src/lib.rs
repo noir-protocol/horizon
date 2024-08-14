@@ -278,8 +278,8 @@ pub mod pallet {
 		type SignModeHandler: SignModeHandler;
 		#[pallet::no_default]
 		type WeightInfo: WeightInfo;
-		#[pallet::no_default]
 		/// A way to convert from cosmos coin denom to asset id.
+		#[pallet::no_default]
 		type DenomToAssetId: Convert<String, Result<Self::AssetId, ()>>;
 	}
 

@@ -35,7 +35,6 @@ pub enum RootError {
 	InvalidAddress = 7,
 	InvalidCoins = 10,
 	UnpackAnyError = 34,
-	NotSupported = 37,
 }
 
 impl From<RootError> for CosmosError {
