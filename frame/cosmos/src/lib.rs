@@ -165,7 +165,10 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{pallet_prelude::*, traits::Contains};
+	use frame_support::{
+		pallet_prelude::*,
+		traits::{fungibles::metadata::Inspect as _, Contains},
+	};
 
 	#[pallet::pallet]
 	pub struct Pallet<T>(PhantomData<T>);
@@ -247,7 +250,7 @@ pub mod pallet {
 		type Balance: Balance + Into<u128>;
 		/// Type of a tradable asset id.
 		/// The [`Ord`] constraint is required for [`BoundedBTreeMap`].
-		type AssetId: AssetId + Ord;
+		type AssetId: AssetId + Ord + MaybeSerializeDeserialize;
 		/// Interface from which we are going to execute assets operations.
 		#[pallet::no_default]
 		type Assets: fungibles::Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
@@ -295,6 +298,26 @@ pub mod pallet {
 		type DenomToAsset: Convert<String, Result<Self::AssetId, ()>>;
 		#[pallet::constant]
 		type MaxDenomLimit: Get<u32>;
+	}
+
+	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
+	pub struct GenesisConfig<T: Config> {
+		pub assets: Vec<(Vec<u8>, T::AssetId)>,
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+		fn build(&self) {
+			for (symbol, asset_id) in &self.assets {
+				let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(symbol.clone())
+					.expect("Invalid denom");
+				assert!(DenomAssetRouter::<T>::get(denom.clone()).is_none());
+				assert!(*symbol == T::Assets::symbol(asset_id.clone()));
+
+				DenomAssetRouter::<T>::insert(denom, asset_id);
+			}
+		}
 	}
 
 	#[pallet::event]
