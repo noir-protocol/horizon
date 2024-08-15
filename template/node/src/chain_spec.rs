@@ -117,6 +117,9 @@ fn testnet_genesis(
 		"balances": {
 			"balances": endowed_accounts.iter().cloned().map(|k| (k, 1u128 << 60)).collect::<Vec<_>>(),
 		},
+		"cosmos": {
+			"assets": vec![("stake".as_bytes().to_vec(), 0)],
+		},
 		"cosmosAccounts": {
 			"accounts": endowed_accounts.to_vec(),
 		},
