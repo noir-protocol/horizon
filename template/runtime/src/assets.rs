@@ -16,17 +16,24 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use cosmos_sdk_proto::prost::alloc::string::String;
-use sp_runtime::{traits::Convert, BoundedVec};
+use frame_support::{ensure, traits::fungibles::metadata::Inspect};
+use sp_runtime::BoundedVec;
 
-pub struct DenomToAsset<T>(sp_std::marker::PhantomData<T>);
-impl<T> Convert<String, Result<T::AssetId, ()>> for DenomToAsset<T>
+pub struct AssetsCallback<T>(sp_std::marker::PhantomData<T>);
+impl<T> pallet_assets::AssetsCallback<T::AssetId, T::AccountId> for AssetsCallback<T>
 where
 	T: pallet_cosmos::Config,
 {
-	fn convert(denom: String) -> Result<T::AssetId, ()> {
-		let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(denom.as_bytes().to_vec())
-			.map_err(|_| ())?;
-		pallet_cosmos::DenomAssetRouter::<T>::get(denom).ok_or(())
+	fn created(id: &T::AssetId, _owner: &T::AccountId) -> Result<(), ()> {
+		let symbol = <T as pallet_cosmos::Config>::Assets::symbol(id.clone());
+		let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(symbol).map_err(|_| ())?;
+		ensure!(pallet_cosmos::DenomAssetRouter::<T>::get(denom.clone()).is_none(), ());
+		pallet_cosmos::DenomAssetRouter::<T>::insert(denom, id);
+
+		Ok(())
+	}
+
+	fn destroyed(_id: &T::AssetId) -> Result<(), ()> {
+		Ok(())
 	}
 }

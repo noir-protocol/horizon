@@ -27,6 +27,7 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod ante;
+mod assets;
 mod compat;
 mod denom;
 mod msgs;
@@ -227,7 +228,7 @@ impl pallet_assets::Config for Runtime {
 	type StringLimit = ConstU32<20>;
 	type Freezer = ();
 	type Extra = ();
-	type CallbackHandle = ();
+	type CallbackHandle = assets::AssetsCallback<Runtime>;
 	type WeightInfo = ();
 	type RemoveItemsLimit = ConstU32<1000>;
 }
@@ -348,6 +349,7 @@ parameter_types! {
 	pub NativeDenom: &'static str = "acdt";
 	pub ChainId: &'static str = "dev";
 	pub const TxSigLimit: u64 = 7;
+	pub const MaxDenomLimit: u32 = 128;
 }
 
 impl pallet_cosmos::Config for Runtime {
@@ -389,7 +391,9 @@ impl pallet_cosmos::Config for Runtime {
 
 	type WeightInfo = pallet_cosmos::weights::CosmosWeight<Runtime>;
 
-	type DenomToAssetId = denom::DenomToAssetId;
+	type DenomToAsset = denom::DenomToAsset<Runtime>;
+
+	type MaxDenomLimit = MaxDenomLimit;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {

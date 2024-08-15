@@ -177,6 +177,7 @@ pub mod pallet {
 	pub mod config_preludes {
 		use super::*;
 		use frame_support::{derive_impl, parameter_types};
+
 		pub struct TestDefaultConfig;
 
 		#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig, no_aggregated_types)]
@@ -208,6 +209,7 @@ pub mod pallet {
 			pub NativeDenom: &'static str = "acdt";
 			pub ChainId: &'static str = "dev";
 			pub const TxSigLimit: u64 = 7;
+			pub const MaxDenomLimit: u32 = 128;
 		}
 
 		#[frame_support::register_default_impl(TestDefaultConfig)]
@@ -224,8 +226,14 @@ pub mod pallet {
 			type GasToWeight = GasToWeight;
 			type WeightToGas = WeightToGas;
 			type TxSigLimit = TxSigLimit;
+			type MaxDenomLimit = MaxDenomLimit;
 		}
 	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn denom_to_asset)]
+	pub type DenomAssetRouter<T: Config> =
+		StorageMap<_, Twox64Concat, BoundedVec<u8, T::MaxDenomLimit>, T::AssetId, OptionQuery>;
 
 	#[pallet::config(with_default)]
 	pub trait Config: frame_system::Config {
@@ -243,7 +251,11 @@ pub mod pallet {
 		/// Interface from which we are going to execute assets operations.
 		#[pallet::no_default]
 		type Assets: fungibles::Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
-			+ fungibles::Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
+			+ fungibles::metadata::Inspect<
+				Self::AccountId,
+				Balance = Self::Balance,
+				AssetId = Self::AssetId,
+			> + fungibles::Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
 		/// The overarching event type.
 		#[pallet::no_default_bounds]
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -280,7 +292,9 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 		/// A way to convert from cosmos coin denom to asset id.
 		#[pallet::no_default]
-		type DenomToAssetId: Convert<String, Result<Self::AssetId, ()>>;
+		type DenomToAsset: Convert<String, Result<Self::AssetId, ()>>;
+		#[pallet::constant]
+		type MaxDenomLimit: Get<u32>;
 	}
 
 	#[pallet::event]
@@ -307,8 +321,11 @@ pub mod pallet {
 
 			Tx::decode(&mut &tx_bytes[..])
 				.ok()
-				.and_then(|tx| tx.auth_info.and_then(|auth_info| auth_info.fee))
-				.map_or(T::WeightInfo::default_weight(), |fee| T::GasToWeight::convert(fee.gas_limit))
+				.and_then(|tx| tx.auth_info)
+				.and_then(|auth_info| auth_info.fee)
+				.map_or(T::WeightInfo::default_weight(), |fee| {
+					T::GasToWeight::convert(fee.gas_limit)
+				})
 		 })]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
