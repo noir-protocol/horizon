@@ -324,6 +324,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub fn deposit_event)]
 	pub enum Event {
+		AnteHandled(Vec<CosmosEvent>),
 		Executed { gas_wanted: u64, gas_used: u64, events: Vec<CosmosEvent> },
 	}
 

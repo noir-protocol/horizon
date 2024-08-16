@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use core::str::FromStr;
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin},
 	prost::alloc::string::String,
@@ -32,6 +31,7 @@ use pallet_balances::WeightInfo as _;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	address::address_from_bech32,
+	coin::amount_to_string,
 	errors::RootError,
 	events::{CosmosEvent, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
 	msgservice::MsgHandlerErrorInfo,
@@ -157,43 +157,5 @@ where
 		};
 
 		Ok((total_weight, sp_std::vec![msg_event]))
-	}
-}
-
-pub fn amount_to_string(amount: &[Coin]) -> String {
-	let mut ret = String::from_str("").unwrap();
-	for (i, coin) in amount.iter().enumerate() {
-		ret.push_str(&coin.amount);
-		ret.push_str(&coin.denom);
-		if i < amount.len() - 1 {
-			ret.push(',');
-		}
-	}
-	ret
-}
-
-#[cfg(test)]
-mod tests {
-	use crate::msgs::amount_to_string;
-	use core::str::FromStr;
-	use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
-
-	#[test]
-	fn amount_to_string_test() {
-		let mut amounts = Vec::<Coin>::new();
-		assert_eq!(amount_to_string(&amounts), "");
-
-		amounts.push(Coin {
-			denom: String::from_str("uatom").unwrap(),
-			amount: String::from_str("1000").unwrap(),
-		});
-		assert_eq!(amount_to_string(&amounts), "1000uatom");
-
-		amounts.push(Coin {
-			denom: String::from_str("uatom").unwrap(),
-			amount: String::from_str("2000").unwrap(),
-		});
-
-		assert_eq!(amount_to_string(&amounts), "1000uatom,2000uatom");
 	}
 }

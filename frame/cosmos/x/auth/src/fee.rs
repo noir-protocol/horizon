@@ -26,7 +26,14 @@ use frame_support::{
 	},
 };
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::{address::address_from_bech32, handler::AnteDecorator};
+use pallet_cosmos_types::{
+	address::address_from_bech32,
+	coin::amount_to_string,
+	events::{
+		CosmosEvent, EventAttribute, ATTRIBUTE_KEY_FEE, ATTRIBUTE_KEY_FEE_PAYER, EVENT_TYPE_TX,
+	},
+	handler::AnteDecorator,
+};
 use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
 use sp_core::Get;
 use sp_runtime::{
@@ -88,6 +95,22 @@ where
 		let deduct_fees_from_acc = T::AddressMapping::into_account_id(deduct_fees_from);
 
 		Self::deduct_fees(&deduct_fees_from_acc, fee)?;
+
+		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::AnteHandled(sp_std::vec![
+			CosmosEvent {
+				r#type: EVENT_TYPE_TX.as_bytes().to_vec(),
+				attributes: sp_std::vec![
+					EventAttribute {
+						key: ATTRIBUTE_KEY_FEE.as_bytes().to_vec(),
+						value: amount_to_string(&fee.amount).as_bytes().to_vec()
+					},
+					EventAttribute {
+						key: ATTRIBUTE_KEY_FEE_PAYER.as_bytes().to_vec(),
+						value: fee_payer.as_bytes().to_vec(),
+					},
+				]
+			}
+		]));
 
 		Ok(ValidTransaction::default())
 	}
