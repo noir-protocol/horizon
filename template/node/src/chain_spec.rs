@@ -110,7 +110,7 @@ fn testnet_genesis(
 ) -> serde_json::Value {
 	serde_json::json!({
 		"assets": {
-			"assets": vec![(0, get_account_id_from_seed::<ecdsa::Public>("Alice"),  true, 2)],
+			"assets": vec![(0, get_account_id_from_seed::<ecdsa::Public>("Alice"),  true, 500)],
 			"metadata": vec![(0, "stake".as_bytes().to_vec(), "stake".as_bytes().to_vec(), 18)],
 			"accounts": vec![(0, get_account_id_from_seed::<ecdsa::Public>("Alice"), 1u128 << 60)],
 		},
