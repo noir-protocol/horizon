@@ -132,7 +132,7 @@ where
 					&from_account,
 					&to_account,
 					transfer_amount.saturated_into(),
-					Preservation::Protect,
+					Preservation::Preserve,
 				)
 				.map_err(|_| MsgHandlerErrorInfo {
 					weight: total_weight,

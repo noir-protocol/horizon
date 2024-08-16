@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizon.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -289,7 +289,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	/// Handler for withdrawing, refunding and depositing the transaction fee.
 	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
-	/// A fee mulitplier for `Operational` extrinsics to compute "virtual tip" to boost their
+	/// A fee multiplier for `Operational` extrinsics to compute "virtual tip" to boost their
 	/// `priority`.
 	type OperationalFeeMultiplier = ConstU8<5>;
 	/// Convert a weight value into a deductible fee based on the currency type.

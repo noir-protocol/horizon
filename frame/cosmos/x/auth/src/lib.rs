@@ -20,6 +20,7 @@
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
 pub mod basic;
+pub mod fee;
 pub mod msg;
 pub mod sigverify;
 
@@ -30,6 +31,6 @@ pub type AnteDecorators<T> = (
 	sigverify::ValidateSigCountDecorator<T>,
 	msg::KnownMsgDecorator<T>,
 	sigverify::SigVerificationDecorator<T>,
-	// TODO: Check fee
+	fee::DeductFeeDecorator<T>,
 	sigverify::IncrementSequenceDecorator<T>,
 );
