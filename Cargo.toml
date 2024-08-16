@@ -9,7 +9,7 @@ members = [
 	"frame/cosmos/x/auth/signing",
 	"frame/cosmos/x/bank",
 	"frame/cosmos/x/bank/types",
-	"frame/cosmos-accounts",
+	"frame/accounts",
 	"primitives/account",
 	"primitives/io",
 	"primitives/rpc",
@@ -42,6 +42,7 @@ frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
+pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 pallet-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
@@ -99,7 +100,7 @@ hp-crypto = { path = "primitives/crypto", default-features = false }
 hp-io = { path = "primitives/io", default-features = false }
 hp-rpc = { path = "primitives/rpc", default-features = false }
 pallet-cosmos = { path = "frame/cosmos", default-features = false }
-pallet-cosmos-accounts = { path = "frame/cosmos-accounts", default-features = false }
+pallet-cosmos-accounts = { path = "frame/accounts", default-features = false }
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
 pallet-cosmos-types = { path = "frame/cosmos/types", default-features = false }

@@ -23,12 +23,15 @@ pub mod weights;
 
 pub use self::pallet::*;
 use crate::weights::WeightInfo;
-use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
+use cosmos_sdk_proto::{
+	cosmos::tx::v1beta1::Tx,
+	prost::{alloc::string::String, Message},
+};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchResultWithPostInfo, InvalidTransaction, Pays},
 	traits::{
-		tokens::{fungible::Inspect, Fortitude, Preservation},
+		tokens::{fungible::Inspect, fungibles, AssetId, Balance, Fortitude, Preservation},
 		Currency, Get,
 	},
 	weights::Weight,
@@ -162,23 +165,22 @@ pub trait EnsureAddressOrigin<OuterOrigin> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::{pallet_prelude::*, traits::Contains};
+	use frame_support::{
+		pallet_prelude::*,
+		traits::{fungibles::metadata::Inspect as _, Contains},
+	};
 
 	#[pallet::pallet]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::origin]
 	pub type Origin = RawOrigin;
 
-	/// Type alias for currency balance.
-	pub type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
 	/// Default implementations of [`DefaultConfig`], which can be used to implement [`Config`].
 	pub mod config_preludes {
 		use super::*;
 		use frame_support::{derive_impl, parameter_types};
+
 		pub struct TestDefaultConfig;
 
 		#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig, no_aggregated_types)]
@@ -207,10 +209,10 @@ pub mod pallet {
 
 		parameter_types! {
 			pub const MaxMemoCharacters: u64 = 256;
-			pub const StringLimit: u32 = 128;
-			pub NativeDenom: BoundedVec<u8, StringLimit> = (*b"acdt").to_vec().try_into().unwrap();
-			pub ChainId: BoundedVec<u8, StringLimit> = (*b"dev").to_vec().try_into().unwrap();
+			pub NativeDenom: &'static str = "acdt";
+			pub ChainId: &'static str = "dev";
 			pub const TxSigLimit: u64 = 7;
+			pub const MaxDenomLimit: u32 = 128;
 		}
 
 		#[frame_support::register_default_impl(TestDefaultConfig)]
@@ -218,25 +220,45 @@ pub mod pallet {
 			#[inject_runtime_type]
 			type RuntimeEvent = ();
 			type AnteHandler = ();
+			type Balance = u64;
+			type AssetId = u32;
 			type MaxMemoCharacters = MaxMemoCharacters;
 			type NativeDenom = NativeDenom;
-			type StringLimit = StringLimit;
 			type ChainId = ChainId;
 			type MsgFilter = MsgFilter;
 			type GasToWeight = GasToWeight;
 			type WeightToGas = WeightToGas;
 			type TxSigLimit = TxSigLimit;
+			type MaxDenomLimit = MaxDenomLimit;
 		}
 	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn denom_to_asset)]
+	pub type DenomAssetRouter<T: Config> =
+		StorageMap<_, Twox64Concat, BoundedVec<u8, T::MaxDenomLimit>, T::AssetId, OptionQuery>;
 
 	#[pallet::config(with_default)]
 	pub trait Config: frame_system::Config {
 		/// Mapping an address to an account id.
 		#[pallet::no_default]
 		type AddressMapping: AddressMapping<Self::AccountId>;
-		/// Currency type used for withdrawals and balance storage.
+		/// Native asset type.
 		#[pallet::no_default]
-		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
+		type NativeAsset: Currency<Self::AccountId> + Inspect<Self::AccountId>;
+		/// Type of an account balance.
+		type Balance: Balance + Into<u128>;
+		/// Type of a tradable asset id.
+		/// The [`Ord`] constraint is required for [`BoundedBTreeMap`].
+		type AssetId: AssetId + Ord + MaybeSerializeDeserialize;
+		/// Interface from which we are going to execute assets operations.
+		#[pallet::no_default]
+		type Assets: fungibles::Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
+			+ fungibles::metadata::Inspect<
+				Self::AccountId,
+				Balance = Self::Balance,
+				AssetId = Self::AssetId,
+			> + fungibles::Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
 		/// The overarching event type.
 		#[pallet::no_default_bounds]
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -247,16 +269,13 @@ pub mod pallet {
 		type MaxMemoCharacters: Get<u64>;
 		/// The native denomination for the currency.
 		#[pallet::constant]
-		type NativeDenom: Get<BoundedVec<u8, Self::StringLimit>>;
-		/// The maximum length of string value.
-		#[pallet::constant]
-		type StringLimit: Get<u32>;
+		type NativeDenom: Get<&'static str>;
 		/// Router for handling message services.
 		#[pallet::no_default]
 		type MsgServiceRouter: MsgServiceRouter;
 		/// The chain ID.
 		#[pallet::constant]
-		type ChainId: Get<BoundedVec<u8, Self::StringLimit>>;
+		type ChainId: Get<&'static str>;
 		/// The message filter.
 		type MsgFilter: Contains<Vec<u8>>;
 		/// Converter for converting Gas to Weight.
@@ -274,6 +293,31 @@ pub mod pallet {
 		type SignModeHandler: SignModeHandler;
 		#[pallet::no_default]
 		type WeightInfo: WeightInfo;
+		/// A way to convert from cosmos coin denom to asset id.
+		#[pallet::no_default]
+		type DenomToAsset: Convert<String, Result<Self::AssetId, ()>>;
+		#[pallet::constant]
+		type MaxDenomLimit: Get<u32>;
+	}
+
+	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
+	pub struct GenesisConfig<T: Config> {
+		pub assets: Vec<(Vec<u8>, T::AssetId)>,
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+		fn build(&self) {
+			for (symbol, asset_id) in &self.assets {
+				let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(symbol.clone())
+					.expect("Invalid denom");
+				assert!(DenomAssetRouter::<T>::get(denom.clone()).is_none());
+				assert!(*symbol == T::Assets::symbol(asset_id.clone()));
+
+				DenomAssetRouter::<T>::insert(denom, asset_id);
+			}
+		}
 	}
 
 	#[pallet::event]
@@ -298,15 +342,13 @@ pub mod pallet {
 			use cosmos_sdk_proto::traits::Message;
 			use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
 
-			match Tx::decode(&mut &tx_bytes[..]) {
-				Ok(tx) => {
-					match tx.auth_info.and_then(|auth_info| auth_info.fee) {
-						Some(fee) => T::GasToWeight::convert(fee.gas_limit),
-						None => T::WeightInfo::default_weight(),
-					}
-				}
-				Err(_) => T::WeightInfo::default_weight(),
-			}
+			Tx::decode(&mut &tx_bytes[..])
+				.ok()
+				.and_then(|tx| tx.auth_info)
+				.and_then(|auth_info| auth_info.fee)
+				.map_or(T::WeightInfo::default_weight(), |fee| {
+					T::GasToWeight::convert(fee.gas_limit)
+				})
 		 })]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
@@ -430,8 +472,11 @@ impl<T: Config> Pallet<T> {
 		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
 		// keepalive `true` takes into account ExistentialDeposit as part of what's considered
 		// liquid balance.
-		let balance =
-			T::Currency::reducible_balance(&account_id, Preservation::Preserve, Fortitude::Polite);
+		let balance = T::NativeAsset::reducible_balance(
+			&account_id,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		);
 
 		(
 			Account {

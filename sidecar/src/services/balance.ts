@@ -34,12 +34,26 @@ export class BalanceService implements ApiService {
       amount = BigInt(free).toString();
     }
     const denom = this.config.get<string>("chain.denom");
+
+    const nativeBalance = { denom, amount };
+
+    let assets = [];
+    const metadata = await this.chainApi.query.assets.metadata.entries();
+    for (const [{ args: [assetId] }, value] of metadata) {
+      const asset = await this.chainApi.query.assets.account(assetId.toString(), origin)
+
+      if (asset) {
+        const denom = value.toHuman()['symbol'];
+        const amount = BigInt(asset.toJSON()['balance']).toString();
+
+        assets.push({ denom, amount });
+      }
+    }
+
     return {
       balances: [
-        {
-          denom,
-          amount,
-        },
+        nativeBalance,
+        ...assets,
       ],
       pagination: {
         nextKey: new Uint8Array(),

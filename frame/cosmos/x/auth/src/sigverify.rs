@@ -21,7 +21,7 @@ use cosmos_sdk_proto::{
 		crypto::{multisig::LegacyAminoPubKey, secp256k1},
 		tx::v1beta1::{ModeInfo, SignerInfo, Tx},
 	},
-	prost::{alloc::string::String, Message},
+	prost::{alloc::string::ToString, Message},
 	Any,
 };
 use hp_io::cosmos::secp256k1_ecdsa_verify;
@@ -87,8 +87,7 @@ where
 				.public_key
 				.as_ref()
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-			let chain_id = T::ChainId::get();
-			let chain_id = String::from_utf8(chain_id.to_vec()).unwrap();
+			let chain_id = T::ChainId::get().to_string();
 			let signer_data = SignerData {
 				address: signer.clone(),
 				chain_id,

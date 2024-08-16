@@ -25,9 +25,10 @@ use cosmos_sdk_proto::{
 };
 use frame_support::{
 	pallet_prelude::*,
-	traits::{Currency, ExistenceRequirement},
+	traits::{fungibles::Mutate, tokens::Preservation, Currency, ExistenceRequirement},
 };
-use pallet_balances::WeightInfo;
+use pallet_assets::WeightInfo as _;
+use pallet_balances::WeightInfo as _;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	address::address_from_bech32,
@@ -36,7 +37,7 @@ use pallet_cosmos_types::{
 	msgservice::MsgHandlerErrorInfo,
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
-use sp_runtime::SaturatedConversion;
+use sp_runtime::{traits::Convert, SaturatedConversion};
 use sp_std::vec::Vec;
 
 pub struct MsgSendHandler<T>(PhantomData<T>);
@@ -99,17 +100,16 @@ where
 		total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
 
 		for amt in amount.iter() {
-			if T::NativeDenom::get() == amt.denom.as_bytes().to_vec() {
-				T::Currency::transfer(
+			let transfer_amount = amt.amount.parse::<u128>().map_err(|_| MsgHandlerErrorInfo {
+				weight: total_weight,
+				error: RootError::InvalidCoins.into(),
+			})?;
+
+			if T::NativeDenom::get() == amt.denom {
+				T::NativeAsset::transfer(
 					&from_account,
 					&to_account,
-					amt.amount
-						.parse::<u128>()
-						.map_err(|_| MsgHandlerErrorInfo {
-							weight: total_weight,
-							error: RootError::InvalidCoins.into(),
-						})?
-						.saturated_into(),
+					transfer_amount.saturated_into(),
 					ExistenceRequirement::KeepAlive,
 				)
 				.map_err(|_| MsgHandlerErrorInfo {
@@ -121,11 +121,26 @@ where
 					pallet_balances::weights::SubstrateWeight::<T>::transfer_keep_alive(),
 				);
 			} else {
-				// TODO: Asset support planned
-				return Err(MsgHandlerErrorInfo {
+				let asset_id = T::DenomToAsset::convert(amt.denom.clone()).map_err(|_| {
+					MsgHandlerErrorInfo {
+						weight: total_weight,
+						error: RootError::InvalidCoins.into(),
+					}
+				})?;
+				T::Assets::transfer(
+					asset_id,
+					&from_account,
+					&to_account,
+					transfer_amount.saturated_into(),
+					Preservation::Protect,
+				)
+				.map_err(|_| MsgHandlerErrorInfo {
 					weight: total_weight,
-					error: RootError::NotSupported.into(),
-				});
+					error: RootError::InsufficientFunds.into(),
+				})?;
+				total_weight = total_weight.saturating_add(
+					pallet_assets::weights::SubstrateWeight::<T>::transfer_keep_alive(),
+				);
 			}
 		}
 
