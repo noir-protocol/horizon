@@ -56,7 +56,7 @@ use sp_runtime::{
 	transaction_validity::{
 		TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	DispatchError, RuntimeDebug,
+	RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
 
@@ -454,7 +454,7 @@ impl<T: Config> Pallet<T> {
 					actual_weight: Some(total_weight),
 					pays_fee: Pays::Yes,
 				},
-				error: DispatchError::Other("Failed to handle message"),
+				error: Error::<T>::CosmosError(RootError::TxDecodeError.into()).into(),
 			},
 		)?;
 
