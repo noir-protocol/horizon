@@ -123,7 +123,8 @@ export class App {
 		} else {
 			throw new Error("unsupported node type");
 		}
-		const abciService = new AbciService(this.chainApi, accountService);
+		const txService = new TxService(this.db, this.chainApi);
+		const abciService = new AbciService(this.chainApi, accountService, txService);
 		const balanceService = new BalanceService(
 			this.config,
 			this.chainApi,
@@ -133,7 +134,6 @@ export class App {
 		const nodeInfoService = new NodeInfoService(this.config);
 		const stakingService = new StakingService();
 		const statusService = new StatusService(this.config, this.chainApi);
-		const txService = new TxService(this.db, this.chainApi);
 
 		this.services.set("abci", abciService);
 		this.services.set("account", accountService);

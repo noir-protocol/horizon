@@ -127,19 +127,15 @@ export class TxService implements ApiService {
           return { codespace: '', code: 0, gasUsed: gas_used };
         } else {
           console.debug(JSON.parse(data));
-          let [{ module: { index, error } }, info] = JSON.parse(data);
+          const [{ module: { index, error } }, info] = JSON.parse(data);
 
-          if (error.startsWith('0x')) {
-            error = error.slice(2);
-          }
-          const errors = Uint8Array.from(Buffer.from(error, 'hex'));
-
+          const errors = Uint8Array.from(Buffer.from(error.startsWith('0x') ? error.slice(2) : error, 'hex'));
           const codespace = errors[1];
-          const code = errors[2]; 
+          const code = errors[2];
 
           const weight = info.weight.refTime;
 
-          // TODO: codespace and gasUsed will be transformed proper values 
+          // TODO: codespace and gasUsed will be transformed proper values
           return { codespace: 'sdk', code, gasUsed: weight };
         }
       });
