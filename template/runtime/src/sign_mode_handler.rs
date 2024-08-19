@@ -16,7 +16,6 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use core::str::FromStr;
 use cosmos_sdk_proto::{
 	cosmos::{
 		bank::v1beta1::MsgSend,
@@ -25,8 +24,8 @@ use cosmos_sdk_proto::{
 			ModeInfo, SignDoc, Tx, TxRaw,
 		},
 	},
-	prost::alloc::string::{String, ToString},
-	traits::Message,
+	prost::alloc::string::ToString,
+	traits::{Message, Name},
 };
 use pallet_cosmos_x_auth_migrations::legacytx::stdsign::StdSignDoc;
 use pallet_cosmos_x_auth_signing::sign_mode_handler::{SignModeHandlerError, SignerData};
@@ -61,25 +60,24 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 					let mut coins = Vec::<Value>::new();
 					for amt in fee.amount.iter() {
 						let mut coin = Map::new();
-						coin.insert(String::from_str("amount").unwrap(), Value::String(amt.amount.clone()));
-						coin.insert(String::from_str("denom").unwrap(), Value::String(amt.denom.clone()));
+						coin.insert("amount".to_string(), Value::String(amt.amount.clone()));
+						coin.insert("denom".to_string(), Value::String(amt.denom.clone()));
 
 						coins.push(Value::Object(coin));
 					}
 
 					let mut std_fee = Map::new();
-					std_fee.insert(String::from_str("gas").unwrap(), Value::String(fee.gas_limit.to_string()));
-					std_fee.insert(String::from_str("amount").unwrap(), Value::Array(coins));
+					std_fee.insert("gas".to_string(), Value::String(fee.gas_limit.to_string()));
+					std_fee.insert("amount".to_string(), Value::Array(coins));
 
 					let mut msgs = Vec::<Value>::new();
 					for message in body.messages.iter() {
-						match message.type_url.as_str() {
-							"/cosmos.bank.v1beta1.MsgSend" => {
-								let msg = MsgSend::decode(&mut &*message.value).map_err(|_| SignModeHandlerError::InvalidMsg)?;
-								let msg = msg_send::get_sign_bytes(&msg);
-								msgs.push(msg);
-							},
-							_ => return Err(SignModeHandlerError::InvalidMsg),
+						if  message.type_url == MsgSend::type_url() {
+							let msg = MsgSend::decode(&mut &*message.value).map_err(|_| SignModeHandlerError::InvalidMsg)?;
+							let msg = msg_send::get_sign_bytes(&msg);
+							msgs.push(msg);
+						} else {
+							return Err(SignModeHandlerError::InvalidMsg);
 						}
 					}
 
@@ -106,7 +104,6 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 mod tests {
 	use crate::sign_mode_handler::SignModeHandler;
 	use base64ct::{Base64, Encoding};
-	use core::str::FromStr;
 	use cosmos_sdk_proto::{
 		cosmos::tx::v1beta1::{
 			mode_info::{Single, Sum},
@@ -137,8 +134,8 @@ mod tests {
 
 		let mode = ModeInfo { sum: Some(Sum::Single(Single { mode: 1 })) };
 		let data = SignerData {
-			address: String::from_str("cosmos1qd69nuwj95gta4akjgyxtj9ujmz4w8edmqysqw").unwrap(),
-			chain_id: String::from_str("theta-testnet-001").unwrap(),
+			address: "cosmos1qd69nuwj95gta4akjgyxtj9ujmz4w8edmqysqw".to_string(),
+			chain_id: "theta-testnet-001".to_string(),
 			account_number: 754989,
 			sequence: 0,
 			pub_key: public_key.clone(),
@@ -171,8 +168,8 @@ mod tests {
 
 		let mode = ModeInfo { sum: Some(Sum::Single(Single { mode: 127 })) };
 		let data = SignerData {
-			address: String::from_str("cosmos1qd69nuwj95gta4akjgyxtj9ujmz4w8edmqysqw").unwrap(),
-			chain_id: String::from_str("dev").unwrap(),
+			address: "cosmos1qd69nuwj95gta4akjgyxtj9ujmz4w8edmqysqw".to_string(),
+			chain_id: "dev".to_string(),
 			account_number: 0,
 			sequence: 0,
 			pub_key: public_key.clone(),

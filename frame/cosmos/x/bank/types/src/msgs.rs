@@ -16,8 +16,10 @@
 // limitations under the License.
 
 pub mod msg_send {
-	use core::str::FromStr;
-	use cosmos_sdk_proto::{cosmos::bank::v1beta1::MsgSend, prost::alloc::string::String};
+	use cosmos_sdk_proto::{
+		cosmos::bank::v1beta1::MsgSend,
+		prost::alloc::string::{String, ToString},
+	};
 	use serde_json::{Map, Value};
 	use sp_std::vec::Vec;
 
@@ -25,30 +27,23 @@ pub mod msg_send {
 
 	pub fn get_sign_bytes(msg: &MsgSend) -> Value {
 		let mut value = Map::new();
-		value.insert(
-			String::from_str("from_address").unwrap(),
-			Value::String(msg.from_address.clone()),
-		);
-		value
-			.insert(String::from_str("to_address").unwrap(), Value::String(msg.to_address.clone()));
+		value.insert("from_address".to_string(), Value::String(msg.from_address.clone()));
+		value.insert("to_address".to_string(), Value::String(msg.to_address.clone()));
 
 		let mut coins = Vec::<Value>::new();
 		for amt in msg.amount.iter() {
 			let mut coin = Map::new();
-			coin.insert(String::from_str("amount").unwrap(), Value::String(amt.amount.clone()));
-			coin.insert(String::from_str("denom").unwrap(), Value::String(amt.denom.clone()));
+			coin.insert("amount".to_string(), Value::String(amt.amount.clone()));
+			coin.insert("denom".to_string(), Value::String(amt.denom.clone()));
 
 			coins.push(Value::Object(coin));
 		}
 
-		value.insert(String::from_str("amount").unwrap(), Value::Array(coins));
+		value.insert("amount".to_string(), Value::Array(coins));
 
 		let mut legacy_msg = Map::new();
-		legacy_msg.insert(
-			String::from_str("type").unwrap(),
-			Value::String(String::from_str(AMINO_NAME).unwrap()),
-		);
-		legacy_msg.insert(String::from_str("value").unwrap(), Value::Object(value));
+		legacy_msg.insert("type".to_string(), Value::String(AMINO_NAME.to_string()));
+		legacy_msg.insert("value".to_string(), Value::Object(value));
 
 		Value::Object(legacy_msg)
 	}

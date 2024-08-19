@@ -52,11 +52,11 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::{
-	traits::{BadOrigin, Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
+	traits::{Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
 		TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	DispatchError, RuntimeDebug,
+	RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
 
@@ -143,25 +143,6 @@ pub trait AddressMapping<A> {
 	fn into_account_id(address: H160) -> A;
 }
 
-pub trait EnsureAddressOrigin<OuterOrigin> {
-	/// Success return type.
-	type Success;
-
-	/// Perform the origin check.
-	fn ensure_address_origin(
-		address: &H160,
-		origin: OuterOrigin,
-	) -> Result<Self::Success, BadOrigin> {
-		Self::try_address_origin(address, origin).map_err(|_| BadOrigin)
-	}
-
-	/// Try with origin.
-	fn try_address_origin(
-		address: &H160,
-		origin: OuterOrigin,
-	) -> Result<Self::Success, OuterOrigin>;
-}
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
@@ -187,9 +168,9 @@ pub mod pallet {
 		impl frame_system::DefaultConfig for TestDefaultConfig {}
 
 		pub struct MsgFilter;
-		impl Contains<Vec<u8>> for MsgFilter {
-			fn contains(_type_url: &Vec<u8>) -> bool {
-				true
+		impl Contains<String> for MsgFilter {
+			fn contains(_type_url: &String) -> bool {
+				false
 			}
 		}
 
@@ -258,7 +239,8 @@ pub mod pallet {
 				Self::AccountId,
 				Balance = Self::Balance,
 				AssetId = Self::AssetId,
-			> + fungibles::Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
+			> + fungibles::Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
+			+ fungibles::Balanced<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
 		/// The overarching event type.
 		#[pallet::no_default_bounds]
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
@@ -277,7 +259,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type ChainId: Get<&'static str>;
 		/// The message filter.
-		type MsgFilter: Contains<Vec<u8>>;
+		type MsgFilter: Contains<String>;
 		/// Converter for converting Gas to Weight.
 		type GasToWeight: Convert<Gas, Weight>;
 		/// Converter for converting Weight to Gas.
@@ -323,6 +305,7 @@ pub mod pallet {
 	#[pallet::event]
 	#[pallet::generate_deposit(pub fn deposit_event)]
 	pub enum Event {
+		AnteHandled(Vec<CosmosEvent>),
 		Executed { gas_wanted: u64, gas_used: u64, events: Vec<CosmosEvent> },
 	}
 
@@ -452,7 +435,7 @@ impl<T: Config> Pallet<T> {
 					actual_weight: Some(total_weight),
 					pays_fee: Pays::Yes,
 				},
-				error: DispatchError::Other("Failed to handle message"),
+				error: Error::<T>::CosmosError(RootError::TxDecodeError.into()).into(),
 			},
 		)?;
 

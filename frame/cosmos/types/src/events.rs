@@ -24,6 +24,11 @@ use serde::{Deserialize, Serialize};
 #[cfg(not(feature = "std"))]
 use sp_std::vec::Vec;
 
+pub const EVENT_TYPE_TX: &str = "tx";
+
+pub const ATTRIBUTE_KEY_FEE: &str = "fee";
+pub const ATTRIBUTE_KEY_FEE_PAYER: &str = "fee_payer";
+
 pub const EVENT_TYPE_MESSAGE: &str = "message";
 
 pub const ATTRIBUTE_KEY_SENDER: &str = "sender";

@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizon.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -34,7 +34,11 @@ mod msgs;
 mod sig_verifiable_tx;
 mod sign_mode_handler;
 
-use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
+use cosmos_sdk_proto::{
+	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
+	prost::{alloc::string::String, Message},
+	traits::Name,
+};
 use frame_support::{
 	construct_runtime, derive_impl,
 	genesis_builder_helper::{build_config, create_default_config},
@@ -54,16 +58,15 @@ use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use hp_rpc::{GasInfo, SimulateError, SimulateResponse};
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::{address::address_from_bech32, tx::Gas};
+use pallet_cosmos_types::tx::Gas;
 use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
-use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata, H160};
 use sp_runtime::{
 	codec, create_runtime_str, generic, impl_opaque_keys,
 	traits::{
@@ -289,7 +292,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	/// Handler for withdrawing, refunding and depositing the transaction fee.
 	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
-	/// A fee mulitplier for `Operational` extrinsics to compute "virtual tip" to boost their
+	/// A fee multiplier for `Operational` extrinsics to compute "virtual tip" to boost their
 	/// `priority`.
 	type OperationalFeeMultiplier = ConstU8<5>;
 	/// Convert a weight value into a deductible fee based on the currency type.
@@ -324,9 +327,9 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 pub struct MsgFilter;
-impl Contains<Vec<u8>> for MsgFilter {
-	fn contains(type_url: &Vec<u8>) -> bool {
-		matches!(&type_url[..], b"/cosmos.bank.v1beta1.MsgSend")
+impl Contains<String> for MsgFilter {
+	fn contains(type_url: &String) -> bool {
+		[MsgSend::type_url()].contains(type_url)
 	}
 }
 
@@ -605,6 +608,8 @@ impl Runtime {
 				)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
+				// TODO: Add asset transfer for migration
+
 				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who)
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 			}
@@ -625,10 +630,7 @@ impl_runtime_apis! {
 		fn simulate(tx_bytes: Vec<u8>) -> Result<SimulateResponse, SimulateError> {
 			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| SimulateError::InvalidTx)?;
 
-			let fee_payer = <Runtime as pallet_cosmos::Config>::SigVerifiableTx::fee_payer(&tx).map_err(|_| SimulateError::InvalidTx)?;
-			let address = address_from_bech32(&fee_payer).map_err(|_| SimulateError::InvalidTx)?;
-
-			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(address, tx.clone()).map_err(|_| SimulateError::UnknownError)?;
+			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx.clone()).map_err(|_| SimulateError::UnknownError)?;
 
 			System::read_events_no_consensus()
 				.find_map(|record| {

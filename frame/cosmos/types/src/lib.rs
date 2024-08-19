@@ -18,6 +18,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 pub mod address;
+pub mod coin;
 pub mod errors;
 pub mod events;
 pub mod handler;

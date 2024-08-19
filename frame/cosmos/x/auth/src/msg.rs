@@ -36,7 +36,7 @@ where
 			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		for msg in body.messages.iter() {
-			if !T::MsgFilter::contains(&msg.type_url.as_bytes().to_vec()) {
+			if !T::MsgFilter::contains(&msg.type_url) {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 			}
 		}
