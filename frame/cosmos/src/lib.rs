@@ -219,6 +219,11 @@ pub mod pallet {
 	pub type DenomAssetRouter<T: Config> =
 		StorageMap<_, Twox64Concat, BoundedVec<u8, T::MaxDenomLimit>, T::AssetId, OptionQuery>;
 
+	#[pallet::storage]
+	#[pallet::getter(fn asset_to_denom)]
+	pub type AssetDenomRouter<T: Config> =
+		StorageMap<_, Twox64Concat, T::AssetId, BoundedVec<u8, T::MaxDenomLimit>, OptionQuery>;
+
 	#[pallet::config(with_default)]
 	pub trait Config: frame_system::Config {
 		/// Mapping an address to an account id.

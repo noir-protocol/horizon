@@ -26,14 +26,26 @@ where
 {
 	fn created(id: &T::AssetId, _owner: &T::AccountId) -> Result<(), ()> {
 		let symbol = <T as pallet_cosmos::Config>::Assets::symbol(id.clone());
+		if symbol.is_empty() {
+			return Err(());
+		}
+
 		let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(symbol).map_err(|_| ())?;
+
 		ensure!(pallet_cosmos::DenomAssetRouter::<T>::get(denom.clone()).is_none(), ());
-		pallet_cosmos::DenomAssetRouter::<T>::insert(denom, id);
+		ensure!(pallet_cosmos::AssetDenomRouter::<T>::get(id.clone()).is_none(), ());
+
+		pallet_cosmos::DenomAssetRouter::<T>::insert(denom.clone(), id);
+		pallet_cosmos::AssetDenomRouter::<T>::insert(id, denom);
 
 		Ok(())
 	}
 
-	fn destroyed(_id: &T::AssetId) -> Result<(), ()> {
+	fn destroyed(id: &T::AssetId) -> Result<(), ()> {
+		if let Some(denom) = pallet_cosmos::AssetDenomRouter::<T>::take(id.clone()) {
+			pallet_cosmos::DenomAssetRouter::<T>::remove(denom);
+		}
+
 		Ok(())
 	}
 }
