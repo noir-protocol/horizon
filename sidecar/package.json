@@ -44,7 +44,6 @@
 	},
 	"dependencies": {
 		"@cosmjs/encoding": "^0.30.1",
-		"@cosmjs/tendermint-rpc": "^0.32.4",
 		"@fastify/static": "^6.10.2",
 		"@fastify/websocket": "^8.1.0",
 		"@pinot/api": "github:pinot-js/api#workaround",
