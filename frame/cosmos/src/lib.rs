@@ -168,9 +168,9 @@ pub mod pallet {
 		impl frame_system::DefaultConfig for TestDefaultConfig {}
 
 		pub struct MsgFilter;
-		impl Contains<Vec<u8>> for MsgFilter {
-			fn contains(_type_url: &Vec<u8>) -> bool {
-				true
+		impl Contains<String> for MsgFilter {
+			fn contains(_type_url: &String) -> bool {
+				false
 			}
 		}
 
@@ -259,7 +259,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type ChainId: Get<&'static str>;
 		/// The message filter.
-		type MsgFilter: Contains<Vec<u8>>;
+		type MsgFilter: Contains<String>;
 		/// Converter for converting Gas to Weight.
 		type GasToWeight: Convert<Gas, Weight>;
 		/// Converter for converting Weight to Gas.

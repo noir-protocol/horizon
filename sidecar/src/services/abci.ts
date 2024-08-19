@@ -11,7 +11,6 @@ import { ApiPromise } from "@pinot/api";
 import { ABCIQueryResponse } from "cosmjs-types/cosmos/base/tendermint/v1beta1/query.js";
 import { SimulateRequest, SimulateResponse } from "cosmjs-types/cosmos/tx/v1beta1/service.js";
 import { TxService } from "./tx.js";
-import { Tx } from "cosmjs-types/cosmos/tx/v1beta1/tx.js";
 
 export class AbciService implements ApiService {
   chainApi: ApiPromise;
@@ -65,7 +64,7 @@ export class AbciService implements ApiService {
     } else if (path === '/cosmos.tx.v1beta1.Service/Simulate') {
       // TODO: Check simulate tx fields
       const request = SimulateRequest.decode(Buffer.from(data, 'hex'));
-      const response = SimulateResponse.encode(await this.txService.simulate(Buffer.from(request.txBytes).toString('hex'))).finish();
+      const response = SimulateResponse.encode(await this.txService.simulate(Buffer.from(request.txBytes).toString('base64'))).finish();
       const height = (await this.chainApi.query.system.number()).toString();
 
       return {

@@ -15,11 +15,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use core::str::FromStr;
-use cosmos_sdk_proto::{cosmos::base::v1beta1::Coin, prost::alloc::string::String};
+use cosmos_sdk_proto::{
+	cosmos::base::v1beta1::Coin,
+	prost::alloc::string::{String, ToString},
+};
 
 pub fn amount_to_string(amount: &[Coin]) -> String {
-	let mut ret = String::from_str("").unwrap();
+	let mut ret = "".to_string();
 	for (i, coin) in amount.iter().enumerate() {
 		ret.push_str(&coin.amount);
 		ret.push_str(&coin.denom);
@@ -33,7 +35,6 @@ pub fn amount_to_string(amount: &[Coin]) -> String {
 #[cfg(test)]
 mod tests {
 	use crate::coin::amount_to_string;
-	use core::str::FromStr;
 	use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
 
 	#[test]
@@ -41,17 +42,11 @@ mod tests {
 		let mut amounts = Vec::<Coin>::new();
 		assert_eq!(amount_to_string(&amounts), "");
 
-		amounts.push(Coin {
-			denom: String::from_str("uatom").unwrap(),
-			amount: String::from_str("1000").unwrap(),
-		});
+		amounts.push(Coin { denom: "uatom".to_string(), amount: "1000".to_string() });
 		assert_eq!(amount_to_string(&amounts), "1000uatom");
 
-		amounts.push(Coin {
-			denom: String::from_str("uatom").unwrap(),
-			amount: String::from_str("2000").unwrap(),
-		});
+		amounts.push(Coin { denom: "stake".to_string(), amount: "2000".to_string() });
 
-		assert_eq!(amount_to_string(&amounts), "1000uatom,2000uatom");
+		assert_eq!(amount_to_string(&amounts), "1000uatom,2000stake");
 	}
 }

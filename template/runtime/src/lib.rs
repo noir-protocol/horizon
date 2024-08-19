@@ -34,7 +34,11 @@ mod msgs;
 mod sig_verifiable_tx;
 mod sign_mode_handler;
 
-use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
+use cosmos_sdk_proto::{
+	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
+	prost::{alloc::string::String, Message},
+	traits::Name,
+};
 use frame_support::{
 	construct_runtime, derive_impl,
 	genesis_builder_helper::{build_config, create_default_config},
@@ -323,9 +327,9 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 pub struct MsgFilter;
-impl Contains<Vec<u8>> for MsgFilter {
-	fn contains(type_url: &Vec<u8>) -> bool {
-		matches!(&type_url[..], b"/cosmos.bank.v1beta1.MsgSend")
+impl Contains<String> for MsgFilter {
+	fn contains(type_url: &String) -> bool {
+		[MsgSend::type_url()].contains(type_url)
 	}
 }
 

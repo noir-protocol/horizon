@@ -19,7 +19,7 @@
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
 	prost::alloc::string::String,
-	traits::Message,
+	traits::{Message, Name},
 };
 use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTxError;
 use pallet_cosmos_x_bank_types::msgs::msg_send;
@@ -33,13 +33,12 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 
 		let body = tx.body.as_ref().ok_or(SigVerifiableTxError::EmptyTxBody)?;
 		for msg in body.messages.iter() {
-			let msg_signers = match msg.type_url.as_str() {
-				"/cosmos.bank.v1beta1.MsgSend" => {
-					let msg = MsgSend::decode(&mut &*msg.value)
-						.map_err(|_| SigVerifiableTxError::InvalidMsg)?;
-					msg_send::get_signers(&msg)
-				},
-				_ => return Err(SigVerifiableTxError::InvalidMsg),
+			let msg_signers = if msg.type_url == MsgSend::type_url() {
+				let msg = MsgSend::decode(&mut &*msg.value)
+					.map_err(|_| SigVerifiableTxError::InvalidMsg)?;
+				msg_send::get_signers(&msg)
+			} else {
+				return Err(SigVerifiableTxError::InvalidMsg);
 			};
 
 			for msg_signer in msg_signers.iter() {

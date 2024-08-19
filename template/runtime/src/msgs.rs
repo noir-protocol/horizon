@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use cosmos_sdk_proto::{cosmos::bank::v1beta1::MsgSend, traits::Name};
 use pallet_cosmos_types::msgservice::MsgHandler;
 use pallet_cosmos_x_bank::msgs::MsgSendHandler;
 use sp_std::{boxed::Box, marker::PhantomData};
@@ -26,9 +27,10 @@ where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
 	fn route(type_url: &str) -> Option<Box<dyn MsgHandler>> {
-		match type_url {
-			"/cosmos.bank.v1beta1.MsgSend" => Some(Box::<MsgSendHandler<T>>::default()),
-			_ => None,
+		if type_url == MsgSend::type_url() {
+			Some(Box::<MsgSendHandler<T>>::default())
+		} else {
+			None
 		}
 	}
 }

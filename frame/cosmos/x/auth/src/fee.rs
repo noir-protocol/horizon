@@ -54,13 +54,13 @@ where
 			.auth_info
 			.as_ref()
 			.and_then(|auth_info| auth_info.fee.as_ref())
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		if !simulate &&
 			!frame_system::Pallet::<T>::block_number().is_zero() &&
 			fee.gas_limit.is_zero()
 		{
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Payment));
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 		}
 
 		// TODO: Implements txFeeChecker
