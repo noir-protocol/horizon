@@ -605,6 +605,8 @@ impl Runtime {
 				)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
+				// TODO: Add asset transfer for migration
+
 				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who)
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 			}
