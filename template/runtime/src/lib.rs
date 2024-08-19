@@ -54,16 +54,15 @@ use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use hp_rpc::{GasInfo, SimulateError, SimulateResponse};
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::{address::address_from_bech32, tx::Gas};
+use pallet_cosmos_types::tx::Gas;
 use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
-use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata, H160};
 use sp_runtime::{
 	codec, create_runtime_str, generic, impl_opaque_keys,
 	traits::{
@@ -627,10 +626,7 @@ impl_runtime_apis! {
 		fn simulate(tx_bytes: Vec<u8>) -> Result<SimulateResponse, SimulateError> {
 			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| SimulateError::InvalidTx)?;
 
-			let fee_payer = <Runtime as pallet_cosmos::Config>::SigVerifiableTx::fee_payer(&tx).map_err(|_| SimulateError::InvalidTx)?;
-			let address = address_from_bech32(&fee_payer).map_err(|_| SimulateError::InvalidTx)?;
-
-			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(address, tx.clone()).map_err(|_| SimulateError::UnknownError)?;
+			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx.clone()).map_err(|_| SimulateError::UnknownError)?;
 
 			System::read_events_no_consensus()
 				.find_map(|record| {

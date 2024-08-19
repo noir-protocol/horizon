@@ -2,6 +2,7 @@ import { GetNodeInfoResponse } from "cosmjs-types/cosmos/base/tendermint/v1beta1
 import { ApiService } from "./service.js";
 import { IConfig } from "config";
 import Long from "long";
+// import { StatusResponse } from "@cosmjs/tendermint-rpc";
 
 export class NodeInfoService implements ApiService {
   config: IConfig;
@@ -46,4 +47,42 @@ export class NodeInfoService implements ApiService {
       },
     };
   }
+
+  // public status(): StatusResponse {
+  //   const endpoint = this.config.get<string>("server.endpoint");
+  //   const network = this.config.get<string>("chain.network");
+  //   const version = this.config.get<string>("chain.version");
+  //   const moniker = this.config.get<string>("chain.moniker");
+
+  //   return {
+  //     nodeInfo: {
+  //       protocolVersion: {
+  //         p2p: 0,
+  //         block: 0,
+  //         app: 0,
+  //       },
+  //       id: new Uint8Array(Buffer.allocUnsafe(20)),
+  //       listenAddr: endpoint,
+  //       network,
+  //       version,
+  //       channels: Buffer.allocUnsafe(8).toString('hex'),
+  //       moniker,
+  //       other: new Map(Object.entries({
+  //         txIndex: "off",
+  //         rpcAddress: "",
+  //       })),
+  //     },
+  //     syncInfo: {
+  //       latestBlockHash: undefined,
+  //       latestAppHash: undefined,
+  //       latestBlockHeight: 0,
+  //       latestBlockTime: undefined,
+  //       catchingUp: false
+  //     },
+  //     validatorInfo: {
+  //       address: ,
+  //       votingPower: 0n
+  //     }
+  //   };
+  // }
 }

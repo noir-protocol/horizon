@@ -94,7 +94,10 @@ where
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 		let deduct_fees_from_acc = T::AddressMapping::into_account_id(deduct_fees_from);
 
-		Self::deduct_fees(&deduct_fees_from_acc, fee)?;
+		// TODO: Check fee is zero
+		if !fee.amount.is_empty() {
+			Self::deduct_fees(&deduct_fees_from_acc, fee)?;
+		}
 
 		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::AnteHandled(sp_std::vec![
 			CosmosEvent {
