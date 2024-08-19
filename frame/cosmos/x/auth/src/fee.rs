@@ -104,10 +104,7 @@ where
 						key: ATTRIBUTE_KEY_FEE.into(),
 						value: amount_to_string(&fee.amount).into()
 					},
-					EventAttribute {
-						key: ATTRIBUTE_KEY_FEE_PAYER.into(),
-						value: fee_payer.into(),
-					},
+					EventAttribute { key: ATTRIBUTE_KEY_FEE_PAYER.into(), value: fee_payer.into() },
 				]
 			}
 		]));
@@ -123,18 +120,20 @@ where
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 			if amt.denom == T::NativeDenom::get() {
-				let _ = T::NativeAsset::withdraw(
+				let _imbalance = T::NativeAsset::withdraw(
 					acc,
 					amount.saturated_into(),
 					WithdrawReasons::TRANSACTION_PAYMENT,
 					ExistenceRequirement::KeepAlive,
 				)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+
+				// TODO: Resolve imbalance
 			} else {
 				let asset_id = T::DenomToAsset::convert(amt.denom.clone())
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-				let _ = T::Assets::withdraw(
+				let _imbalance = T::Assets::withdraw(
 					asset_id,
 					acc,
 					amount.saturated_into(),
@@ -143,6 +142,8 @@ where
 					Fortitude::Polite,
 				)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+
+				// TODO: Resolve imbalance
 			}
 		}
 
