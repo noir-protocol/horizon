@@ -98,15 +98,15 @@ where
 
 		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::AnteHandled(sp_std::vec![
 			CosmosEvent {
-				r#type: EVENT_TYPE_TX.as_bytes().to_vec(),
+				r#type: EVENT_TYPE_TX.into(),
 				attributes: sp_std::vec![
 					EventAttribute {
-						key: ATTRIBUTE_KEY_FEE.as_bytes().to_vec(),
-						value: amount_to_string(&fee.amount).as_bytes().to_vec()
+						key: ATTRIBUTE_KEY_FEE.into(),
+						value: amount_to_string(&fee.amount).into()
 					},
 					EventAttribute {
-						key: ATTRIBUTE_KEY_FEE_PAYER.as_bytes().to_vec(),
-						value: fee_payer.as_bytes().to_vec(),
+						key: ATTRIBUTE_KEY_FEE_PAYER.into(),
+						value: fee_payer.into(),
 					},
 				]
 			}
