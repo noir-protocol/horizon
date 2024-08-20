@@ -630,6 +630,8 @@ impl_runtime_apis! {
 		fn simulate(tx_bytes: Vec<u8>) -> Result<SimulateResponse, SimulateError> {
 			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| SimulateError::InvalidTx)?;
 
+			// TODO: Run ante handlers
+
 			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx.clone()).map_err(|_| SimulateError::UnknownError)?;
 
 			System::read_events_no_consensus()
