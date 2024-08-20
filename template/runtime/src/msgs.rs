@@ -16,8 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use cosmos_sdk_proto::{cosmos::bank::v1beta1::MsgSend, traits::Name};
+use cosmos_sdk_proto::{cosmos::bank::v1beta1::MsgSend, Any};
 use pallet_cosmos_types::msgservice::MsgHandler;
+use pallet_cosmos_x_auth_signing::any_match;
 use pallet_cosmos_x_bank::msgs::MsgSendHandler;
 use sp_std::{boxed::Box, marker::PhantomData};
 
@@ -26,11 +27,12 @@ impl<T> pallet_cosmos_types::msgservice::MsgServiceRouter for MsgServiceRouter<T
 where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
-	fn route(type_url: &str) -> Option<Box<dyn MsgHandler>> {
-		if type_url == MsgSend::type_url() {
-			Some(Box::<MsgSendHandler<T>>::default())
-		} else {
+	fn route(msg: &Any) -> Option<Box<dyn MsgHandler>> {
+		any_match!(msg,
+			{
+				MsgSend => Some(Box::<MsgSendHandler<T>>::default())
+			},
 			None
-		}
+		)
 	}
 }

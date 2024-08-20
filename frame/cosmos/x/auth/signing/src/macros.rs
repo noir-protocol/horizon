@@ -18,15 +18,15 @@
 
 #[macro_export]
 macro_rules! any_match {
-	($any:expr, { $( $msg:ty => $handle:expr ),* }, $not_match:expr) => {
+	($msg:expr, { $( $msg_type:ty => $handler:expr ),* }, $default:expr) => {
 		{
 			{
 				$(
-					if $any.type_url == <$msg as cosmos_sdk_proto::traits::Name>::type_url() {
-                        $handle
+					if $msg.type_url == <$msg_type as cosmos_sdk_proto::traits::Name>::type_url() {
+                        $handler
 					} else
 				)* {
-                    $not_match
+                    $default
 				}
 			}
         }

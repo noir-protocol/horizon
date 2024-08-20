@@ -407,14 +407,13 @@ impl<T: Config> Pallet<T> {
 		})?;
 
 		for msg in body.messages.iter() {
-			let handler =
-				T::MsgServiceRouter::route(&msg.type_url).ok_or(DispatchErrorWithPostInfo {
-					post_info: PostDispatchInfo {
-						actual_weight: Some(total_weight),
-						pays_fee: Pays::Yes,
-					},
-					error: Error::<T>::CosmosError(RootError::UnknownRequest.into()).into(),
-				})?;
+			let handler = T::MsgServiceRouter::route(msg).ok_or(DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(total_weight),
+					pays_fee: Pays::Yes,
+				},
+				error: Error::<T>::CosmosError(RootError::UnknownRequest.into()).into(),
+			})?;
 			match handler.handle(msg) {
 				Ok((weight, msg_events)) => {
 					total_weight = total_weight.saturating_add(weight);

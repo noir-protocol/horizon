@@ -30,5 +30,5 @@ pub trait MsgHandler {
 }
 
 pub trait MsgServiceRouter {
-	fn route(type_url: &str) -> Option<sp_std::boxed::Box<dyn MsgHandler>>;
+	fn route(msg: &Any) -> Option<sp_std::boxed::Box<dyn MsgHandler>>;
 }
