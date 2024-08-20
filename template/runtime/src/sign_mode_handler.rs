@@ -25,10 +25,13 @@ use cosmos_sdk_proto::{
 		},
 	},
 	prost::alloc::string::ToString,
-	traits::{Message, Name},
+	traits::Message,
 };
 use pallet_cosmos_x_auth_migrations::legacytx::stdsign::StdSignDoc;
-use pallet_cosmos_x_auth_signing::sign_mode_handler::{SignModeHandlerError, SignerData};
+use pallet_cosmos_x_auth_signing::{
+	any_match,
+	sign_mode_handler::{SignModeHandlerError, SignerData},
+};
 use pallet_cosmos_x_bank_types::msgs::msg_send;
 use serde_json::{Map, Value};
 use sp_std::vec::Vec;
@@ -71,14 +74,14 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 					std_fee.insert("amount".to_string(), Value::Array(coins));
 
 					let mut msgs = Vec::<Value>::new();
-					for message in body.messages.iter() {
-						if  message.type_url == MsgSend::type_url() {
-							let msg = MsgSend::decode(&mut &*message.value).map_err(|_| SignModeHandlerError::InvalidMsg)?;
-							let msg = msg_send::get_sign_bytes(&msg);
-							msgs.push(msg);
-						} else {
-							return Err(SignModeHandlerError::InvalidMsg);
-						}
+					for msg in body.messages.iter() {
+						let sign_msg = any_match!(msg,
+							{
+								MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg)
+							},
+							Err(SignModeHandlerError::InvalidMsg))?;
+
+						msgs.push(sign_msg);
 					}
 
 					let sign_doc = StdSignDoc {
