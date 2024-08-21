@@ -75,8 +75,8 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 
 					let mut msgs = Vec::<Value>::new();
 					for msg in body.messages.iter() {
-						let sign_msg = any_match!(msg,
-							{
+						let sign_msg = any_match!(
+							msg, {
 								MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg)
 							},
 							Err(SignModeHandlerError::InvalidMsg))?;

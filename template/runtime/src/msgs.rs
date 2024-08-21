@@ -28,8 +28,8 @@ where
 	T: frame_system::Config + pallet_cosmos::Config,
 {
 	fn route(msg: &Any) -> Option<Box<dyn MsgHandler>> {
-		any_match!(msg,
-			{
+		any_match!(
+			msg, {
 				MsgSend => Some(Box::<MsgSendHandler<T>>::default())
 			},
 			None

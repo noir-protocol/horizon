@@ -32,8 +32,8 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 
 		let body = tx.body.as_ref().ok_or(SigVerifiableTxError::EmptyTxBody)?;
 		for msg in body.messages.iter() {
-			let msg_signers = any_match!(msg,
-				{
+			let msg_signers = any_match!(
+				msg, {
 					MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg)
 				},
 				Err(SigVerifiableTxError::InvalidMsg)
