@@ -554,11 +554,10 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		info: Self::SignedInfo,
 	) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
 		match self {
-			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) => {
+			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) =>
 				Some(call.dispatch(RuntimeOrigin::from(
 					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosm_address().unwrap()),
-				)))
-			},
+				))),
 			_ => None,
 		}
 	}
@@ -608,11 +607,8 @@ impl Runtime {
 						pk.copy_from_slice(&public_key.key);
 						CosmosSigner(Public(pk))
 					},
-					_ => {
-						return Err(TransactionValidityError::Invalid(
-							InvalidTransaction::BadSigner,
-						))
-					},
+					_ =>
+						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
 				};
 
 				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(

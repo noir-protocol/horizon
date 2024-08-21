@@ -18,10 +18,12 @@
 
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
+	cosmwasm::wasm::v1::MsgStoreCode,
 	prost::{alloc::string::String, Message},
 };
 use pallet_cosmos_x_auth_signing::{any_match, sign_verifiable_tx::SigVerifiableTxError};
 use pallet_cosmos_x_bank_types::msgs::msg_send;
+use pallet_cosmos_x_wasm_types::tx::msg_store_code;
 use sp_std::vec::Vec;
 
 pub struct SigVerifiableTx;
@@ -34,7 +36,8 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 		for msg in body.messages.iter() {
 			let msg_signers = any_match!(
 				msg, {
-					MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg)
+					MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					MsgStoreCode => MsgStoreCode::decode(&mut &*msg.value).as_ref().map(msg_store_code::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
 				},
 				Err(SigVerifiableTxError::InvalidMsg)
 			)?;

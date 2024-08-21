@@ -16,10 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use cosmos_sdk_proto::{cosmos::bank::v1beta1::MsgSend, Any};
+use cosmos_sdk_proto::{cosmos::bank::v1beta1::MsgSend, cosmwasm::wasm::v1::MsgStoreCode, Any};
 use pallet_cosmos_types::msgservice::MsgHandler;
 use pallet_cosmos_x_auth_signing::any_match;
 use pallet_cosmos_x_bank::msgs::MsgSendHandler;
+use pallet_cosmos_x_wasm::msgs::MsgStoreCodeHandler;
 use sp_std::{boxed::Box, marker::PhantomData};
 
 pub struct MsgServiceRouter<T>(PhantomData<T>);
@@ -30,7 +31,8 @@ where
 	fn route(msg: &Any) -> Option<Box<dyn MsgHandler>> {
 		any_match!(
 			msg, {
-				MsgSend => Some(Box::<MsgSendHandler<T>>::default())
+				MsgSend => Some(Box::<MsgSendHandler<T>>::default()),
+				MsgStoreCode => Some(Box::<MsgStoreCodeHandler<T>>::default()),
 			},
 			None
 		)

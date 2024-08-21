@@ -24,6 +24,7 @@ use cosmos_sdk_proto::{
 			ModeInfo, SignDoc, Tx, TxRaw,
 		},
 	},
+	cosmwasm::wasm::v1::MsgStoreCode,
 	prost::alloc::string::ToString,
 	traits::Message,
 };
@@ -33,6 +34,7 @@ use pallet_cosmos_x_auth_signing::{
 	sign_mode_handler::{SignModeHandlerError, SignerData},
 };
 use pallet_cosmos_x_bank_types::msgs::msg_send;
+use pallet_cosmos_x_wasm_types::tx::msg_store_code;
 use serde_json::{Map, Value};
 use sp_std::vec::Vec;
 
@@ -77,7 +79,8 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 					for msg in body.messages.iter() {
 						let sign_msg = any_match!(
 							msg, {
-								MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg)
+								MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								MsgStoreCode => MsgStoreCode::decode(&mut &*msg.value).as_ref().map(msg_store_code::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
 							},
 							Err(SignModeHandlerError::InvalidMsg))?;
 

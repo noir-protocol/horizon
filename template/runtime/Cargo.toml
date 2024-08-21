@@ -58,6 +58,8 @@ pallet-cosmos-x-auth-migrations = { workspace = true }
 pallet-cosmos-x-auth-signing = { workspace = true }
 pallet-cosmos-x-bank = { workspace = true }
 pallet-cosmos-x-bank-types = { workspace = true }
+pallet-cosmos-x-wasm = { workspace = true }
+pallet-cosmos-x-wasm-types = { workspace = true }
 
 [dev-dependencies]
 base64ct = { workspace = true }
