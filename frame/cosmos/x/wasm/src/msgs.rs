@@ -17,7 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use cosmos_sdk_proto::{
-	cosmwasm::wasm::v1::{MsgInstantiateContract2, MsgStoreCode},
+	cosmwasm::wasm::v1::{MsgExecuteContract, MsgInstantiateContract2, MsgStoreCode},
 	prost::Message,
 	Any,
 };
@@ -77,6 +77,29 @@ impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgInstantiateContract2H
 		})?;
 
 		// TODO: Implements instantiate contract with pallet_cosmwasm
+		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
+	}
+}
+
+pub struct MsgExecuteContractHandler<T>(PhantomData<T>);
+
+impl<T> Default for MsgExecuteContractHandler<T> {
+	fn default() -> Self {
+		Self(Default::default())
+	}
+}
+
+impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgExecuteContractHandler<T> {
+	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
+		let total_weight = Weight::zero();
+
+		let MsgExecuteContract { sender: _, contract: _, msg: _, funds: _ } =
+			MsgExecuteContract::decode(&mut &*msg.value).map_err(|_| MsgHandlerErrorInfo {
+				weight: total_weight,
+				error: RootError::TxDecodeError.into(),
+			})?;
+
+		// TODO: Implements execute contract with pallet_cosmwasm
 		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
 	}
 }

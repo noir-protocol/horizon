@@ -37,8 +37,8 @@ mod sign_mode_handler;
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
 	cosmwasm::wasm::v1::{
-		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract,
-		MsgStoreCode, MsgUpdateAdmin,
+		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
+		MsgUpdateAdmin,
 	},
 	prost::{alloc::string::String, Message},
 	Any,
