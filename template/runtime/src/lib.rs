@@ -36,6 +36,10 @@ mod sign_mode_handler;
 
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
+	cosmwasm::wasm::v1::{
+		MsgExecuteContract, MsgInstantiateContract, MsgInstantiateContract2, MsgMigrateContract,
+		MsgStoreCode, MsgUpdateAdmin,
+	},
 	prost::{alloc::string::String, Message},
 	Any,
 };
@@ -332,7 +336,13 @@ impl Contains<Any> for MsgFilter {
 	fn contains(msg: &Any) -> bool {
 		any_match!(
 			msg, {
-				MsgSend => true
+				MsgSend => true,
+				MsgStoreCode => true,
+				MsgInstantiateContract => true,
+				MsgInstantiateContract2 => true,
+				MsgExecuteContract => true,
+				MsgMigrateContract => true,
+				MsgUpdateAdmin => true,
 			},
 			false
 		)

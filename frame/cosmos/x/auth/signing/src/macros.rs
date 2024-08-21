@@ -18,7 +18,7 @@
 
 #[macro_export]
 macro_rules! any_match {
-	($msg:expr, { $( $msg_type:ty => $handler:expr ),* }, $default:expr) => {
+	($msg:expr, { $( $msg_type:ty => $handler:expr ),* $(,)? }, $default:expr) => {
 		{
 			{
 				$(
