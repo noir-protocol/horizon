@@ -26,6 +26,7 @@ use crate::weights::WeightInfo;
 use cosmos_sdk_proto::{
 	cosmos::tx::v1beta1::Tx,
 	prost::{alloc::string::String, Message},
+	Any,
 };
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
@@ -168,8 +169,8 @@ pub mod pallet {
 		impl frame_system::DefaultConfig for TestDefaultConfig {}
 
 		pub struct MsgFilter;
-		impl Contains<String> for MsgFilter {
-			fn contains(_type_url: &String) -> bool {
+		impl Contains<Any> for MsgFilter {
+			fn contains(_msg: &Any) -> bool {
 				false
 			}
 		}
@@ -264,7 +265,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type ChainId: Get<&'static str>;
 		/// The message filter.
-		type MsgFilter: Contains<String>;
+		type MsgFilter: Contains<Any>;
 		/// Converter for converting Gas to Weight.
 		type GasToWeight: Convert<Gas, Weight>;
 		/// Converter for converting Weight to Gas.
@@ -407,14 +408,13 @@ impl<T: Config> Pallet<T> {
 		})?;
 
 		for msg in body.messages.iter() {
-			let handler =
-				T::MsgServiceRouter::route(&msg.type_url).ok_or(DispatchErrorWithPostInfo {
-					post_info: PostDispatchInfo {
-						actual_weight: Some(total_weight),
-						pays_fee: Pays::Yes,
-					},
-					error: Error::<T>::CosmosError(RootError::UnknownRequest.into()).into(),
-				})?;
+			let handler = T::MsgServiceRouter::route(msg).ok_or(DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(total_weight),
+					pays_fee: Pays::Yes,
+				},
+				error: Error::<T>::CosmosError(RootError::UnknownRequest.into()).into(),
+			})?;
 			match handler.handle(msg) {
 				Ok((weight, msg_events)) => {
 					total_weight = total_weight.saturating_add(weight);

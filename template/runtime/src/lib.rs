@@ -36,8 +36,12 @@ mod sign_mode_handler;
 
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
+	cosmwasm::wasm::v1::{
+		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
+		MsgUpdateAdmin,
+	},
 	prost::{alloc::string::String, Message},
-	traits::Name,
+	Any,
 };
 use frame_support::{
 	construct_runtime, derive_impl,
@@ -60,6 +64,7 @@ use hp_rpc::{GasInfo, SimulateError, SimulateResponse};
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::tx::Gas;
 use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
+use pallet_cosmos_x_auth_signing::any_match;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -327,9 +332,19 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 pub struct MsgFilter;
-impl Contains<String> for MsgFilter {
-	fn contains(type_url: &String) -> bool {
-		[MsgSend::type_url()].contains(type_url)
+impl Contains<Any> for MsgFilter {
+	fn contains(msg: &Any) -> bool {
+		any_match!(
+			msg, {
+				MsgSend => true,
+				MsgStoreCode => true,
+				MsgInstantiateContract2 => true,
+				MsgExecuteContract => true,
+				MsgMigrateContract => true,
+				MsgUpdateAdmin => true,
+			},
+			false
+		)
 	}
 }
 

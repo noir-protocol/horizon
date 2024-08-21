@@ -24,12 +24,23 @@ use cosmos_sdk_proto::{
 			ModeInfo, SignDoc, Tx, TxRaw,
 		},
 	},
+	cosmwasm::wasm::v1::{
+		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
+		MsgUpdateAdmin,
+	},
 	prost::alloc::string::ToString,
-	traits::{Message, Name},
+	traits::Message,
 };
 use pallet_cosmos_x_auth_migrations::legacytx::stdsign::StdSignDoc;
-use pallet_cosmos_x_auth_signing::sign_mode_handler::{SignModeHandlerError, SignerData};
+use pallet_cosmos_x_auth_signing::{
+	any_match,
+	sign_mode_handler::{SignModeHandlerError, SignerData},
+};
 use pallet_cosmos_x_bank_types::msgs::msg_send;
+use pallet_cosmos_x_wasm_types::tx::{
+	msg_execute_contract, msg_instantiate_contract2, msg_migrate_contract, msg_store_code,
+	msg_update_admin,
+};
 use serde_json::{Map, Value};
 use sp_std::vec::Vec;
 
@@ -71,14 +82,19 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 					std_fee.insert("amount".to_string(), Value::Array(coins));
 
 					let mut msgs = Vec::<Value>::new();
-					for message in body.messages.iter() {
-						if  message.type_url == MsgSend::type_url() {
-							let msg = MsgSend::decode(&mut &*message.value).map_err(|_| SignModeHandlerError::InvalidMsg)?;
-							let msg = msg_send::get_sign_bytes(&msg);
-							msgs.push(msg);
-						} else {
-							return Err(SignModeHandlerError::InvalidMsg);
-						}
+					for msg in body.messages.iter() {
+						let sign_msg = any_match!(
+							msg, {
+								MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								MsgStoreCode => MsgStoreCode::decode(&mut &*msg.value).as_ref().map(msg_store_code::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								MsgInstantiateContract2 => MsgInstantiateContract2::decode(&mut &*msg.value).as_ref().map(msg_instantiate_contract2::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								MsgExecuteContract => MsgExecuteContract::decode(&mut &*msg.value).as_ref().map(msg_execute_contract::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								MsgMigrateContract => MsgMigrateContract::decode(&mut &*msg.value).as_ref().map(msg_migrate_contract::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								MsgUpdateAdmin => MsgUpdateAdmin::decode(&mut &*msg.value).as_ref().map(msg_update_admin::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+							},
+							Err(SignModeHandlerError::InvalidMsg))?;
+
+						msgs.push(sign_msg);
 					}
 
 					let sign_doc = StdSignDoc {

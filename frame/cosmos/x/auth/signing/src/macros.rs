@@ -16,9 +16,19 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-#![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::comparison_chain, clippy::large_enum_variant)]
-
-pub mod macros;
-pub mod sign_mode_handler;
-pub mod sign_verifiable_tx;
+#[macro_export]
+macro_rules! any_match {
+	($msg:expr, { $( $msg_type:ty => $handler:expr ),* $(,)? }, $default:expr) => {
+		{
+			{
+				$(
+					if $msg.type_url == <$msg_type as cosmos_sdk_proto::traits::Name>::type_url() {
+                        $handler
+					} else
+				)* {
+                    $default
+				}
+			}
+        }
+	};
+}

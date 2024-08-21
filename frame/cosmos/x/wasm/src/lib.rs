@@ -19,6 +19,4 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
-pub mod macros;
-pub mod sign_mode_handler;
-pub mod sign_verifiable_tx;
+pub mod msgs;

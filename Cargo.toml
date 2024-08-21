@@ -9,6 +9,8 @@ members = [
 	"frame/cosmos/x/auth/signing",
 	"frame/cosmos/x/bank",
 	"frame/cosmos/x/bank/types",
+	"frame/cosmos/x/wasm",
+	"frame/cosmos/x/wasm/types",
 	"frame/accounts",
 	"primitives/account",
 	"primitives/io",
@@ -22,6 +24,7 @@ array-bytes = "6.2.2"
 base64ct = { version = "1.6.0", default-features = false }
 bech32 = { version = "0.9.1", default-features = false }
 clap = { version = "4.0.9", features = ["derive"] }
+cosmos-sdk-proto = { version = "0.23.0", default-features = false }
 futures = "0.3.28"
 hex = "0.4.3"
 impl-trait-for-tuples = "0.2.2"
@@ -109,8 +112,8 @@ pallet-cosmos-x-auth-migrations = { path = "frame/cosmos/x/auth/migrations", def
 pallet-cosmos-x-auth-signing = { path = "frame/cosmos/x/auth/signing", default-features = false }
 pallet-cosmos-x-bank = { path = "frame/cosmos/x/bank", default-features = false }
 pallet-cosmos-x-bank-types = { path = "frame/cosmos/x/bank/types", default-features = false }
-
-cosmos-sdk-proto = { version = "0.23.0", default-features = false }
+pallet-cosmos-x-wasm = { path = "frame/cosmos/x/wasm", default-features = false }
+pallet-cosmos-x-wasm-types = { path = "frame/cosmos/x/wasm/types", default-features = false }
 
 [profile.release]
 panic = "unwind"
