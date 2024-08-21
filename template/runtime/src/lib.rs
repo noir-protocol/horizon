@@ -37,7 +37,7 @@ mod sign_mode_handler;
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
 	prost::{alloc::string::String, Message},
-	traits::Name,
+	Any,
 };
 use frame_support::{
 	construct_runtime, derive_impl,
@@ -60,6 +60,7 @@ use hp_rpc::{GasInfo, SimulateError, SimulateResponse};
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::tx::Gas;
 use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
+use pallet_cosmos_x_auth_signing::any_match;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -327,9 +328,14 @@ impl pallet_timestamp::Config for Runtime {
 }
 
 pub struct MsgFilter;
-impl Contains<String> for MsgFilter {
-	fn contains(type_url: &String) -> bool {
-		[MsgSend::type_url()].contains(type_url)
+impl Contains<Any> for MsgFilter {
+	fn contains(msg: &Any) -> bool {
+		any_match!(
+			msg, {
+				MsgSend => true
+			},
+			false
+		)
 	}
 }
 
@@ -538,10 +544,11 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		info: Self::SignedInfo,
 	) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
 		match self {
-			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) =>
+			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) => {
 				Some(call.dispatch(RuntimeOrigin::from(
 					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosm_address().unwrap()),
-				))),
+				)))
+			},
 			_ => None,
 		}
 	}
@@ -591,8 +598,11 @@ impl Runtime {
 						pk.copy_from_slice(&public_key.key);
 						CosmosSigner(Public(pk))
 					},
-					_ =>
-						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
+					_ => {
+						return Err(TransactionValidityError::Invalid(
+							InvalidTransaction::BadSigner,
+						))
+					},
 				};
 
 				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
