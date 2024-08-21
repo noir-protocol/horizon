@@ -18,14 +18,18 @@
 
 use cosmos_sdk_proto::{
 	cosmos::bank::v1beta1::MsgSend,
-	cosmwasm::wasm::v1::{MsgExecuteContract, MsgInstantiateContract2, MsgStoreCode},
+	cosmwasm::wasm::v1::{
+		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
+		MsgUpdateAdmin,
+	},
 	Any,
 };
 use pallet_cosmos_types::msgservice::MsgHandler;
 use pallet_cosmos_x_auth_signing::any_match;
 use pallet_cosmos_x_bank::msgs::MsgSendHandler;
 use pallet_cosmos_x_wasm::msgs::{
-	MsgExecuteContractHandler, MsgInstantiateContract2Handler, MsgStoreCodeHandler,
+	MsgExecuteContractHandler, MsgInstantiateContract2Handler, MsgMigrateContractHandler,
+	MsgStoreCodeHandler, MsgUpdateAdminHandler,
 };
 use sp_std::{boxed::Box, marker::PhantomData};
 
@@ -41,6 +45,8 @@ where
 				MsgStoreCode => Some(Box::<MsgStoreCodeHandler<T>>::default()),
 				MsgInstantiateContract2 => Some(Box::<MsgInstantiateContract2Handler<T>>::default()),
 				MsgExecuteContract => Some(Box::<MsgExecuteContractHandler<T>>::default()),
+				MsgMigrateContract => Some(Box::<MsgMigrateContractHandler<T>>::default()),
+				MsgUpdateAdmin => Some(Box::<MsgUpdateAdminHandler<T>>::default()),
 			},
 			None
 		)

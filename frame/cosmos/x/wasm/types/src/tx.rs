@@ -127,3 +127,45 @@ pub mod msg_execute_contract {
 		vec![msg.sender.clone()]
 	}
 }
+
+pub mod msg_migrate_contract {
+	use super::*;
+	use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgMigrateContract;
+
+	pub fn get_sign_bytes(msg: &MsgMigrateContract) -> Value {
+		let mut value = Map::new();
+
+		value.insert("sender".to_string(), Value::String(msg.sender.clone()));
+		value.insert("contract".to_string(), Value::String(msg.contract.clone()));
+		value.insert("code_id".to_string(), Value::from(msg.code_id));
+		value.insert(
+			"msg".to_string(),
+			Value::Array(msg.msg.clone().into_iter().map(Value::from).collect::<Vec<Value>>()),
+		);
+
+		Value::Object(value)
+	}
+
+	pub fn get_signers(msg: &MsgMigrateContract) -> Vec<String> {
+		vec![msg.sender.clone()]
+	}
+}
+
+pub mod msg_update_admin {
+	use super::*;
+	use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgUpdateAdmin;
+
+	pub fn get_sign_bytes(msg: &MsgUpdateAdmin) -> Value {
+		let mut value: Map<String, Value> = Map::new();
+
+		value.insert("sender".to_string(), Value::String(msg.sender.clone()));
+		value.insert("new_admin".to_string(), Value::String(msg.new_admin.clone()));
+		value.insert("contract".to_string(), Value::String(msg.contract.clone()));
+
+		Value::Object(value)
+	}
+
+	pub fn get_signers(msg: &MsgUpdateAdmin) -> Vec<String> {
+		vec![msg.sender.clone()]
+	}
+}

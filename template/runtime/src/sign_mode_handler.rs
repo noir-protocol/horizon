@@ -24,7 +24,10 @@ use cosmos_sdk_proto::{
 			ModeInfo, SignDoc, Tx, TxRaw,
 		},
 	},
-	cosmwasm::wasm::v1::{MsgExecuteContract, MsgInstantiateContract2, MsgStoreCode},
+	cosmwasm::wasm::v1::{
+		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
+		MsgUpdateAdmin,
+	},
 	prost::alloc::string::ToString,
 	traits::Message,
 };
@@ -35,7 +38,8 @@ use pallet_cosmos_x_auth_signing::{
 };
 use pallet_cosmos_x_bank_types::msgs::msg_send;
 use pallet_cosmos_x_wasm_types::tx::{
-	msg_execute_contract, msg_instantiate_contract2, msg_store_code,
+	msg_execute_contract, msg_instantiate_contract2, msg_migrate_contract, msg_store_code,
+	msg_update_admin,
 };
 use serde_json::{Map, Value};
 use sp_std::vec::Vec;
@@ -85,6 +89,8 @@ impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignMo
 								MsgStoreCode => MsgStoreCode::decode(&mut &*msg.value).as_ref().map(msg_store_code::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
 								MsgInstantiateContract2 => MsgInstantiateContract2::decode(&mut &*msg.value).as_ref().map(msg_instantiate_contract2::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
 								MsgExecuteContract => MsgExecuteContract::decode(&mut &*msg.value).as_ref().map(msg_execute_contract::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								MsgMigrateContract => MsgMigrateContract::decode(&mut &*msg.value).as_ref().map(msg_migrate_contract::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								MsgUpdateAdmin => MsgUpdateAdmin::decode(&mut &*msg.value).as_ref().map(msg_update_admin::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
 							},
 							Err(SignModeHandlerError::InvalidMsg))?;
 

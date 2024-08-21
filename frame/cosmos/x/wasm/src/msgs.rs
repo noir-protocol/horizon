@@ -17,7 +17,10 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use cosmos_sdk_proto::{
-	cosmwasm::wasm::v1::{MsgExecuteContract, MsgInstantiateContract2, MsgStoreCode},
+	cosmwasm::wasm::v1::{
+		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
+		MsgUpdateAdmin,
+	},
 	prost::Message,
 	Any,
 };
@@ -100,6 +103,52 @@ impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgExecuteContractHandle
 			})?;
 
 		// TODO: Implements execute contract with pallet_cosmwasm
+		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
+	}
+}
+
+pub struct MsgMigrateContractHandler<T>(PhantomData<T>);
+
+impl<T> Default for MsgMigrateContractHandler<T> {
+	fn default() -> Self {
+		Self(Default::default())
+	}
+}
+
+impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgMigrateContractHandler<T> {
+	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
+		let total_weight = Weight::zero();
+
+		let MsgMigrateContract { sender: _, contract: _, code_id: _, msg: _ } =
+			MsgMigrateContract::decode(&mut &*msg.value).map_err(|_| MsgHandlerErrorInfo {
+				weight: total_weight,
+				error: RootError::TxDecodeError.into(),
+			})?;
+
+		// TODO: Implements migrate contract with pallet_cosmwasm
+		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
+	}
+}
+
+pub struct MsgUpdateAdminHandler<T>(PhantomData<T>);
+
+impl<T> Default for MsgUpdateAdminHandler<T> {
+	fn default() -> Self {
+		Self(Default::default())
+	}
+}
+
+impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgUpdateAdminHandler<T> {
+	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
+		let total_weight = Weight::zero();
+
+		let MsgUpdateAdmin { sender: _, new_admin: _, contract: _ } =
+			MsgUpdateAdmin::decode(&mut &*msg.value).map_err(|_| MsgHandlerErrorInfo {
+				weight: total_weight,
+				error: RootError::TxDecodeError.into(),
+			})?;
+
+		// TODO: Implements update admin with pallet_cosmwasm
 		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
 	}
 }
