@@ -15,13 +15,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use cosmos_sdk_proto::{
+	cosmwasm::wasm::v1::{MsgInstantiateContract2, MsgStoreCode},
+	prost::alloc::string::{String, ToString},
+};
+use serde_json::{Map, Value};
+use sp_std::{vec, vec::Vec};
+
 pub mod msg_store_code {
-	use cosmos_sdk_proto::{
-		cosmwasm::wasm::v1::MsgStoreCode,
-		prost::alloc::string::{String, ToString},
-	};
-	use serde_json::{Map, Value};
-	use sp_std::{vec, vec::Vec};
+	use super::*;
 
 	pub fn get_sign_bytes(msg: &MsgStoreCode) -> Value {
 		let mut value = Map::new();
@@ -47,6 +49,47 @@ pub mod msg_store_code {
 	}
 
 	pub fn get_signers(msg: &MsgStoreCode) -> Vec<String> {
+		vec![msg.sender.clone()]
+	}
+}
+
+pub mod msg_instantiate_contract2 {
+	use super::*;
+
+	pub fn get_sign_bytes(msg: &MsgInstantiateContract2) -> Value {
+		let mut value = Map::new();
+
+		value.insert("sender".to_string(), Value::String(msg.sender.clone()));
+		value.insert("admin".to_string(), Value::String(msg.admin.clone()));
+		value.insert("code_id".to_string(), Value::from(msg.code_id));
+		value.insert("label".to_string(), Value::String(msg.label.clone()));
+		value.insert(
+			"msg".to_string(),
+			Value::Array(msg.msg.clone().into_iter().map(Value::from).collect::<Vec<Value>>()),
+		);
+		let funds = msg
+			.funds
+			.clone()
+			.into_iter()
+			.map(|coin| {
+				let mut fund = Map::new();
+				fund.insert("denom".to_string(), Value::String(coin.denom.clone()));
+				fund.insert("amount".to_string(), Value::String(coin.amount.clone()));
+				fund
+			})
+			.map(Value::Object)
+			.collect::<Vec<Value>>();
+		value.insert("funds".to_string(), Value::Array(funds));
+		value.insert(
+			"salt".to_string(),
+			Value::Array(msg.salt.clone().into_iter().map(Value::from).collect::<Vec<Value>>()),
+		);
+		value.insert("fix_msg".to_string(), Value::Bool(msg.fix_msg));
+
+		Value::Object(value)
+	}
+
+	pub fn get_signers(msg: &MsgInstantiateContract2) -> Vec<String> {
 		vec![msg.sender.clone()]
 	}
 }

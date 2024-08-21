@@ -16,7 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use cosmos_sdk_proto::{cosmwasm::wasm::v1::MsgStoreCode, prost::Message, Any};
+use cosmos_sdk_proto::{
+	cosmwasm::wasm::v1::{MsgInstantiateContract2, MsgStoreCode},
+	prost::Message,
+	Any,
+};
 use frame_support::weights::Weight;
 use pallet_cosmos_types::{
 	errors::RootError, events::CosmosEvent, msgservice::MsgHandlerErrorInfo,
@@ -42,6 +46,37 @@ impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgStoreCodeHandler<T> {
 			})?;
 
 		// TODO: Implements store wasm code with pallet_cosmwasm
+		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
+	}
+}
+
+pub struct MsgInstantiateContract2Handler<T>(PhantomData<T>);
+
+impl<T> Default for MsgInstantiateContract2Handler<T> {
+	fn default() -> Self {
+		Self(Default::default())
+	}
+}
+
+impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgInstantiateContract2Handler<T> {
+	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
+		let total_weight = Weight::zero();
+
+		let MsgInstantiateContract2 {
+			sender: _,
+			admin: _,
+			code_id: _,
+			label: _,
+			msg: _,
+			funds: _,
+			salt: _,
+			fix_msg: _,
+		} = MsgInstantiateContract2::decode(&mut &*msg.value).map_err(|_| MsgHandlerErrorInfo {
+			weight: total_weight,
+			error: RootError::TxDecodeError.into(),
+		})?;
+
+		// TODO: Implements instantiate contract with pallet_cosmwasm
 		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
 	}
 }

@@ -37,7 +37,7 @@ mod sign_mode_handler;
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
 	cosmwasm::wasm::v1::{
-		MsgExecuteContract, MsgInstantiateContract, MsgInstantiateContract2, MsgMigrateContract,
+		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract,
 		MsgStoreCode, MsgUpdateAdmin,
 	},
 	prost::{alloc::string::String, Message},
@@ -338,7 +338,6 @@ impl Contains<Any> for MsgFilter {
 			msg, {
 				MsgSend => true,
 				MsgStoreCode => true,
-				MsgInstantiateContract => true,
 				MsgInstantiateContract2 => true,
 				MsgExecuteContract => true,
 				MsgMigrateContract => true,

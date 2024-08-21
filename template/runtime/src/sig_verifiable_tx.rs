@@ -18,12 +18,12 @@
 
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
-	cosmwasm::wasm::v1::MsgStoreCode,
+	cosmwasm::wasm::v1::{MsgInstantiateContract2, MsgStoreCode},
 	prost::{alloc::string::String, Message},
 };
 use pallet_cosmos_x_auth_signing::{any_match, sign_verifiable_tx::SigVerifiableTxError};
 use pallet_cosmos_x_bank_types::msgs::msg_send;
-use pallet_cosmos_x_wasm_types::tx::msg_store_code;
+use pallet_cosmos_x_wasm_types::tx::{msg_instantiate_contract2, msg_store_code};
 use sp_std::vec::Vec;
 
 pub struct SigVerifiableTx;
@@ -38,6 +38,7 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 				msg, {
 					MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
 					MsgStoreCode => MsgStoreCode::decode(&mut &*msg.value).as_ref().map(msg_store_code::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					MsgInstantiateContract2 => MsgInstantiateContract2::decode(&mut &*msg.value).as_ref().map(msg_instantiate_contract2::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
 				},
 				Err(SigVerifiableTxError::InvalidMsg)
 			)?;
