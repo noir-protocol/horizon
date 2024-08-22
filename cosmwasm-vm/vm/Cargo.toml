@@ -1,0 +1,26 @@
+[package]
+name = "cosmwasm-vm"
+version = "0.2.0"
+edition = "2021"
+
+[features]
+default = ["iterator", "stargate"]
+iterator = ["cosmwasm-std/iterator"]
+stargate = ["cosmwasm-std/stargate"]
+std = ["cosmwasm-std/std"]
+
+[dependencies]
+cosmwasm-std = { workspace = true, default-features = false, features = [
+  "iterator",
+  "staking",
+  "stargate",
+  "cosmwasm_2_1",
+] }
+log = { workspace = true, default-features = false }
+num = { workspace = true }
+serde = { workspace = true, default-features = false, features = ["derive"] }
+serde_json = { workspace = true, default-features = false, features = ["alloc"] }
+
+[dev-dependencies]
+wat = "1.0"
+env_logger = "0.9"

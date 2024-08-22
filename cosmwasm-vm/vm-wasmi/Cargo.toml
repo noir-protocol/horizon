@@ -1,0 +1,38 @@
+[package]
+name = "cosmwasm-vm-wasmi"
+version = "0.2.0"
+edition = "2021"
+
+[features]
+default = ["iterator", "stargate"]
+iterator = ["cosmwasm-vm/iterator"]
+stargate = ["cosmwasm-vm/stargate"]
+std = ["cosmwasm-std/std"]
+
+[dependencies]
+serde = { workspace = true, default-features = false, features = ["derive"] }
+serde_json = { workspace = true, default-features = false, features = [
+  "alloc",
+] }
+either = { version = "1.8", default-features = false }
+log = { workspace = true, default-features = false }
+wasmi = { workspace = true, default-features = false }
+wasmi-validation = { workspace = true, default-features = false }
+wasm-instrument = { workspace = true, default-features = false }
+cosmwasm-std = { workspace = true, default-features = false, features = [
+  "iterator",
+  "staking",
+  "stargate",
+  "cosmwasm_2_1",
+] }
+cosmwasm-vm = { workspace = true, default-features = false }
+hex = { workspace = true, features = ["alloc"] }
+
+[dev-dependencies]
+wat = "1.0"
+env_logger = "0.9"
+cosmwasm-crypto = { workspace = true }
+
+cw20-ics20 = { git = "https://github.com/CosmWasm/cw-plus", default-features = false, features = [
+  "library",
+] }
