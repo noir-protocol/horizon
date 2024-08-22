@@ -275,14 +275,13 @@ pub mod ibc {
 	impl<T> From<IbcChannelConnectResult<T>> for ContractResult<Response<T>> {
 		fn from(IbcChannelConnectResult(result): IbcChannelConnectResult<T>) -> Self {
 			match result {
-				ContractResult::Ok(IbcBasicResponse { messages, attributes, events, .. }) => {
+				ContractResult::Ok(IbcBasicResponse { messages, attributes, events, .. }) =>
 					ContractResult::Ok(
 						Response::new()
 							.add_submessages(messages)
 							.add_attributes(attributes)
 							.add_events(events),
-					)
-				},
+					),
 				ContractResult::Err(x) => ContractResult::Err(x),
 			}
 		}
@@ -318,14 +317,13 @@ pub mod ibc {
 	impl<T> From<IbcChannelCloseResult<T>> for ContractResult<Response<T>> {
 		fn from(IbcChannelCloseResult(result): IbcChannelCloseResult<T>) -> Self {
 			match result {
-				ContractResult::Ok(IbcBasicResponse { messages, attributes, events, .. }) => {
+				ContractResult::Ok(IbcBasicResponse { messages, attributes, events, .. }) =>
 					ContractResult::Ok(
 						Response::new()
 							.add_submessages(messages)
 							.add_attributes(attributes)
 							.add_events(events),
-					)
-				},
+					),
 				ContractResult::Err(x) => ContractResult::Err(x),
 			}
 		}
@@ -372,7 +370,7 @@ pub mod ibc {
 						.add_submessages(messages)
 						.add_attributes(attributes)
 						.add_events(events);
-					
+
 					response.data = acknowledgement;
 					ContractResult::Ok(response)
 				},
@@ -415,14 +413,13 @@ pub mod ibc {
 	impl<T> From<IbcPacketAckResult<T>> for ContractResult<Response<T>> {
 		fn from(IbcPacketAckResult(result): IbcPacketAckResult<T>) -> Self {
 			match result {
-				ContractResult::Ok(IbcBasicResponse { messages, attributes, events, .. }) => {
+				ContractResult::Ok(IbcBasicResponse { messages, attributes, events, .. }) =>
 					ContractResult::Ok(
 						Response::new()
 							.add_submessages(messages)
 							.add_attributes(attributes)
 							.add_events(events),
-					)
-				},
+					),
 				ContractResult::Err(x) => ContractResult::Err(x),
 			}
 		}
@@ -458,14 +455,13 @@ pub mod ibc {
 	impl<T> From<IbcPacketTimeoutResult<T>> for ContractResult<Response<T>> {
 		fn from(IbcPacketTimeoutResult(result): IbcPacketTimeoutResult<T>) -> Self {
 			match result {
-				ContractResult::Ok(IbcBasicResponse { messages, attributes, events, .. }) => {
+				ContractResult::Ok(IbcBasicResponse { messages, attributes, events, .. }) =>
 					ContractResult::Ok(
 						Response::new()
 							.add_submessages(messages)
 							.add_attributes(attributes)
 							.add_events(events),
-					)
-				},
+					),
 				ContractResult::Err(x) => ContractResult::Err(x),
 			}
 		}
