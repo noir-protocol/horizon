@@ -21,7 +21,6 @@ wasmi-validation = { workspace = true, default-features = false }
 wasm-instrument = { workspace = true, default-features = false }
 cosmwasm-std = { workspace = true, default-features = false, features = [
   "iterator",
-  "staking",
   "stargate",
   "cosmwasm_2_1",
 ] }

@@ -12,7 +12,6 @@ std = ["cosmwasm-std/std"]
 [dependencies]
 cosmwasm-std = { workspace = true, default-features = false, features = [
   "iterator",
-  "staking",
   "stargate",
   "cosmwasm_2_1",
 ] }
