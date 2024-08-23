@@ -4,6 +4,7 @@ members = [
 	"client/rpc",
 	"frame/accounts",
 	"frame/cosmos",
+	"frame/cosmwasm",
 	"frame/cosmos/types",
 	"frame/cosmos/x/auth",
 	"frame/cosmos/x/auth/migrations",
@@ -109,6 +110,7 @@ hp-crypto = { path = "primitives/crypto", default-features = false }
 hp-io = { path = "primitives/io", default-features = false }
 hp-rpc = { path = "primitives/rpc", default-features = false }
 pallet-cosmos = { path = "frame/cosmos", default-features = false }
+pallet-cosmwasm = { path = "frame/cosmwasm", default-features = false }
 pallet-cosmos-accounts = { path = "frame/accounts", default-features = false }
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
