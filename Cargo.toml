@@ -4,6 +4,7 @@ members = [
 	"client/rpc",
 	"frame/accounts",
 	"frame/cosmos",
+	"frame/cosmwasm",
 	"frame/cosmos/types",
 	"frame/cosmos/x/auth",
 	"frame/cosmos/x/auth/migrations",
@@ -30,6 +31,7 @@ clap = { version = "4.0.9", features = ["derive"] }
 cosmos-sdk-proto = { version = "0.23.0", default-features = false }
 futures = "0.3.28"
 hex = "0.4.3"
+hex-literal = "0.4.1"
 impl-trait-for-tuples = "0.2.2"
 jsonrpsee = "0.22.5"
 log = { version = "0.4.21", default-features = false }
@@ -77,6 +79,7 @@ sc-service = { git = "https://github.com/paritytech/polkadot-sdk", branch = "rel
 sc-telemetry = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0" }
 sc-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0" }
 sc-transaction-pool-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0" }
+sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 sp-blockchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
@@ -109,6 +112,7 @@ hp-crypto = { path = "primitives/crypto", default-features = false }
 hp-io = { path = "primitives/io", default-features = false }
 hp-rpc = { path = "primitives/rpc", default-features = false }
 pallet-cosmos = { path = "frame/cosmos", default-features = false }
+pallet-cosmwasm = { path = "frame/cosmwasm", default-features = false }
 pallet-cosmos-accounts = { path = "frame/accounts", default-features = false }
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
