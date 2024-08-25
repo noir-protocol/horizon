@@ -125,7 +125,7 @@ pub type VmStorageKeyOf<T> = <T as VMBase>::StorageKey;
 #[allow(clippy::module_name_repetitions)]
 pub type VmStorageValueOf<T> = <T as VMBase>::StorageValue;
 #[allow(clippy::module_name_repetitions)]
-pub type VmContracMetaOf<T> = <T as VMBase>::ContractMeta;
+pub type VmContractMetaOf<T> = <T as VMBase>::ContractMeta;
 
 /// A way of calling a VM. From the abstract `call` to `raw_call`.
 pub trait VM: VMBase {

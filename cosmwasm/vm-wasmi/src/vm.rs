@@ -20,7 +20,7 @@ use cosmwasm_vm::{
 	system::{CosmwasmCodeId, CosmwasmContractMeta, SystemError},
 	transaction::{Transactional, TransactionalErrorOf},
 	vm::{
-		VMBase, VmAddressOf, VmCanonicalAddressOf, VmContracMetaOf, VmErrorOf, VmGas,
+		VMBase, VmAddressOf, VmCanonicalAddressOf, VmContractMetaOf, VmErrorOf, VmGas,
 		VmGasCheckpoint, VmMessageCustomOf, VmQueryCustomOf, VmStorageKeyOf, VmStorageValueOf, VM,
 	},
 };
@@ -87,7 +87,7 @@ where
 	type Output<'x> = WasmiOutput<Self>;
 	type QueryCustom = VmQueryCustomOf<V>;
 	type MessageCustom = VmMessageCustomOf<V>;
-	type ContractMeta = VmContracMetaOf<V>;
+	type ContractMeta = VmContractMetaOf<V>;
 	type Address = VmAddressOf<V>;
 	type CanonicalAddress = VmCanonicalAddressOf<V>;
 	type StorageKey = VmStorageKeyOf<V>;
