@@ -10,7 +10,7 @@ doctest = false
 
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.2.0", default-features = false }
-composable-support = { path = "../composable-support", default-features = false }
+composable-support = { workspace = true, default-features = false }
 cosmwasm-vm = { workspace = true, default-features = false }
 cosmwasm-vm-wasmi = { workspace = true, default-features = false }
 cosmwasm-std = { workspace = true, default-features = false, features = [
@@ -21,13 +21,12 @@ cosmwasm-std = { workspace = true, default-features = false, features = [
 
 frame-support = { default-features = false, workspace = true }
 frame-system = { default-features = false, workspace = true }
-hex = { version = "0.4", default-features = false, features = ["alloc"] }
+hex = { version = "0.4", features = ["alloc"] }
 hex-literal = { workspace = true }
 vec1 = { version = "*", default-features = false, features = ["smallvec-v1"] }
 
 ibc = { workspace = true, default-features = false }
 ibc-primitives = { workspace = true, default-features = false, optional = false }
-pallet-ibc = { workspace = true, default-features = false }
 
 libsecp256k1 = { version = "0.7.0", default-features = false }
 
@@ -57,7 +56,7 @@ sp-std = { default-features = false, workspace = true }
 wasm-instrument = { workspace = true, default-features = false }
 wasmi = { workspace = true, default-features = false }
 wasmi-validation = { workspace = true, default-features = false }
-composable-traits = { path = "../composable-traits", default-features = false }
+composable-traits = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
@@ -77,9 +76,7 @@ std = [
 	"log/std",
 	"pallet-assets/std",
 	"pallet-balances/std",
-	"pallet-ibc/std",
 	"parity-wasm/std",
-	"primitives/std",
 	"rand/std",
 	"scale-info/std",
 	"serde/std",
@@ -96,3 +93,4 @@ std = [
 	"wasmi-validation/std",
 	"wasmi/std",
 ]
+try-runtime = []

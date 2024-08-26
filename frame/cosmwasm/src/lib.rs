@@ -24,7 +24,6 @@
 	overflowing_literals,
 	path_statements,
 	patterns_in_fns_without_body,
-	private_in_public,
 	unconditional_recursion,
 	unused_allocation,
 	unused_comparisons,
@@ -53,15 +52,6 @@ pub mod utils;
 pub mod weights;
 pub use crate::ibc::NoRelayer;
 pub mod entrypoint;
-mod mapping;
-
-#[cfg(feature = "runtime-benchmarks")]
-mod benchmarking;
-
-#[cfg(any(test, fuzzing))]
-pub mod mock;
-#[cfg(test)]
-mod tests;
 
 const SUBSTRATE_ECDSA_SIGNATURE_LEN: usize = 65;
 use crate::{
@@ -135,7 +125,7 @@ pub mod pallet {
 		traits::{
 			fungibles::{Inspect as FungiblesInspect, Mutate as FungiblesMutate},
 			tokens::{AssetId, Balance},
-			Get, ReservableCurrency, UnixTime,
+			GenesisBuild, Get, ReservableCurrency, UnixTime,
 		},
 		transactional, PalletId, Twox64Concat,
 	};
@@ -1094,7 +1084,7 @@ impl<T: Config> Pallet<T> {
 				},
 			);
 
-			return Ok(OwnedWasmiVM::new(store))
+			return Ok(OwnedWasmiVM::new(store));
 		}
 
 		// Else, the contract is not a pallet. We continue with the normal wasmi vm creation
@@ -1405,23 +1395,22 @@ impl<T: Config> Pallet<T> {
 		};
 
 		let creator = CosmwasmAccount::<T>::new(contract_info.instantiator.clone());
-		let mut contract_info_response = ContractInfoResponse::default();
-		contract_info_response.code_id = contract_info.code_id;
-		contract_info_response.creator = creator.into();
-		contract_info_response.admin =
-			contract_info.admin.map(|admin| CosmwasmAccount::<T>::new(admin).into());
-		contract_info_response.pinned = pinned;
-		contract_info_response.ibc_port = ibc_port;
-		Ok(contract_info_response)
+		Ok(ContractInfoResponse::new(
+			contract_info.code_id,
+			creator.into(),
+			contract_info.admin.map(|admin| CosmwasmAccount::<T>::new(admin).into()),
+			pinned,
+			ibc_port,
+		))
 	}
 
 	pub(crate) fn do_query_code_info(code_id: u64) -> Result<CodeInfoResponse, CosmwasmVMError<T>> {
 		let code_info = CodeIdToInfo::<T>::get(code_id).ok_or(Error::<T>::CodeNotFound)?;
-		let mut code_info_response = CodeInfoResponse::default();
-		code_info_response.code_id = code_id;
-		code_info_response.creator = Pallet::<T>::account_to_cosmwasm_addr(code_info.creator);
-		code_info_response.checksum = code_info.pristine_code_hash.as_ref().into();
-		Ok(code_info_response)
+		Ok(CodeInfoResponse::new(
+			code_id,
+			Addr::unchecked(Pallet::<T>::account_to_cosmwasm_addr(code_info.creator)),
+			code_info.pristine_code_hash.into(),
+		))
 	}
 
 	pub(crate) fn do_continue_query(
