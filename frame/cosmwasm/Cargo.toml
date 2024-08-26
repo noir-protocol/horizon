@@ -11,8 +11,14 @@ doctest = false
 [dependencies]
 codec = { package = "parity-scale-codec", version = "3.2.0", default-features = false }
 composable-support = { workspace = true, default-features = false }
-cosmwasm-vm = { workspace = true, default-features = false }
-cosmwasm-vm-wasmi = { workspace = true, default-features = false }
+cosmwasm-vm = { workspace = true, default-features = false, features = [
+	"iterator",
+	"stargate",
+] }
+cosmwasm-vm-wasmi = { workspace = true, default-features = false, features = [
+	"iterator",
+	"stargate",
+] }
 cosmwasm-std = { workspace = true, default-features = false, features = [
 	"iterator",
 	"stargate",
@@ -35,10 +41,6 @@ log = { workspace = true, default-features = false }
 pallet-assets = { default-features = false, workspace = true }
 pallet-balances = { default-features = false, workspace = true }
 parity-wasm = { version = "0.45.0", default-features = false }
-rand = { version = "0.8.5", optional = true, default-features = false, features = [
-	"alloc",
-	"small_rng",
-] }
 scale-info = { default-features = false, version = "2.1.1", features = [
 	"derive",
 ] }
@@ -77,7 +79,6 @@ std = [
 	"pallet-assets/std",
 	"pallet-balances/std",
 	"parity-wasm/std",
-	"rand/std",
 	"scale-info/std",
 	"serde/std",
 	"serde_json/std",

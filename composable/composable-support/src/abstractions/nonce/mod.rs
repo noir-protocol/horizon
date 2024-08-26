@@ -5,11 +5,11 @@ use crate::abstractions::utils::{
 };
 
 use codec::FullCodec;
+use core::marker::PhantomData;
 use frame_support::{
 	pallet_prelude::StorageValue,
 	traits::{Get, StorageInstance},
 };
-use core::marker::PhantomData;
 
 /// Defines what a nonce should start at and how it should be incremented.
 ///

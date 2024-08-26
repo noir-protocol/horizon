@@ -24,7 +24,10 @@ cosmwasm-std = { workspace = true, default-features = false, features = [
 	"stargate",
 	"cosmwasm_1_4",
 ] }
-cosmwasm-vm = { workspace = true, default-features = false }
+cosmwasm-vm = { workspace = true, default-features = false, features = [
+	"iterator",
+	"stargate",
+] }
 hex = { workspace = true, features = ["alloc"] }
 rand_core = { workspace = true, features = ["alloc"] }
 

@@ -142,8 +142,14 @@ wasmi-validation = { version = "0.5.0", default-features = false }
 # Composable
 pallet-cosmwasm = { path = "frame/cosmwasm", default-features = false }
 ibc-primitives = { path = "composable/primitives", default-features = false }
-cosmwasm-vm = { path = "composable/vm", default-features = false }
-cosmwasm-vm-wasmi = { path = "composable/vm-wasmi", default-features = false }
+cosmwasm-vm = { path = "composable/vm", default-features = false, features = [
+	"iterator",
+	"stargate",
+] }
+cosmwasm-vm-wasmi = { path = "composable/vm-wasmi", default-features = false, features = [
+	"iterator",
+	"stargate",
+] }
 composable-support = { path = "composable/composable-support", default-features = false }
 composable-traits = { path = "composable/composable-traits", default-features = false }
 
