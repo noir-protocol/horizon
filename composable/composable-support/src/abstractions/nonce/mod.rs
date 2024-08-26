@@ -9,7 +9,7 @@ use frame_support::{
 	pallet_prelude::StorageValue,
 	traits::{Get, StorageInstance},
 };
-use sp_std::marker::PhantomData;
+use core::marker::PhantomData;
 
 /// Defines what a nonce should start at and how it should be incremented.
 ///

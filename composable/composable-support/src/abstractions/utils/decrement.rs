@@ -5,7 +5,7 @@ use crate::{
 
 use codec::FullCodec;
 use sp_runtime::{traits::One, ArithmeticError};
-use sp_std::fmt::Debug;
+use core::fmt::Debug;
 
 /// An extension trait for [`StorageValue`]s that can be decreased.
 pub trait Decrement<T, D>: Sealed + 'static

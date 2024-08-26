@@ -13,12 +13,11 @@ use ibc::{
 	},
 	primitives::{Signer, Timestamp},
 };
+use scale_info::TypeInfo;
 use sp_runtime::RuntimeDebug;
 
-pub mod runtime_interface;
-
 /// Packet timeout, could be an offset, or absolute value.
-#[derive(RuntimeDebug, PartialEq, Eq, scale_info::TypeInfo, Encode, Decode, Clone)]
+#[derive(RuntimeDebug, PartialEq, Eq, TypeInfo, Encode, Decode, Clone)]
 pub enum Timeout {
 	Offset {
 		/// Timestamp at which this packet should timeout in counterparty in seconds

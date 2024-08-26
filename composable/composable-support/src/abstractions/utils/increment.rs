@@ -6,7 +6,7 @@ use crate::{
 use codec::FullCodec;
 use frame_support::pallet_prelude::Get;
 use sp_runtime::{traits::One, ArithmeticError};
-use sp_std::{fmt::Debug, marker::PhantomData, ops::Add};
+use core::{fmt::Debug, marker::PhantomData, ops::Add};
 
 /// An extension trait for [`StorageValue`]s that are used as a [nonce](nonce).
 ///

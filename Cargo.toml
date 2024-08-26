@@ -4,6 +4,7 @@ members = [
 	"client/rpc",
 	"frame/accounts",
 	"frame/cosmos",
+	"frame/cosmwasm",
 	"frame/cosmos/types",
 	"frame/cosmos/x/auth",
 	"frame/cosmos/x/auth/migrations",
@@ -23,7 +24,6 @@ members = [
 	"composable/vm-wasmi",
 	"composable/composable-support",
 	"composable/composable-traits",
-	"frame/cosmwasm",
 ]
 
 [workspace.dependencies]
@@ -100,7 +100,6 @@ sp-session = { git = "https://github.com/paritytech/polkadot-sdk", branch = "rel
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 sp-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 sp-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
-sp-trie = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 sp-version = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 sp-wasm-interface = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 substrate-wasm-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0" }
@@ -140,6 +139,7 @@ wasm-instrument = { version = "0.4.0", default-features = false }
 wasmi = { version = "0.30.0", default-features = false }
 wasmi-validation = { version = "0.5.0", default-features = false }
 
+# Composable
 pallet-cosmwasm = { path = "frame/cosmwasm", default-features = false }
 ibc-primitives = { path = "composable/primitives", default-features = false }
 cosmwasm-vm = { path = "composable/vm", default-features = false }
