@@ -21,6 +21,7 @@ members = [
 	"cosmwasm/std",
 	"cosmwasm/vm",
 	"cosmwasm/vm-wasmi",
+	"frame/composable-support",
 ]
 
 [workspace.dependencies]
@@ -136,6 +137,8 @@ cosmwasm-vm-wasmi = { path = "cosmwasm/vm-wasmi", default-features = false }
 wasm-instrument = { version = "0.4.0", default-features = false }
 wasmi = { version = "0.30.0", default-features = false }
 wasmi-validation = { version = "0.5.0", default-features = false }
+
+composable-support = { path = "frame/composable-support", default-features = false }
 
 [profile.release]
 panic = "unwind"

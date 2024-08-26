@@ -9,14 +9,14 @@ version = "1.0.0"
 doctest = false
 
 [dependencies]
-codec = { package = "parity-scale-codec", workspace = true, default-features = false }
+codec = { package = "parity-scale-codec", version = "3.2.0", default-features = false }
 composable-support = { path = "../composable-support", default-features = false }
 cosmwasm-vm = { workspace = true, default-features = false }
 cosmwasm-vm-wasmi = { workspace = true, default-features = false }
 cosmwasm-std = { workspace = true, default-features = false, features = [
 	"iterator",
 	"stargate",
-	"cosmwasm_2_1",
+	"cosmwasm_1_4",
 ] }
 
 frame-support = { default-features = false, workspace = true }
