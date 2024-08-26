@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![feature(trait_alias)]
 #![cfg_attr(test, feature(assert_matches))]
 #![allow(soft_unstable)]
