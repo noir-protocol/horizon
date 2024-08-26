@@ -9,9 +9,8 @@ version = "1.0.0"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-thiserror = { workspace = true }
+thiserror = { version = "1.0.50", package = "thiserror-core", default-features = false }
 
 [features]
 default = ["std"]
-std = [
-]
+std = ["thiserror/std"]

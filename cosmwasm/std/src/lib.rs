@@ -5,6 +5,8 @@
 // you need no_std support see #1484. "#
 // );
 
+#![cfg_attr(not(feature = "std"), no_std)]
+
 #[macro_use]
 extern crate alloc;
 

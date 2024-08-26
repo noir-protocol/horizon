@@ -49,7 +49,6 @@ serde = { version = "1.0.0", default-features = false }
 serde_json = { version = "1.0.94", default-features = false, features = [
 	"alloc",
 ] }
-thiserror = { version = "1.0.63" }
 
 # Substrate FRAME
 frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }

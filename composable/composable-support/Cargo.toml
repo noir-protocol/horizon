@@ -10,21 +10,29 @@ version = "1.0.0"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+codec = { version = "3.2.0", package = "parity-scale-codec", default-features = false, features = [
+	"derive",
+] }
+scale-info = { version = "2.3.0", default-features = false, features = [
+	"derive",
+] }
+num-traits = { version = "0.2.14", default-features = false }
+schemars = { optional = true, workspace = true }
+
 frame-support = { default-features = false, workspace = true }
 sp-arithmetic = { default-features = false, workspace = true }
 sp-runtime = { default-features = false, workspace = true }
 sp-std = { default-features = false, workspace = true }
-schemars = { optional = true, workspace = true }
-codec = { version = "3.2.0", package = "parity-scale-codec", default-features = false, features = [
-  "derive",
-] }
-scale-info = { version = "2.3.0", default-features = false, features = [
-  "derive",
-] }
-
-num-traits = { version = "0.2.14", default-features = false }
 
 [features]
 default = ["std"]
 schema = ["schemars", "std"]
-std = ["codec/std", "frame-support/std", "scale-info/std", "sp-std/std"]
+std = [
+	"codec/std",
+	"scale-info/std",
+	"num-traits/std",
+	"frame-support/std",
+	"sp-arithmetic/std",
+	"sp-runtime/std",
+	"sp-std/std",
+]
