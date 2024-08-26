@@ -1,5 +1,3 @@
-#![cfg_attr(not(feature = "std"), no_std)]
-
 // #[cfg(not(feature = "std"))]
 // core::compile_error!(
 //     r#"Please enable `cosmwasm-std`'s `std` feature, as we might move existing functionality to
