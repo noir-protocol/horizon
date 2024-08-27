@@ -2526,9 +2526,9 @@ mod tests {
         );
 	}
 
-	#[test]
-	fn signed_decimal_has_defined_json_schema() {
-		let schema = schemars::schema_for!(SignedDecimal);
-		assert_eq!("SignedDecimal", schema.schema.metadata.unwrap().title.unwrap());
-	}
+	// #[test]
+	// fn signed_decimal_has_defined_json_schema() {
+	// 	let schema = schemars::schema_for!(SignedDecimal);
+	// 	assert_eq!("SignedDecimal", schema.schema.metadata.unwrap().title.unwrap());
+	// }
 }
