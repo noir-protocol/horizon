@@ -125,7 +125,7 @@ pub mod pallet {
 		traits::{
 			fungibles::{Inspect as FungiblesInspect, Mutate as FungiblesMutate},
 			tokens::{AssetId, Balance},
-			GenesisBuild, Get, ReservableCurrency, UnixTime,
+			BuildGenesisConfig, Get, ReservableCurrency, UnixTime,
 		},
 		transactional, PalletId, Twox64Concat,
 	};
@@ -390,7 +390,7 @@ pub mod pallet {
 	}
 
 	#[pallet::genesis_build]
-	impl<T: Config> GenesisBuild<T> for GenesisConfig<T> {
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for (who, code) in self.contracts.clone() {
 				<Pallet<T>>::do_upload(&who, code).expect("contracts in genesis are valid")
