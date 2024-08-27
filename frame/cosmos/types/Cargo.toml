@@ -9,22 +9,27 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-bech32 = { workspace = true }
-parity-scale-codec = { workspace = true, features = [
+cosmos-sdk-proto = { workspace = true, default-features = false }
+
+bech32 = { workspace = true, default-features = false }
+parity-scale-codec = { workspace = true, default-features = false, features = [
 	"derive",
 ], optional = true }
-scale-info = { workspace = true, features = ["derive"], optional = true }
-serde = { workspace = true, features = ["derive"], optional = true }
-serde_json = { workspace = true, optional = true }
-cosmos-sdk-proto = { workspace = true }
+scale-info = { workspace = true, default-features = false, features = [
+	"derive",
+], optional = true }
+serde = { workspace = true, default-features = false, features = [
+	"derive",
+], optional = true }
+serde_json = { workspace = true, default-features = false, optional = true }
 
 # Substrate
-frame-support = { workspace = true }
+frame-support = { workspace = true, default-features = false }
 impl-trait-for-tuples = { workspace = true }
-sp-core = { workspace = true }
-sp-runtime-interface = { workspace = true }
-sp-runtime = { workspace = true }
-sp-std = { workspace = true }
+sp-core = { workspace = true, default-features = false }
+sp-runtime-interface = { workspace = true, default-features = false }
+sp-runtime = { workspace = true, default-features = false }
+sp-std = { workspace = true, default-features = false }
 
 [dev-dependencies]
 array-bytes = { workspace = true }
@@ -45,10 +50,5 @@ std = [
 	"sp-runtime/std",
 	"sp-std/std",
 ]
-with-codec = [
-	"parity-scale-codec", 
-	"scale-info"
-]
-with-serde = [
-	"serde"
-]
+with-codec = ["parity-scale-codec", "scale-info"]
+with-serde = ["serde"]
