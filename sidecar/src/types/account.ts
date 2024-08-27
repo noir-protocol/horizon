@@ -1,14 +1,8 @@
-import Dummy from "../constants/dummy.js";
-
 export class AccountResponse {
   account: BaseAccount;
 
   constructor(account: BaseAccount) {
     this.account = account;
-  }
-
-  public isInterim(): boolean {
-    return this.account.pub_key.key === Dummy.Secp256k1PublicKey;
   }
 }
 

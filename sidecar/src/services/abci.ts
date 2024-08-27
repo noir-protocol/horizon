@@ -9,14 +9,18 @@ import { BaseAccount } from "cosmjs-types/cosmos/auth/v1beta1/auth.js";
 import Long from "long";
 import { ApiPromise } from "@pinot/api";
 import { ABCIQueryResponse } from "cosmjs-types/cosmos/base/tendermint/v1beta1/query.js";
+import { SimulateRequest, SimulateResponse } from "cosmjs-types/cosmos/tx/v1beta1/service.js";
+import { TxService } from "./tx.js";
 
 export class AbciService implements ApiService {
   chainApi: ApiPromise;
   accountService: IAccountService;
+  txService: TxService;
 
-  constructor(chainApi: ApiPromise, accountService: IAccountService) {
+  constructor(chainApi: ApiPromise, accountService: IAccountService, txService: TxService) {
     this.chainApi = chainApi;
     this.accountService = accountService;
+    this.txService = txService;
   }
 
   async query(path: string, data: string): Promise<ABCIQueryResponse> {
@@ -53,6 +57,23 @@ export class AbciService implements ApiService {
         index: Long.ZERO,
         key: undefined,
         value,
+        proofOps: undefined,
+        height: Long.fromString(height),
+        codespace: "",
+      };
+    } else if (path === '/cosmos.tx.v1beta1.Service/Simulate') {
+      // TODO: Check simulate tx fields
+      const request = SimulateRequest.decode(Buffer.from(data, 'hex'));
+      const response = SimulateResponse.encode(await this.txService.simulate(Buffer.from(request.txBytes).toString('base64'))).finish();
+      const height = (await this.chainApi.query.system.number()).toString();
+
+      return {
+        code: 0,
+        log: "",
+        info: "",
+        index: Long.ZERO,
+        key: undefined,
+        value: response,
         proofOps: undefined,
         height: Long.fromString(height),
         codespace: "",

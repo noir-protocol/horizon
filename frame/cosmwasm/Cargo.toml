@@ -1,0 +1,95 @@
+[package]
+authors = ["Composable Developers"]
+edition = "2021"
+homepage = "https://composable.finance"
+name = "pallet-cosmwasm"
+version = "1.0.0"
+
+[lib]
+doctest = false
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.2.0", default-features = false }
+scale-info = { default-features = false, version = "2.1.1", features = [
+	"derive",
+] }
+
+hex = { version = "0.4", default-features = false, features = ["alloc"] }
+hex-literal = { workspace = true }
+ibc = { workspace = true, default-features = false }
+ibc-primitives = { workspace = true, default-features = false, optional = false }
+libsecp256k1 = { version = "0.7.0", default-features = false }
+log = { workspace = true, default-features = false }
+parity-wasm = { version = "0.45.0", default-features = false }
+serde = { workspace = true, default-features = false, features = ["derive"] }
+serde_json = { workspace = true, default-features = false, features = [
+	"alloc",
+] }
+sha2 = { version = "0.10", default-features = false }
+sha3 = { version = "0.10", default-features = false }
+vec1 = { version = "*", default-features = false, features = ["smallvec-v1"] }
+wasmi = { workspace = true, default-features = false }
+wasm-instrument = { workspace = true, default-features = false }
+wasmi-validation = { workspace = true, default-features = false }
+
+frame-support = { default-features = false, workspace = true }
+frame-system = { default-features = false, workspace = true }
+pallet-assets = { default-features = false, workspace = true }
+pallet-balances = { default-features = false, workspace = true }
+sp-arithmetic = { default-features = false, workspace = true }
+sp-core = { default-features = false, workspace = true }
+sp-io = { default-features = false, workspace = true }
+sp-runtime = { default-features = false, workspace = true }
+sp-std = { default-features = false, workspace = true }
+
+composable-support = { workspace = true, default-features = false }
+composable-traits = { workspace = true, default-features = false }
+cosmwasm-std = { workspace = true, default-features = false, features = [
+	"iterator",
+	"stargate",
+	"cosmwasm_1_4",
+] }
+cosmwasm-vm = { workspace = true, default-features = false, features = [
+	"iterator",
+	"stargate",
+] }
+cosmwasm-vm-wasmi = { workspace = true, default-features = false, features = [
+	"iterator",
+	"stargate",
+] }
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"scale-info/std",
+	"hex/std",
+	"ibc/std",
+	"ibc-primitives/std",
+	"libsecp256k1/std",
+	"log/std",
+	"parity-wasm/std",
+	"serde/std",
+	"serde_json/std",
+	"sha2/std",
+	"sha3/std",
+	"vec1/std",
+	"wasmi/std",
+	"wasm-instrument/std",
+	"wasmi-validation/std",
+	"frame-support/std",
+	"frame-system/std",
+	"pallet-assets/std",
+	"pallet-balances/std",
+	"sp-arithmetic/std",
+	"sp-core/std",
+	"sp-io/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"composable-support/std",
+	"composable-traits/std",
+	"cosmwasm-std/std",
+	"cosmwasm-vm/std",
+	"cosmwasm-vm-wasmi/std",
+]
+try-runtime = []

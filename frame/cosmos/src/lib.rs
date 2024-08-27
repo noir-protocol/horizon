@@ -19,36 +19,47 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
-pub mod errors;
 pub mod weights;
 
 pub use self::pallet::*;
+use crate::weights::WeightInfo;
+use cosmos_sdk_proto::{
+	cosmos::tx::v1beta1::Tx,
+	prost::{alloc::string::String, Message},
+	Any,
+};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
-	pallet_prelude::{DispatchResultWithPostInfo, Pays},
+	pallet_prelude::{DispatchResultWithPostInfo, InvalidTransaction, Pays},
 	traits::{
-		tokens::{fungible::Inspect, Fortitude, Preservation},
+		tokens::{fungible::Inspect, fungibles, AssetId, Balance, Fortitude, Preservation},
 		Currency, Get,
 	},
-	weights::{constants::ExtrinsicBaseWeight, Weight, WeightToFee},
+	weights::Weight,
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use hp_cosmos::{Account, PublicKey, SignerPublicKey};
-use hp_io::crypto::ripemd160;
-use pallet_cosmos_modules::{ante::AnteHandler, msgs::MsgServiceRouter};
+use pallet_cosmos_types::{
+	address::address_from_bech32,
+	errors::{CosmosError, RootError},
+	events::CosmosEvent,
+	handler::AnteDecorator,
+	msgservice::MsgServiceRouter,
+	tx::{Account, Gas},
+};
+use pallet_cosmos_x_auth_signing::{
+	sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
+};
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
-use sp_io::hashing::sha2_256;
 use sp_runtime::{
-	traits::{BadOrigin, Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
+	traits::{Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
 	transaction_validity::{
-		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
+		TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	DispatchError, RuntimeDebug,
+	RuntimeDebug,
 };
 use sp_std::{marker::PhantomData, vec::Vec};
-pub use weights::*;
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum RawOrigin {
@@ -61,7 +72,7 @@ where
 {
 	match o.into() {
 		Ok(RawOrigin::CosmosTransaction(n)) => Ok(n),
-		_ => Err("bad origin: expected to be an Cosmos transaction"),
+		_ => Err("bad origin: expected to be a Cosmos transaction"),
 	}
 }
 
@@ -77,24 +88,18 @@ where
 
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx_bytes } = self {
-			let tx = hp_io::tx::decode(tx_bytes)?;
+			let check = || {
+				let tx = Tx::decode(&mut &tx_bytes[..])
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+				let fee_payer = T::SigVerifiableTx::fee_payer(&tx).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
 
-			if let Err(e) = T::AnteHandler::handle(&tx) {
-				return Some(Err(e));
-			}
+				address_from_bech32(&fee_payer)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
+			};
 
-			if let Some(signer) = tx.auth_info.signer_infos.first() {
-				if let Some(SignerPublicKey::Single(PublicKey::Secp256k1(public_key))) =
-					signer.public_key
-				{
-					let address = ripemd160(&sha2_256(&public_key)).into();
-					Some(Ok(address))
-				} else {
-					Some(Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)))
-				}
-			} else {
-				Some(Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)))
-			}
+			Some(check())
 		} else {
 			None
 		}
@@ -139,92 +144,180 @@ pub trait AddressMapping<A> {
 	fn into_account_id(address: H160) -> A;
 }
 
-pub trait EnsureAddressOrigin<OuterOrigin> {
-	/// Success return type.
-	type Success;
-
-	/// Perform the origin check.
-	fn ensure_address_origin(
-		address: &H160,
-		origin: OuterOrigin,
-	) -> Result<Self::Success, BadOrigin> {
-		Self::try_address_origin(address, origin).map_err(|_| BadOrigin)
-	}
-
-	/// Try with origin.
-	fn try_address_origin(
-		address: &H160,
-		origin: OuterOrigin,
-	) -> Result<Self::Success, OuterOrigin>;
-}
-
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
-	use frame_support::pallet_prelude::*;
-	use hp_cosmos::Any;
-	use pallet_cosmos_modules::{ante::AnteHandler, msgs::MsgServiceRouter};
+	use frame_support::{
+		pallet_prelude::*,
+		traits::{fungibles::metadata::Inspect as _, Contains},
+	};
 
 	#[pallet::pallet]
-	#[pallet::without_storage_info]
 	pub struct Pallet<T>(PhantomData<T>);
 
 	#[pallet::origin]
 	pub type Origin = RawOrigin;
 
-	/// Type alias for currency balance.
-	pub type BalanceOf<T> =
-		<<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+	/// Default implementations of [`DefaultConfig`], which can be used to implement [`Config`].
+	pub mod config_preludes {
+		use super::*;
+		use frame_support::{derive_impl, parameter_types};
 
-	#[pallet::config]
+		pub struct TestDefaultConfig;
+
+		#[derive_impl(frame_system::config_preludes::TestDefaultConfig as frame_system::DefaultConfig, no_aggregated_types)]
+		impl frame_system::DefaultConfig for TestDefaultConfig {}
+
+		pub struct MsgFilter;
+		impl Contains<Any> for MsgFilter {
+			fn contains(_msg: &Any) -> bool {
+				false
+			}
+		}
+
+		pub struct GasToWeight;
+		impl Convert<Gas, Weight> for GasToWeight {
+			fn convert(gas: Gas) -> Weight {
+				Weight::from_parts(gas, 0u64)
+			}
+		}
+
+		pub struct WeightToGas;
+		impl Convert<Weight, Gas> for WeightToGas {
+			fn convert(weight: Weight) -> Gas {
+				weight.ref_time()
+			}
+		}
+
+		parameter_types! {
+			pub const MaxMemoCharacters: u64 = 256;
+			pub NativeDenom: &'static str = "acdt";
+			pub ChainId: &'static str = "dev";
+			pub const TxSigLimit: u64 = 7;
+			pub const MaxDenomLimit: u32 = 128;
+		}
+
+		#[frame_support::register_default_impl(TestDefaultConfig)]
+		impl DefaultConfig for TestDefaultConfig {
+			#[inject_runtime_type]
+			type RuntimeEvent = ();
+			type AnteHandler = ();
+			type Balance = u64;
+			type AssetId = u32;
+			type MaxMemoCharacters = MaxMemoCharacters;
+			type NativeDenom = NativeDenom;
+			type ChainId = ChainId;
+			type MsgFilter = MsgFilter;
+			type GasToWeight = GasToWeight;
+			type WeightToGas = WeightToGas;
+			type TxSigLimit = TxSigLimit;
+			type MaxDenomLimit = MaxDenomLimit;
+		}
+	}
+
+	#[pallet::storage]
+	#[pallet::getter(fn denom_to_asset)]
+	pub type DenomAssetRouter<T: Config> =
+		StorageMap<_, Twox64Concat, BoundedVec<u8, T::MaxDenomLimit>, T::AssetId, OptionQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn asset_to_denom)]
+	pub type AssetDenomRouter<T: Config> =
+		StorageMap<_, Twox64Concat, T::AssetId, BoundedVec<u8, T::MaxDenomLimit>, OptionQuery>;
+
+	#[pallet::config(with_default)]
 	pub trait Config: frame_system::Config {
-		/// Mapping from address to account id.
+		/// Mapping an address to an account id.
+		#[pallet::no_default]
 		type AddressMapping: AddressMapping<Self::AccountId>;
-		/// Currency type for withdraw and balance storage.
-		type Currency: Currency<Self::AccountId> + Inspect<Self::AccountId>;
-		/// Convert a length value into a deductible fee based on the currency type.
-		type LengthToFee: WeightToFee<Balance = BalanceOf<Self>>;
+		/// Native asset type.
+		#[pallet::no_default]
+		type NativeAsset: Currency<Self::AccountId> + Inspect<Self::AccountId>;
+		/// Type of an account balance.
+		type Balance: Balance + Into<u128>;
+		/// Type of a tradable asset id.
+		/// The [`Ord`] constraint is required for [`BoundedBTreeMap`].
+		type AssetId: AssetId + Ord + MaybeSerializeDeserialize;
+		/// Interface from which we are going to execute assets operations.
+		#[pallet::no_default]
+		type Assets: fungibles::Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
+			+ fungibles::metadata::Inspect<
+				Self::AccountId,
+				Balance = Self::Balance,
+				AssetId = Self::AssetId,
+			> + fungibles::Mutate<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
+			+ fungibles::Balanced<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>;
 		/// The overarching event type.
+		#[pallet::no_default_bounds]
 		type RuntimeEvent: From<Event> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
-		/// Weight information for extrinsics in this pallet.
-		type WeightInfo: WeightInfo;
-		/// Used to answer contracts' queries regarding the current weight price. This is **not**
-		/// used to calculate the actual fee and is only for informational purposes.
-		type WeightPrice: Convert<Weight, BalanceOf<Self>>;
-		/// Convert a weight value into a deductible fee based on the currency type.
-		type WeightToFee: WeightToFee<Balance = BalanceOf<Self>>;
 		/// Verify the validity of a Cosmos transaction.
-		type AnteHandler: AnteHandler;
-		/// The maximum size of the memo.
+		type AnteHandler: AnteDecorator;
+		/// The maximum number of characters allowed in a memo.
 		#[pallet::constant]
 		type MaxMemoCharacters: Get<u64>;
 		/// The native denomination for the currency.
 		#[pallet::constant]
-		type NativeDenom: Get<BoundedVec<u8, Self::StringLimit>>;
-		/// The maximum length of string value.
-		#[pallet::constant]
-		type StringLimit: Get<u32>;
-		/// Router for message service handling.
+		type NativeDenom: Get<&'static str>;
+		/// Router for handling message services.
+		#[pallet::no_default]
 		type MsgServiceRouter: MsgServiceRouter;
 		/// The chain ID.
 		#[pallet::constant]
-		type ChainId: Get<BoundedVec<u8, Self::StringLimit>>;
+		type ChainId: Get<&'static str>;
+		/// The message filter.
+		type MsgFilter: Contains<Any>;
+		/// Converter for converting Gas to Weight.
+		type GasToWeight: Convert<Gas, Weight>;
+		/// Converter for converting Weight to Gas.
+		type WeightToGas: Convert<Weight, Gas>;
+		/// The maximum number of transaction signatures allowed.
+		#[pallet::constant]
+		type TxSigLimit: Get<u64>;
+		/// Defines the features for all signature verification handlers.
+		#[pallet::no_default]
+		type SigVerifiableTx: SigVerifiableTx;
+		/// Handler for managing different signature modes in transactions.
+		#[pallet::no_default]
+		type SignModeHandler: SignModeHandler;
+		#[pallet::no_default]
+		type WeightInfo: WeightInfo;
+		/// A way to convert from cosmos coin denom to asset id.
+		#[pallet::no_default]
+		type DenomToAsset: Convert<String, Result<Self::AssetId, ()>>;
+		#[pallet::constant]
+		type MaxDenomLimit: Get<u32>;
+	}
+
+	#[pallet::genesis_config]
+	#[derive(frame_support::DefaultNoBound)]
+	pub struct GenesisConfig<T: Config> {
+		pub assets: Vec<(Vec<u8>, T::AssetId)>,
+	}
+
+	#[pallet::genesis_build]
+	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
+		fn build(&self) {
+			for (symbol, asset_id) in &self.assets {
+				let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(symbol.clone())
+					.expect("Invalid denom");
+				assert!(DenomAssetRouter::<T>::get(denom.clone()).is_none());
+				assert!(*symbol == T::Assets::symbol(asset_id.clone()));
+
+				DenomAssetRouter::<T>::insert(denom, asset_id);
+			}
+		}
 	}
 
 	#[pallet::event]
-	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	#[pallet::generate_deposit(pub fn deposit_event)]
 	pub enum Event {
-		Executed { gas_used: Weight, messages: Vec<Any> },
+		AnteHandled(Vec<CosmosEvent>),
+		Executed { gas_wanted: u64, gas_used: u64, events: Vec<CosmosEvent> },
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		InvalidTx,
-		Unauthorized,
-		InsufficientFunds,
-		OutOfGas,
-		InsufficientFee,
-		InvalidType,
+		CosmosError(CosmosError),
 	}
 
 	#[pallet::call]
@@ -232,12 +325,30 @@ pub mod pallet {
 	where
 		OriginFor<T>: Into<Result<RawOrigin, OriginFor<T>>>,
 	{
-		/// Transact an Cosmos transaction.
+		/// Transact a Cosmos transaction.
 		#[pallet::call_index(0)]
-		#[pallet::weight({ 0 })]
+		#[pallet::weight({
+			use cosmos_sdk_proto::traits::Message;
+			use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
+
+			Tx::decode(&mut &tx_bytes[..])
+				.ok()
+				.and_then(|tx| tx.auth_info)
+				.and_then(|auth_info| auth_info.fee)
+				.map_or(T::WeightInfo::default_weight(), |fee| {
+					T::GasToWeight::convert(fee.gas_limit)
+				})
+		 })]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
 			let source = ensure_cosmos_transaction(origin)?;
-			let tx = hp_io::tx::decode(&tx_bytes).unwrap();
+
+			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(T::WeightInfo::default_weight()),
+					pays_fee: Pays::Yes,
+				},
+				error: Error::<T>::CosmosError(RootError::TxDecodeError.into()).into(),
+			})?;
 
 			Self::apply_validated_transaction(source, tx)
 		}
@@ -245,7 +356,7 @@ pub mod pallet {
 }
 
 impl<T: Config> Pallet<T> {
-	/// Validate an Cosmos transaction already in block
+	/// Validate a Cosmos transaction already in block
 	///
 	/// This function must be called during the pre-dispatch phase
 	/// (just before applying the extrinsic).
@@ -254,10 +365,10 @@ impl<T: Config> Pallet<T> {
 		tx_bytes: &[u8],
 	) -> Result<(), TransactionValidityError> {
 		let (_who, _) = Self::account(&origin);
-		let tx = hp_io::tx::decode(tx_bytes)
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let tx = Tx::decode(&mut &*tx_bytes)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-		T::AnteHandler::handle(&tx)?;
+		T::AnteHandler::ante_handle(&tx, false)?;
 
 		Ok(())
 	}
@@ -265,17 +376,13 @@ impl<T: Config> Pallet<T> {
 	// Controls that must be performed by the pool.
 	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
 		let (who, _) = Self::account(&origin);
-		let tx = hp_io::tx::decode(tx_bytes)
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let tx = Tx::decode(&mut &*tx_bytes)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
-		T::AnteHandler::handle(&tx)?;
+		T::AnteHandler::ante_handle(&tx, true)?;
 
-		let transaction_nonce = tx
-			.auth_info
-			.signer_infos
-			.first()
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?
-			.sequence;
+		let transaction_nonce = T::SigVerifiableTx::sequence(&tx)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		let mut builder =
 			ValidTransactionBuilder::default().and_provides((origin, transaction_nonce));
@@ -291,14 +398,27 @@ impl<T: Config> Pallet<T> {
 		builder.build()
 	}
 
-	fn apply_validated_transaction(source: H160, tx: hp_cosmos::Tx) -> DispatchResultWithPostInfo {
-		let mut total_weight = ExtrinsicBaseWeight::get();
+	pub fn apply_validated_transaction(_source: H160, tx: Tx) -> DispatchResultWithPostInfo {
+		let mut total_weight = T::WeightInfo::default_weight();
+		let mut events = Vec::<CosmosEvent>::new();
 
-		for msg in tx.body.messages.iter() {
-			let handler = T::MsgServiceRouter::route(&msg.type_url).unwrap();
+		let body = tx.body.ok_or(DispatchErrorWithPostInfo {
+			post_info: PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes },
+			error: Error::<T>::CosmosError(RootError::TxDecodeError.into()).into(),
+		})?;
+
+		for msg in body.messages.iter() {
+			let handler = T::MsgServiceRouter::route(msg).ok_or(DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(total_weight),
+					pays_fee: Pays::Yes,
+				},
+				error: Error::<T>::CosmosError(RootError::UnknownRequest.into()).into(),
+			})?;
 			match handler.handle(msg) {
-				Ok(weight) => {
+				Ok((weight, msg_events)) => {
 					total_weight = total_weight.saturating_add(weight);
+					events.extend(msg_events);
 				},
 				Err(e) => {
 					total_weight = total_weight.saturating_add(e.weight);
@@ -308,26 +428,43 @@ impl<T: Config> Pallet<T> {
 							actual_weight: Some(total_weight),
 							pays_fee: Pays::Yes,
 						},
-						error: DispatchError::Other("Invalid msg"),
+						error: Error::<T>::CosmosError(e.error).into(),
 					});
 				},
 			}
 		}
 
-		Self::deposit_event(Event::Executed { gas_used: total_weight, messages: tx.body.messages });
+		let fee = tx.auth_info.as_ref().and_then(|auth_info| auth_info.fee.as_ref()).ok_or(
+			DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(total_weight),
+					pays_fee: Pays::Yes,
+				},
+				error: Error::<T>::CosmosError(RootError::TxDecodeError.into()).into(),
+			},
+		)?;
+
+		Self::deposit_event(Event::Executed {
+			gas_wanted: fee.gas_limit,
+			gas_used: T::WeightToGas::convert(total_weight),
+			events,
+		});
 
 		Ok(PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes })
 	}
 
 	/// Get the base account info.
-	pub fn account(address: &H160) -> (Account, frame_support::weights::Weight) {
+	pub fn account(address: &H160) -> (Account, Weight) {
 		let account_id = T::AddressMapping::into_account_id(*address);
 
 		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
 		// keepalive `true` takes into account ExistentialDeposit as part of what's considered
 		// liquid balance.
-		let balance =
-			T::Currency::reducible_balance(&account_id, Preservation::Preserve, Fortitude::Polite);
+		let balance = T::NativeAsset::reducible_balance(
+			&account_id,
+			Preservation::Preserve,
+			Fortitude::Polite,
+		);
 
 		(
 			Account {
@@ -336,26 +473,5 @@ impl<T: Config> Pallet<T> {
 			},
 			T::DbWeight::get().reads(2),
 		)
-	}
-
-	fn compute_fee(len: u32, weight: Weight) -> BalanceOf<T> {
-		// Base fee is already included.
-		let adjusted_weight_fee = T::WeightPrice::convert(weight);
-		let length_fee = Self::length_to_fee(len);
-		length_fee + adjusted_weight_fee
-	}
-
-	/// Compute the length portion of a fee by invoking the configured `LengthToFee` impl.
-	pub fn length_to_fee(length: u32) -> BalanceOf<T> {
-		T::LengthToFee::weight_to_fee(&Weight::from_parts(length as u64, 0))
-	}
-
-	/// Compute the unadjusted portion of the weight fee by invoking the configured `WeightToFee`
-	/// impl. Note that the input `weight` is capped by the maximum block weight before computation.
-	pub fn weight_to_fee(weight: Weight) -> BalanceOf<T> {
-		// cap the weight to the maximum defined in runtime, otherwise it will be the
-		// `Bounded` maximum of its data type, which is not desired.
-		let capped_weight = weight.min(T::BlockWeights::get().max_block);
-		T::WeightToFee::weight_to_fee(&capped_weight)
 	}
 }

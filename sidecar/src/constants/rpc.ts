@@ -1,7 +1,7 @@
 const rpc = {
   cosm: {
     broadcastTx: {
-      description: "Broadcast cosmos tx.",
+      description: "Broadcast cosmos transaction.",
       params: [
         {
           name: "tx_bytes",
@@ -9,6 +9,16 @@ const rpc = {
         },
       ],
       type: "H256",
+    },
+    simulate: {
+      description: "Simulate cosmos transaction.",
+      params: [
+        {
+          name: "tx_bytes",
+          type: "Bytes",
+        },
+      ],
+      type: "SimulateResponse",
     },
   },
 };

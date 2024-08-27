@@ -9,30 +9,35 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-parity-scale-codec = { workspace = true }
-scale-info = { workspace = true }
-log = { workspace = true }
+cosmos-sdk-proto = { workspace = true, default-features = false }
+parity-scale-codec = { workspace = true, default-features = false }
+scale-info = { workspace = true, default-features = false }
+log = { workspace = true, default-features = false }
 
 # Substrate
-frame-support = { workspace = true }
-frame-system = { workspace = true }
-pallet-balances = { workspace = true }
-sp-core = { workspace = true }
-sp-io = { workspace = true }
-sp-runtime = { workspace = true }
-sp-std = { workspace = true }
+frame-support = { workspace = true, default-features = false }
+frame-system = { workspace = true, default-features = false }
+pallet-balances = { workspace = true, default-features = false }
+sp-core = { workspace = true, default-features = false }
+sp-io = { workspace = true, default-features = false }
+sp-runtime = { workspace = true, default-features = false }
+sp-std = { workspace = true, default-features = false }
 
 # Horizon
-hp-cosmos = { workspace = true, features = ["with-codec"] }
-hp-io = { workspace = true }
+hp-io = { workspace = true, default-features = false }
 
-pallet-cosmos-modules = { workspace = true }
+pallet-cosmos-types = { workspace = true, default-features = false, features = [
+	"with-codec",
+] }
+pallet-cosmos-x-auth-signing = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
 std = [
+	"cosmos-sdk-proto/std",
 	"parity-scale-codec/std",
 	"scale-info/std",
+	"log/std",
 	"frame-support/std",
 	"frame-system/std",
 	"pallet-balances/std",
@@ -40,7 +45,8 @@ std = [
 	"sp-io/std",
 	"sp-runtime/std",
 	"sp-std/std",
-	"hp-cosmos/std",
 	"hp-io/std",
-	"pallet-cosmos-modules/std"
+	"pallet-cosmos-x-auth-signing/std",
+	"pallet-cosmos-types/std",
 ]
+try-runtime = []

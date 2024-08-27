@@ -9,8 +9,10 @@ build = "build.rs"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
+cosmos-sdk-proto = { workspace = true, features = ["cosmwasm"] }
 parity-scale-codec = { workspace = true }
 scale-info = { workspace = true }
+serde_json = { workspace = true }
 
 # Substrate
 sp-api = { workspace = true }
@@ -32,6 +34,7 @@ frame-support = { workspace = true }
 frame-system = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
 pallet-aura = { workspace = true }
+pallet-assets = { workspace = true }
 pallet-balances = { workspace = true }
 pallet-grandpa = { workspace = true }
 pallet-sudo = { workspace = true }
@@ -44,15 +47,25 @@ fp-self-contained = { workspace = true, features = ["serde"] }
 
 # Horizon
 hp-account = { workspace = true }
-hp-cosmos = { workspace = true, features = ["with-codec"] }
 hp-crypto = { workspace = true }
 hp-io = { workspace = true }
 hp-rpc = { workspace = true }
 pallet-cosmos = { workspace = true }
 pallet-cosmos-accounts = { workspace = true }
-pallet-cosmos-auth = { workspace = true }
-pallet-cosmos-bank = { workspace = true }
-pallet-cosmos-modules = { workspace = true }
+pallet-cosmos-types = { workspace = true, features = ["with-codec"] }
+pallet-cosmos-x-auth = { workspace = true }
+pallet-cosmos-x-auth-migrations = { workspace = true }
+pallet-cosmos-x-auth-signing = { workspace = true }
+pallet-cosmos-x-bank = { workspace = true }
+pallet-cosmos-x-bank-types = { workspace = true }
+pallet-cosmos-x-wasm = { workspace = true }
+pallet-cosmos-x-wasm-types = { workspace = true }
+
+pallet-cosmwasm = { workspace = true }
+
+[dev-dependencies]
+base64ct = { workspace = true }
+hex = { workspace = true }
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true, optional = true }
@@ -60,39 +73,44 @@ substrate-wasm-builder = { workspace = true, optional = true }
 [features]
 default = ["std"]
 std = [
-  "parity-scale-codec/std",
-  "scale-info/std",
-  "sp-api/std",
-  "sp-block-builder/std",
-  "sp-consensus-aura/std",
-  "sp-core/std",
-  "sp-genesis-builder/std",
-  "sp-offchain/std",
-  "sp-runtime/std",
-  "sp-std/std",
-  "sp-transaction-pool/std",
-  "sp-version/std",
-  "frame-executive/std",
-  "frame-support/std",
-  "frame-system/std",
-  "frame-system-rpc-runtime-api/std",
-  "pallet-aura/std",
-  "pallet-balances/std",
-  "pallet-grandpa/std",
-  "pallet-sudo/std",
-  "pallet-transaction-payment/std",
-  "pallet-transaction-payment-rpc-runtime-api/std",
-  "pallet-timestamp/std",
-  "fp-self-contained/std",
-  "hp-account/std",
-  "hp-cosmos/std",
-  "hp-crypto/std",
-  "hp-io/std",
-  "hp-rpc/std",
-  "pallet-cosmos/std",
-  "pallet-cosmos-accounts/std",
-  "pallet-cosmos-auth/std",
-  "pallet-cosmos-bank/std",
-  "pallet-cosmos-modules/std",
-  "substrate-wasm-builder",
+	"cosmos-sdk-proto/std",
+	"parity-scale-codec/std",
+	"scale-info/std",
+	"sp-api/std",
+	"sp-block-builder/std",
+	"sp-consensus-aura/std",
+	"sp-core/std",
+	"sp-genesis-builder/std",
+	"sp-offchain/std",
+	"sp-runtime/std",
+	"sp-std/std",
+	"sp-transaction-pool/std",
+	"sp-version/std",
+	"frame-executive/std",
+	"frame-support/std",
+	"frame-system/std",
+	"frame-system-rpc-runtime-api/std",
+	"pallet-aura/std",
+	"pallet-assets/std",
+	"pallet-balances/std",
+	"pallet-grandpa/std",
+	"pallet-sudo/std",
+	"pallet-transaction-payment/std",
+	"pallet-transaction-payment-rpc-runtime-api/std",
+	"pallet-timestamp/std",
+	"fp-self-contained/std",
+	"hp-account/std",
+	"hp-crypto/std",
+	"hp-io/std",
+	"hp-rpc/std",
+	"pallet-cosmos/std",
+	"pallet-cosmos-accounts/std",
+	"pallet-cosmos-types/std",
+	"pallet-cosmos-x-auth/std",
+	"pallet-cosmos-x-auth-migrations/std",
+	"pallet-cosmos-x-auth-signing/std",
+	"pallet-cosmos-x-bank/std",
+	"pallet-cosmos-x-bank-types/std",
+	"pallet-cosmwasm/std",
+	"substrate-wasm-builder",
 ]

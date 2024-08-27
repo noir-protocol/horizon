@@ -8,9 +8,10 @@ const config = {
 	coinType: "118",
 	decimals: 18,
 	gasRate: {
+		high: "1.3",
 		average: "1",
 		low: "0.8",
 		tiny: "0.6",
 	},
-	sendGas: "1000000000"
+	sendGas: "336314000"
 };

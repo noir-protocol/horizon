@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizon.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -27,40 +27,59 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 mod ante;
+mod assets;
 mod compat;
+mod denom;
 mod msgs;
+mod sig_verifiable_tx;
+mod sign_mode_handler;
 
+use cosmos_sdk_proto::{
+	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
+	cosmwasm::wasm::v1::{
+		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
+		MsgUpdateAdmin,
+	},
+	prost::{alloc::string::String, Message},
+	Any,
+};
 use frame_support::{
 	construct_runtime, derive_impl,
 	genesis_builder_helper::{build_config, create_default_config},
+	pallet_prelude::InvalidTransaction,
 	parameter_types,
 	traits::{
 		tokens::{fungible, Fortitude, Preservation},
-		ConstBool, ConstU32, ConstU8, OnTimestampSet,
+		AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU32, ConstU8, Contains, OnTimestampSet,
 	},
 	weights::{
 		constants::{RocksDbWeight as RuntimeDbWeight, WEIGHT_REF_TIME_PER_MILLIS},
 		IdentityFee, Weight,
 	},
 };
+use frame_system::EnsureRoot;
+use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
-use msgs::MsgServiceRouter;
+use hp_rpc::{GasInfo, SimulateError, SimulateResponse};
 use pallet_cosmos::AddressMapping;
+use pallet_cosmos_types::tx::Gas;
+use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
+use pallet_cosmos_x_auth_signing::any_match;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
 use pallet_transaction_payment::{ConstFeeMultiplier, CurrencyAdapter, Multiplier};
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata, H160};
+use sp_core::{crypto::KeyTypeId, ecdsa::Public, OpaqueMetadata, H160};
 use sp_runtime::{
-	create_runtime_str, generic, impl_opaque_keys,
+	codec, create_runtime_str, generic, impl_opaque_keys,
 	traits::{
-		AccountIdLookup, BlakeTwo256, Block as BlockT, DispatchInfoOf, Dispatchable,
+		AccountIdLookup, BlakeTwo256, Block as BlockT, Convert, DispatchInfoOf, Dispatchable,
 		IdentifyAccount, NumberFor, One, PostDispatchInfoOf, Verify,
 	},
 	transaction_validity::{TransactionSource, TransactionValidity, TransactionValidityError},
-	ApplyExtrinsicResult, BoundedVec, ExtrinsicInclusionMode, Perbill,
+	ApplyExtrinsicResult, ExtrinsicInclusionMode, Perbill,
 };
 use sp_std::{marker::PhantomData, prelude::*};
 #[cfg(feature = "std")]
@@ -148,16 +167,6 @@ parameter_types! {
 	pub const SS58Prefix: u8 = 42;
 }
 
-pub struct OnNewAccount;
-impl frame_support::traits::OnNewAccount<AccountId> for OnNewAccount {
-	fn on_new_account(who: &AccountId) {
-		if let Some(address) = who.to_cosm_address() {
-			let _ = Runtime::migrate_cosm_account(&address, who);
-			let _ = pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(who);
-		}
-	}
-}
-
 #[derive_impl(frame_system::config_preludes::SolochainDefaultConfig as frame_system::DefaultConfig)]
 impl frame_system::Config for Runtime {
 	/// The basic call filter to use in dispatchable.
@@ -197,7 +206,7 @@ impl frame_system::Config for Runtime {
 	/// The data to be stored in an account.
 	type AccountData = pallet_balances::AccountData<Balance>;
 	/// What to do if a new account is created.
-	type OnNewAccount = OnNewAccount;
+	type OnNewAccount = ();
 	/// What to do if an account is fully reaped from the system.
 	type OnKilledAccount = ();
 	/// Weight information for the extrinsics of this pallet.
@@ -207,6 +216,29 @@ impl frame_system::Config for Runtime {
 	/// The set code logic, just the default since we're not a parachain.
 	type OnSetCode = ();
 	type MaxConsumers = ConstU32<16>;
+}
+
+type AssetId = u128;
+
+impl pallet_assets::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type AssetIdParameter = codec::Compact<AssetId>;
+	type Currency = Balances;
+	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type AssetDeposit = ConstU128<500>;
+	type AssetAccountDeposit = ConstU128<500>;
+	type MetadataDepositBase = ConstU128<0>;
+	type MetadataDepositPerByte = ConstU128<0>;
+	type ApprovalDeposit = ConstU128<0>;
+	type StringLimit = ConstU32<20>;
+	type Freezer = ();
+	type Extra = ();
+	type CallbackHandle = assets::AssetsCallback<Runtime>;
+	type WeightInfo = ();
+	type RemoveItemsLimit = ConstU32<1000>;
 }
 
 parameter_types! {
@@ -265,7 +297,7 @@ impl pallet_transaction_payment::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	/// Handler for withdrawing, refunding and depositing the transaction fee.
 	type OnChargeTransaction = CurrencyAdapter<Balances, ()>;
-	/// A fee mulitplier for `Operational` extrinsics to compute "virtual tip" to boost their
+	/// A fee multiplier for `Operational` extrinsics to compute "virtual tip" to boost their
 	/// `priority`.
 	type OperationalFeeMultiplier = ConstU8<5>;
 	/// Convert a weight value into a deductible fee based on the currency type.
@@ -299,40 +331,87 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
+pub struct MsgFilter;
+impl Contains<Any> for MsgFilter {
+	fn contains(msg: &Any) -> bool {
+		any_match!(
+			msg, {
+				MsgSend => true,
+				MsgStoreCode => true,
+				MsgInstantiateContract2 => true,
+				MsgExecuteContract => true,
+				MsgMigrateContract => true,
+				MsgUpdateAdmin => true,
+			},
+			false
+		)
+	}
+}
+
+pub struct GasToWeight;
+impl Convert<Gas, Weight> for GasToWeight {
+	fn convert(gas: Gas) -> Weight {
+		Weight::from_parts(gas, 0u64)
+	}
+}
+
+pub struct WeightToGas;
+impl Convert<Weight, Gas> for WeightToGas {
+	fn convert(weight: Weight) -> Gas {
+		weight.ref_time()
+	}
+}
+
 parameter_types! {
 	pub const MaxMemoCharacters: u64 = 256;
-	pub const StringLimit: u32 = 128;
-	pub NativeDenom: BoundedVec<u8, StringLimit> = (*b"acdt").to_vec().try_into().unwrap();
-	pub ChainId: BoundedVec<u8, StringLimit> = (*b"dev").to_vec().try_into().unwrap();
+	pub NativeDenom: &'static str = "acdt";
+	pub ChainId: &'static str = "dev";
+	pub const TxSigLimit: u64 = 7;
+	pub const MaxDenomLimit: u32 = 128;
 }
 
 impl pallet_cosmos::Config for Runtime {
-	/// Mapping from address to account id.
+	/// Mapping an address to an account id.
 	type AddressMapping = compat::cosm::HashedAddressMapping<Self, BlakeTwo256>;
-	/// Currency type for withdraw and balance storage.
-	type Currency = Balances;
-	/// Convert a length value into a deductible fee based on the currency type.
-	type LengthToFee = IdentityFee<Balance>;
+	/// Native asset type.
+	type NativeAsset = Balances;
+	/// Type of an account balance.
+	type Balance = Balance;
+	/// Type of a tradable asset id.
+	/// The [`Ord`] constraint is required for [`BoundedBTreeMap`].
+	type AssetId = AssetId;
+	/// Interface from which we are going to execute assets operations.
+	type Assets = Assets;
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
-	/// Weight information for extrinsics in this pallet.
-	type WeightInfo = pallet_cosmos::weights::HorizonWeight<Runtime>;
-	/// Used to calculate actual fee when executing cosmos transaction.
-	type WeightPrice = pallet_transaction_payment::Pallet<Self>;
-	/// Convert a weight value into a deductible fee based on the currency type.
-	type WeightToFee = IdentityFee<Balance>;
 	/// Verify the validity of a Cosmos transaction.
-	type AnteHandler = ante::AnteHandlers<Self>;
-	/// The maximum size of the memo.
+	type AnteHandler = ante::AnteHandler<Self>;
+	/// The maximum number of characters allowed in a memo.
 	type MaxMemoCharacters = MaxMemoCharacters;
 	/// The native denomination for the currency.
 	type NativeDenom = NativeDenom;
-	/// The maximum length of string value.
-	type StringLimit = StringLimit;
-	/// Router for message service handling.
-	type MsgServiceRouter = MsgServiceRouter<Self>;
+	/// Router for handling message services.
+	type MsgServiceRouter = msgs::MsgServiceRouter<Self>;
 	/// The chain ID.
 	type ChainId = ChainId;
+	/// The message filter.
+	type MsgFilter = MsgFilter;
+	/// Converter for converting Gas to Weight.
+	type GasToWeight = GasToWeight;
+	/// Converter for converting Weight to Gas.
+	type WeightToGas = WeightToGas;
+	/// The maximum number of transaction signatures allowed.
+	type TxSigLimit = TxSigLimit;
+	/// Defines the features for all signature verification handlers.
+	type SigVerifiableTx = sig_verifiable_tx::SigVerifiableTx;
+	/// Handler for managing different signature modes in transactions.
+	type SignModeHandler = sign_mode_handler::SignModeHandler;
+
+	type WeightInfo = pallet_cosmos::weights::CosmosWeight<Runtime>;
+
+	type DenomToAsset = denom::DenomToAsset<Runtime>;
+
+	type MaxDenomLimit = MaxDenomLimit;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
@@ -351,13 +430,14 @@ impl pallet_sudo::Config for Runtime {
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
 	pub enum Runtime {
-		Aura: pallet_aura,
+		System: frame_system,
 		Balances: pallet_balances,
+		Assets: pallet_assets,
+		Aura: pallet_aura,
 		Cosmos: pallet_cosmos,
 		CosmosAccounts: pallet_cosmos_accounts,
 		Grandpa: pallet_grandpa,
 		Sudo: pallet_sudo,
-		System: frame_system,
 		Timestamp: pallet_timestamp,
 		TransactionPayment: pallet_transaction_payment,
 	}
@@ -427,8 +507,17 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		len: usize,
 	) -> Option<TransactionValidity> {
 		match self {
-			RuntimeCall::Cosmos(call) =>
-				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len),
+			RuntimeCall::Cosmos(call) => {
+				if let pallet_cosmos::Call::transact { tx_bytes } = call {
+					if Runtime::migrate_cosm_account(tx_bytes).is_err() {
+						return Some(Err(TransactionValidityError::Invalid(
+							InvalidTransaction::BadSigner,
+						)));
+					}
+				}
+
+				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len)
+			},
 			_ => None,
 		}
 	}
@@ -440,11 +529,21 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		len: usize,
 	) -> Option<Result<(), TransactionValidityError>> {
 		match self {
-			RuntimeCall::Cosmos(call) => call.pre_dispatch_self_contained(
-				&info.to_cosm_address().unwrap(),
-				dispatch_info,
-				len,
-			),
+			RuntimeCall::Cosmos(call) => {
+				if let pallet_cosmos::Call::transact { tx_bytes } = call {
+					if Runtime::migrate_cosm_account(tx_bytes).is_err() {
+						return Some(Err(TransactionValidityError::Invalid(
+							InvalidTransaction::BadSigner,
+						)));
+					}
+				}
+
+				call.pre_dispatch_self_contained(
+					&info.to_cosm_address().unwrap(),
+					dispatch_info,
+					len,
+				)
+			},
 			_ => None,
 		}
 	}
@@ -464,33 +563,100 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 }
 
 impl Runtime {
-	fn migrate_cosm_account(address: &H160, who: &AccountId) -> Result<Balance, ()> {
+	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), TransactionValidityError> {
+		use cosmos_sdk_proto::cosmos::crypto::secp256k1;
 		use fungible::{Inspect, Mutate};
+		use pallet_cosmos_types::address::address_from_bech32;
+		use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
 
-		let interim_account =
-			<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(*address);
-		let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
-			&interim_account,
-			Preservation::Expendable,
-			Fortitude::Polite,
-		);
-		<pallet_balances::Pallet<Runtime> as Mutate<AccountId>>::transfer(
-			&interim_account,
-			who,
-			balance,
-			Preservation::Expendable,
-		)
-		.map_err(|_| ())
-		.map(|_| balance)
+		let tx = Tx::decode(&mut &*tx_bytes)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let signers = <Runtime as pallet_cosmos::Config>::SigVerifiableTx::get_signers(&tx)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+
+		let signer_infos = tx
+			.auth_info
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?
+			.signer_infos;
+
+		for (i, signer_info) in signer_infos.iter().enumerate() {
+			if signer_info.sequence == 0 {
+				let signer = signers
+					.get(i)
+					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+				let signer_addr = address_from_bech32(signer).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
+
+				let interim_account =
+					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(
+						signer_addr,
+					);
+				let public_key = signer_info
+					.public_key
+					.as_ref()
+					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+				let who = match public_key.type_url.as_str() {
+					SECP256K1_TYPE_URL => {
+						let public_key = secp256k1::PubKey::decode(&mut &*public_key.value)
+							.map_err(|_| {
+								TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+							})?;
+						let mut pk = [0u8; 33];
+						pk.copy_from_slice(&public_key.key);
+						CosmosSigner(Public(pk))
+					},
+					_ =>
+						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
+				};
+
+				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
+					&interim_account,
+					Preservation::Expendable,
+					Fortitude::Polite,
+				);
+				<pallet_balances::Pallet<Runtime> as Mutate<AccountId>>::transfer(
+					&interim_account,
+					&who,
+					balance,
+					Preservation::Expendable,
+				)
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+
+				// TODO: Add asset transfer for migration
+
+				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+			}
+		}
+
+		Ok(())
 	}
 }
 
 impl_runtime_apis! {
-	impl hp_rpc::ConvertTxRuntimeApi<Block> for Runtime {
+	impl hp_rpc::CosmosTxRuntimeApi<Block> for Runtime {
 		fn convert_tx(tx_bytes: Vec<u8>) -> <Block as BlockT>::Extrinsic {
 			UncheckedExtrinsic::new_unsigned(
 				pallet_cosmos::Call::<Runtime>::transact { tx_bytes }.into(),
 			)
+		}
+
+		fn simulate(tx_bytes: Vec<u8>) -> Result<SimulateResponse, SimulateError> {
+			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| SimulateError::InvalidTx)?;
+
+			// TODO: Run ante handlers
+
+			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx.clone()).map_err(|_| SimulateError::UnknownError)?;
+
+			System::read_events_no_consensus()
+				.find_map(|record| {
+					if let RuntimeEvent::Cosmos(pallet_cosmos::Event::Executed { gas_wanted, gas_used, events }) = record.event {
+						Some(SimulateResponse{gas_info: GasInfo { gas_wanted, gas_used }, events})
+					} else {
+						None
+					}
+				}).ok_or(SimulateError::UnknownError)
 		}
 	}
 

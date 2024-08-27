@@ -18,10 +18,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 mod ecdsa;
-mod ripmd160;
 mod secp256k1;
 
 #[cfg(feature = "std")]
 pub use crate::secp256k1::secp256k1_ecdsa_verify;
 pub use ecdsa::EcdsaExt;
-pub use ripmd160::ripemd160;

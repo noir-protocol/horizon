@@ -6,32 +6,33 @@ license = "Apache-2.0"
 repository = "https://github.com/noirhq/horizon/"
 
 [dependencies]
-array-bytes = { workspace = true, optional = true }
-hex = { workspace = true, optional = true }
-serde = { workspace = true, features = ["derive"] }
+parity-scale-codec = { workspace = true, default-features = false }
+scale-info = { workspace = true, default-features = false }
 
-parity-scale-codec = { workspace = true }
-scale-info = { workspace = true }
+array-bytes = { workspace = true, optional = true }
+hex = { workspace = true, default-features = false, optional = true }
+serde = { workspace = true, default-features = false, features = ["derive"] }
+ripemd = { workspace = true, default-features = false }
 
 # Substrate
-sp-core = { workspace = true }
-sp-io = { workspace = true }
-sp-runtime = { workspace = true }
-sp-std = { workspace = true }
+sp-core = { workspace = true, default-features = false }
+sp-io = { workspace = true, default-features = false }
+sp-runtime = { workspace = true, default-features = false }
+sp-std = { workspace = true, default-features = false }
 
 # Horizon
-hp-crypto = { workspace = true }
-hp-io = { workspace = true }
-
-[dev-dependencies]
+hp-crypto = { workspace = true, default-features = false }
+hp-io = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
 std = [
-	"array-bytes",
-	"hex",
 	"parity-scale-codec/std",
 	"scale-info/std",
+	"array-bytes",
+	"hex/std",
+	"serde/std",
+	"ripemd/std",
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",

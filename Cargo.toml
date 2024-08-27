@@ -2,36 +2,53 @@
 resolver = "2"
 members = [
 	"client/rpc",
+	"frame/accounts",
 	"frame/cosmos",
-	"frame/cosmos/modules",
-	"frame/cosmos/modules/auth",
-	"frame/cosmos/modules/bank",
-	"frame/cosmos-accounts",
+	"frame/cosmwasm",
+	"frame/cosmos/types",
+	"frame/cosmos/x/auth",
+	"frame/cosmos/x/auth/migrations",
+	"frame/cosmos/x/auth/signing",
+	"frame/cosmos/x/bank",
+	"frame/cosmos/x/bank/types",
+	"frame/cosmos/x/wasm",
+	"frame/cosmos/x/wasm/types",
 	"primitives/account",
-	"primitives/cosmos",
 	"primitives/io",
 	"primitives/rpc",
 	"template/runtime",
 	"template/node",
+	"cosmwasm/std",
+	"composable/primitives",
+	"composable/vm",
+	"composable/vm-wasmi",
+	"composable/composable-support",
+	"composable/composable-traits",
 ]
 
 [workspace.dependencies]
 array-bytes = "6.2.2"
 base64ct = { version = "1.6.0", default-features = false }
 bech32 = { version = "0.9.1", default-features = false }
-clap = { version = "4.0.9", features = ["derive"] }
-cosmrs = "0.15.0"
+clap = { version = "4.5.16", features = ["derive"] }
+cosmos-sdk-proto = { version = "0.24.0", default-features = false }
 futures = "0.3.28"
-hex = "0.4.3"
+hex = { version = "0.4.3", default-features = false }
+hex-literal = "0.4.1"
+impl-trait-for-tuples = "0.2.2"
 jsonrpsee = "0.22.5"
 log = { version = "0.4.21", default-features = false }
-num_enum = { version = "0.7.2", default-features = false }
+num = { version = "0.4.3", default-features = false }
 parity-scale-codec = { version = "3.2.0", default-features = false }
+rand_core = { version = "0.6.4", default-features = false }
 ripemd = { version = "0.1.3", default-features = false }
 scale-info = { version = "2.3.0", default-features = false }
+schemars = { version = "1.0.0-alpha.5", default-features = false }
 secp256k1 = { version = "0.28.1", default-features = false }
-serde = { version = "1.0.0", default-features = false }
-serde_json = { version = "1.0.94", default-features = false }
+serde = { version = "1.0.209", default-features = false }
+serde_json = { version = "1.0.127", default-features = false, features = [
+	"alloc",
+] }
 
 # Substrate FRAME
 frame-executive = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
@@ -39,6 +56,7 @@ frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 frame-system-rpc-runtime-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 pallet-aura = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
+pallet-assets = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 pallet-grandpa = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 pallet-sudo = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
@@ -64,6 +82,7 @@ sc-service = { git = "https://github.com/paritytech/polkadot-sdk", branch = "rel
 sc-telemetry = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0" }
 sc-transaction-pool = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0" }
 sc-transaction-pool-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0" }
+sp-arithmetic = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 sp-api = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 sp-block-builder = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
 sp-blockchain = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.9.0", default-features = false }
@@ -92,17 +111,40 @@ fp-self-contained = { git = "https://github.com/polkadot-evm/frontier", branch =
 # Horizon
 hc-rpc = { path = "client/rpc" }
 hp-account = { path = "primitives/account", default-features = false }
-hp-cosmos = { path = "primitives/cosmos", default-features = false }
 hp-crypto = { path = "primitives/crypto", default-features = false }
 hp-io = { path = "primitives/io", default-features = false }
 hp-rpc = { path = "primitives/rpc", default-features = false }
 pallet-cosmos = { path = "frame/cosmos", default-features = false }
-pallet-cosmos-accounts = { path = "frame/cosmos-accounts", default-features = false }
+pallet-cosmos-accounts = { path = "frame/accounts", default-features = false }
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
-pallet-cosmos-auth = { path = "frame/cosmos/modules/auth", default-features = false}
-pallet-cosmos-bank = { path = "frame/cosmos/modules/bank", default-features = false}
-pallet-cosmos-modules = { path = "frame/cosmos/modules", default-features = false}
+pallet-cosmos-types = { path = "frame/cosmos/types", default-features = false }
+pallet-cosmos-x-auth = { path = "frame/cosmos/x/auth", default-features = false }
+pallet-cosmos-x-auth-migrations = { path = "frame/cosmos/x/auth/migrations", default-features = false }
+pallet-cosmos-x-auth-signing = { path = "frame/cosmos/x/auth/signing", default-features = false }
+pallet-cosmos-x-bank = { path = "frame/cosmos/x/bank", default-features = false }
+pallet-cosmos-x-bank-types = { path = "frame/cosmos/x/bank/types", default-features = false }
+pallet-cosmos-x-wasm = { path = "frame/cosmos/x/wasm", default-features = false }
+pallet-cosmos-x-wasm-types = { path = "frame/cosmos/x/wasm/types", default-features = false }
+
+cosmwasm-core = { version = "2.1.3", default-features = false }
+cosmwasm-schema = { version = "2.1.3", default-features = false }
+cosmwasm-crypto = { version = "2.1.3", default-features = false }
+
+cosmwasm-std = { path = "cosmwasm/std", default-features = false }
+ibc = { version = "0.54.0", default-features = false }
+
+wasm-instrument = { version = "0.4.0", default-features = false }
+wasmi = { version = "0.30.0", default-features = false }
+wasmi-validation = { version = "0.5.0", default-features = false }
+
+# Composable
+pallet-cosmwasm = { path = "frame/cosmwasm", default-features = false }
+ibc-primitives = { path = "composable/primitives", default-features = false }
+cosmwasm-vm = { path = "composable/vm", default-features = false }
+cosmwasm-vm-wasmi = { path = "composable/vm-wasmi", default-features = false }
+composable-support = { path = "composable/composable-support", default-features = false }
+composable-traits = { path = "composable/composable-traits", default-features = false }
 
 [profile.release]
 panic = "unwind"

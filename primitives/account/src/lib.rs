@@ -19,11 +19,13 @@
 
 use hp_crypto::EcdsaExt;
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
+use ripemd::Digest;
 use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{de, Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 use sp_core::{ecdsa, H160};
+use sp_io::hashing::sha2_256;
 use sp_runtime::traits::IdentifyAccount;
 
 #[derive(
@@ -77,8 +79,11 @@ impl sp_std::fmt::Debug for CosmosSigner {
 
 impl EcdsaExt for CosmosSigner {
 	fn to_cosm_address(&self) -> Option<H160> {
-		let hashed = sp_io::hashing::sha2_256(&self.0 .0);
-		Some(hp_io::crypto::ripemd160(&hashed).into())
+		let mut hasher = ripemd::Ripemd160::new();
+		hasher.update(sha2_256(&self.0 .0));
+		let address = H160::from_slice(&hasher.finalize());
+
+		Some(address)
 	}
 }
 
@@ -126,6 +131,6 @@ impl sp_runtime::traits::Verify for CosmosSignature {
 	type Signer = CosmosSigner;
 
 	fn verify<L: sp_runtime::traits::Lazy<[u8]>>(&self, mut msg: L, signer: &CosmosSigner) -> bool {
-		hp_io::crypto::secp256k1_ecdsa_verify(self.0.as_ref(), msg.get(), &signer.0 .0)
+		hp_io::cosmos::secp256k1_ecdsa_verify(self.0.as_ref(), msg.get(), &signer.0 .0)
 	}
 }

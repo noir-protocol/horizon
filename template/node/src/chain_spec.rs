@@ -29,7 +29,7 @@ use sp_runtime::traits::{IdentifyAccount, Verify};
 
 /// Specialized `ChainSpec`. This is a specialization of the general Substrate ChainSpec type.
 pub type ChainSpec =
-	sc_service::GenericChainSpec<RuntimeGenesisConfig, NoExtension, hp_io::crypto::HostFunctions>;
+	sc_service::GenericChainSpec<RuntimeGenesisConfig, NoExtension, hp_io::cosmos::HostFunctions>;
 
 /// Generate a crypto pair from seed.
 pub fn get_from_seed<TPublic: Public>(seed: &str) -> <TPublic::Pair as Pair>::Public {
@@ -109,8 +109,16 @@ fn testnet_genesis(
 	_enable_println: bool,
 ) -> serde_json::Value {
 	serde_json::json!({
+		"assets": {
+			"assets": vec![(0, get_account_id_from_seed::<ecdsa::Public>("Alice"),  true, 500)],
+			"metadata": vec![(0, "stake".as_bytes().to_vec(), "stake".as_bytes().to_vec(), 18)],
+			"accounts": vec![(0, get_account_id_from_seed::<ecdsa::Public>("Alice"), 1u128 << 60)],
+		},
 		"balances": {
-			"balances": endowed_accounts.iter().cloned().map(|k| (k, 1u64 << 60)).collect::<Vec<_>>(),
+			"balances": endowed_accounts.iter().cloned().map(|k| (k, 1u128 << 60)).collect::<Vec<_>>(),
+		},
+		"cosmos": {
+			"assets": vec![("stake".as_bytes().to_vec(), 0)],
 		},
 		"cosmosAccounts": {
 			"accounts": endowed_accounts.to_vec(),

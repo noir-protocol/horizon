@@ -16,21 +16,20 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use frame_support::weights::Weight;
+use frame_support::{dispatch::DispatchClass, weights::Weight};
 use sp_core::Get;
 use sp_std::marker::PhantomData;
 
-/// Weight functions needed for pallet_cosmos.
 pub trait WeightInfo {
-	fn msg_send() -> Weight;
+	fn default_weight() -> Weight;
 }
 
-/// Weights for pallet_cosmos using the Horizon node and recommended hardware.
-pub struct HorizonWeight<T>(PhantomData<T>);
-impl<T: frame_system::Config> WeightInfo for HorizonWeight<T> {
-	fn msg_send() -> Weight {
-		use pallet_balances::WeightInfo;
-		pallet_balances::weights::SubstrateWeight::<T>::transfer_allow_death()
-			.saturating_add(T::DbWeight::get().reads(2))
+pub struct CosmosWeight<T>(PhantomData<T>);
+impl<T> WeightInfo for CosmosWeight<T>
+where
+	T: frame_system::Config,
+{
+	fn default_weight() -> Weight {
+		T::BlockWeights::get().get(DispatchClass::Normal).base_extrinsic
 	}
 }

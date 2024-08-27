@@ -1,0 +1,16 @@
+[package]
+authors = ["Composable Developers"]
+edition = "2021"
+homepage = "https://composable.finance"
+name = "composable-traits"
+version = "1.0.0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+thiserror = { version = "1.0.50", package = "thiserror-core", default-features = false }
+
+[features]
+default = ["std"]
+std = ["thiserror/std"]
