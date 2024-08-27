@@ -94,6 +94,7 @@ pub mod pallet {
 		pub fn connect(origin: OriginFor<T>) -> DispatchResult {
 			let who = ensure_signed(origin)?;
 			Self::connect_account(&who)?;
+			
 			Ok(())
 		}
 	}

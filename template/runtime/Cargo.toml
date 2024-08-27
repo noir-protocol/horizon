@@ -61,6 +61,8 @@ pallet-cosmos-x-bank-types = { workspace = true }
 pallet-cosmos-x-wasm = { workspace = true }
 pallet-cosmos-x-wasm-types = { workspace = true }
 
+pallet-cosmwasm = { workspace = true }
+
 [dev-dependencies]
 base64ct = { workspace = true }
 hex = { workspace = true }
@@ -109,5 +111,6 @@ std = [
 	"pallet-cosmos-x-auth-signing/std",
 	"pallet-cosmos-x-bank/std",
 	"pallet-cosmos-x-bank-types/std",
+	"pallet-cosmwasm/std",
 	"substrate-wasm-builder",
 ]
