@@ -4,7 +4,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{Addr, IbcAcknowledgement, IbcPacket, Uint64};
+use crate::{prelude::*, Addr, IbcAcknowledgement, IbcPacket, Uint64};
 
 /// This is just a type representing the data that has to be sent with the IBC message to receive
 /// callbacks. It should be serialized and sent with the IBC message.

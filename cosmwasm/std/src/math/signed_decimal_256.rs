@@ -1,4 +1,4 @@
-use alloc::string::ToString;
+use crate::prelude::*;
 use core::{
 	cmp::Ordering,
 	fmt::{self, Write},

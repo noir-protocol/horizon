@@ -1,4 +1,4 @@
-use alloc::string::ToString;
+use alloc::string::{String, ToString};
 use core::{
 	cmp::Ordering,
 	fmt::{self, Write},

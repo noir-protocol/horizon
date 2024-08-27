@@ -1,4 +1,4 @@
-use alloc::vec::Vec;
+use crate::prelude::*;
 use core::{any::TypeId, marker::PhantomData, mem, ops::Deref, slice};
 
 /// This trait is used to indicate whether a region is borrowed or owned

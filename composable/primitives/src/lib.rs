@@ -2,7 +2,7 @@
 
 extern crate alloc;
 
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 use codec::{Decode, Encode};
 use ibc::{
 	apps::transfer::types::PrefixedCoin,

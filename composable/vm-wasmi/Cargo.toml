@@ -28,8 +28,8 @@ cosmwasm-vm = { workspace = true, default-features = false, features = [
 	"iterator",
 	"stargate",
 ] }
-hex = { workspace = true, features = ["alloc"] }
-rand_core = { workspace = true, features = ["alloc"] }
+hex = { workspace = true, default-features = false, features = ["alloc"] }
+rand_core = { workspace = true, default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
 wat = "1.0"

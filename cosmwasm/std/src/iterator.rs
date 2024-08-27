@@ -2,6 +2,8 @@ use crate::StdError;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::prelude::*;
+
 /// A record of a key-value storage that is created through an iterator API.
 /// The first element (key) is always raw binary data. The second element
 /// (value) is binary by default but can be changed to a custom type. This

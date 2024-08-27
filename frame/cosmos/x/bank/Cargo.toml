@@ -9,34 +9,34 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-cosmos-sdk-proto = { workspace = true }
-log = { workspace = true }
+cosmos-sdk-proto = { workspace = true, default-features = false }
+log = { workspace = true, default-features = false }
 
-frame-support = { workspace = true }
-sp-core = { workspace = true }
-sp-runtime = { workspace = true }
-sp-std = { workspace = true }
+frame-support = { workspace = true, default-features = false }
+pallet-assets = { workspace = true, default-features = false }
+pallet-balances = { workspace = true, default-features = false }
+sp-core = { workspace = true, default-features = false }
+sp-runtime = { workspace = true, default-features = false }
+sp-std = { workspace = true, default-features = false }
 
-hp-io = { workspace = true }
-pallet-cosmos = { workspace = true }
-pallet-cosmos-types = { workspace = true }
-pallet-cosmos-x-bank-types = { workspace = true, features = ["with-codec"] }
-
-pallet-assets = { workspace = true }
-pallet-balances = { workspace = true }
+hp-io = { workspace = true, default-features = false }
+pallet-cosmos = { workspace = true, default-features = false }
+pallet-cosmos-types = { workspace = true, default-features = false }
+pallet-cosmos-x-bank-types = { workspace = true, default-features = false, features = ["with-codec"] }
 
 [features]
 default = ["std"]
 std = [
 	"cosmos-sdk-proto/std",
+	"log/std",
 	"frame-support/std",
+	"pallet-assets/std",
+	"pallet-balances/std",
 	"sp-core/std",
 	"sp-runtime/std",
 	"sp-std/std",
 	"hp-io/std",
-	"pallet-assets/std",
-	"pallet-balances/std",
 	"pallet-cosmos/std",
-	"pallet-cosmos-x-bank-types/std",
 	"pallet-cosmos-types/std",
+	"pallet-cosmos-x-bank-types/std",
 ]

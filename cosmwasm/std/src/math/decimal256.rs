@@ -19,6 +19,8 @@ use crate::{
 
 use super::{Fraction, Isqrt, Uint256};
 
+use crate::prelude::*;
+
 /// A fixed-point decimal value with 18 fractional digits, i.e.
 /// Decimal256(1_000_000_000_000_000_000) == 1.0
 ///
