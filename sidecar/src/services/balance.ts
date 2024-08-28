@@ -22,7 +22,7 @@ export class BalanceService implements ApiService {
 
   public async balances(address: string): Promise<QueryAllBalancesResponse> {
     const originRaw = await this.accountService.origin(address);
-    let amount = "0";
+    let amount = '0';
     let origin = originRaw.toString();
     if (!origin) {
       origin = this.accountService.interim(address);
@@ -44,11 +44,16 @@ export class BalanceService implements ApiService {
 
       if (asset) {
         const denom = value.toHuman()['symbol'];
-        const amount = BigInt(asset.toJSON()['balance']).toString();
+        const amount = asset.toJSON() ? BigInt(asset.toJSON()['balance']).toString() : '0';
 
         assets.push({ denom, amount });
       }
     }
+
+    console.debug([
+      nativeBalance,
+      ...assets,
+    ]);
 
     return {
       balances: [
