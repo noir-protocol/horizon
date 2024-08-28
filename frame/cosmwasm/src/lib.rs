@@ -194,6 +194,7 @@ pub mod pallet {
 		QueryDeserialize,
 		ExecuteSerialize,
 		Xcm,
+		IncrementFailed,
 	}
 
 	#[pallet::config]
@@ -933,7 +934,7 @@ impl<T: Config> Pallet<T> {
 	pub fn do_upload(
 		who: &AccountIdOf<T>,
 		code: ContractCodeOf<T>,
-	) -> Result<(H256, u64), DispatchError> {
+	) -> Result<(H256, u64), Error<T>> {
 		let code_hash = sp_io::hashing::sha2_256(&code);
 		ensure!(!CodeHashToId::<T>::contains_key(code_hash), Error::<T>::CodeAlreadyExists);
 		let deposit = code.len().saturating_mul(T::CodeStorageByteDeposit::get() as _);
@@ -942,7 +943,7 @@ impl<T: Config> Pallet<T> {
 		let module = Self::do_load_module(&code)?;
 		let ibc_capable = Self::do_check_ibc_capability(&module);
 		let instrumented_code = Self::do_instrument_code(module)?;
-		let code_id = CurrentCodeId::<T>::increment()?;
+		let code_id = CurrentCodeId::<T>::increment().map_err(|_| Error::<T>::IncrementFailed)?;
 		CodeHashToId::<T>::insert(code_hash, code_id);
 		PristineCode::<T>::insert(code_id, code);
 		InstrumentedCode::<T>::insert(code_id, instrumented_code);
