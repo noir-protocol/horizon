@@ -121,7 +121,7 @@ where
 					pallet_balances::weights::SubstrateWeight::<T>::transfer_keep_alive(),
 				);
 			} else {
-				let asset_id = T::DenomToAsset::convert(amt.denom.clone()).map_err(|_| {
+				let asset_id = T::AssetToDenom::convert(amt.denom.clone()).map_err(|_| {
 					MsgHandlerErrorInfo {
 						weight: total_weight,
 						error: RootError::InvalidCoins.into(),

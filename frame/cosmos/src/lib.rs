@@ -195,6 +195,7 @@ pub mod pallet {
 			pub ChainId: &'static str = "dev";
 			pub const TxSigLimit: u64 = 7;
 			pub const MaxDenomLimit: u32 = 128;
+			pub const AddressPrefix: &'static str = "cosmos";
 		}
 
 		#[frame_support::register_default_impl(TestDefaultConfig)]
@@ -212,6 +213,7 @@ pub mod pallet {
 			type WeightToGas = WeightToGas;
 			type TxSigLimit = TxSigLimit;
 			type MaxDenomLimit = MaxDenomLimit;
+			type AddressPrefix = AddressPrefix;
 		}
 	}
 
@@ -283,9 +285,13 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 		/// A way to convert from cosmos coin denom to asset id.
 		#[pallet::no_default]
-		type DenomToAsset: Convert<String, Result<Self::AssetId, ()>>;
+		type AssetToDenom: Convert<String, Result<Self::AssetId, ()>>
+			+ Convert<Self::AssetId, String>;
 		#[pallet::constant]
 		type MaxDenomLimit: Get<u32>;
+		/// The chain ID.
+		#[pallet::constant]
+		type AddressPrefix: Get<&'static str>;
 	}
 
 	#[pallet::genesis_config]

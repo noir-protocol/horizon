@@ -15,18 +15,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bech32::FromBase32;
 use sp_core::H160;
-use sp_std::vec::Vec;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum AddressError {
-	Bech32Error(bech32::Error),
+	Bech32Error(bech32::DecodeError),
 }
 
 pub fn address_from_bech32(address: &str) -> Result<H160, AddressError> {
-	let (_prefix, data, _variant) = bech32::decode(address).map_err(AddressError::Bech32Error)?;
-	let address = Vec::<u8>::from_base32(&data).map_err(AddressError::Bech32Error)?;
+	let (_prefix, data) = bech32::decode(address).map_err(AddressError::Bech32Error)?;
 
-	Ok(H160::from_slice(&address))
+	Ok(H160::from_slice(&data))
 }

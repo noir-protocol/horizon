@@ -133,7 +133,7 @@ where
 
 				// TODO: Resolve imbalance
 			} else {
-				let asset_id = T::DenomToAsset::convert(amt.denom.clone())
+				let asset_id = T::AssetToDenom::convert(amt.denom.clone())
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 				let _imbalance = T::Assets::withdraw(

@@ -203,7 +203,7 @@ pub mod pallet {
 		/// Max number of frames a contract is able to push, a.k.a recursive calls.
 		const MAX_FRAMES: u8;
 
-		#[allow(missing_docs)]
+		#[pallet::event]
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type AccountIdExtended: Parameter
@@ -322,11 +322,6 @@ pub mod pallet {
 		/// Weight implementation.
 		type WeightInfo: WeightInfo;
 
-		/// account which execute relayer calls IBC exported entry points
-		type IbcRelayerAccount: Get<AccountIdOf<Self>>;
-
-		type IbcRelayer: ibc_primitives::IbcHandler<AccountIdOf<Self>>;
-
 		/// A hook into the VM execution semantic, allowing the runtime to hook into a contract
 		/// execution.
 		type PalletHook: PalletHook<Self>;
@@ -379,13 +374,12 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub contracts: sp_std::vec::Vec<(T::AccountIdExtended, ContractCodeOf<T>)>,
+		pub contracts: alloc::vec::Vec<(T::AccountIdExtended, ContractCodeOf<T>)>,
 	}
 
-	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { contracts: vec![] }
+			Self { contracts: Default::default() }
 		}
 	}
 

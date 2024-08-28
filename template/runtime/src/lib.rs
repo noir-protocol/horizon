@@ -26,10 +26,12 @@
 #[cfg(feature = "std")]
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
+extern crate alloc;
+
+mod accounts;
 mod ante;
 mod assets;
 mod compat;
-mod denom;
 mod msgs;
 mod sig_verifiable_tx;
 mod sign_mode_handler;
@@ -40,7 +42,7 @@ use cosmos_sdk_proto::{
 		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
 		MsgUpdateAdmin,
 	},
-	prost::{alloc::string::String, Message},
+	prost::Message,
 	Any,
 };
 use frame_support::{
@@ -56,6 +58,7 @@ use frame_support::{
 		constants::{RocksDbWeight as RuntimeDbWeight, WEIGHT_REF_TIME_PER_MILLIS},
 		IdentityFee, Weight,
 	},
+	PalletId,
 };
 use frame_system::EnsureRoot;
 use hp_account::CosmosSigner;
@@ -65,6 +68,7 @@ use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::tx::Gas;
 use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
 use pallet_cosmos_x_auth_signing::any_match;
+use pallet_cosmwasm::instrument::CostRules;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
 };
@@ -368,6 +372,7 @@ parameter_types! {
 	pub ChainId: &'static str = "dev";
 	pub const TxSigLimit: u64 = 7;
 	pub const MaxDenomLimit: u32 = 128;
+	pub const AddressPrefix: &'static str = "cosmos";
 }
 
 impl pallet_cosmos::Config for Runtime {
@@ -409,9 +414,11 @@ impl pallet_cosmos::Config for Runtime {
 
 	type WeightInfo = pallet_cosmos::weights::CosmosWeight<Runtime>;
 
-	type DenomToAsset = denom::DenomToAsset<Runtime>;
+	type AssetToDenom = assets::AssetToDenom<Runtime>;
 
 	type MaxDenomLimit = MaxDenomLimit;
+
+	type AddressPrefix = AddressPrefix;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
@@ -419,6 +426,64 @@ impl pallet_cosmos_accounts::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
 	/// Weight information for extrinsics in this pallet.
 	type WeightInfo = pallet_cosmos_accounts::weights::HorizonWeight<Runtime>;
+}
+
+parameter_types! {
+	pub const CosmwasmPalletId: PalletId = PalletId(*b"cosmwasm");
+	pub const MaxContractLabelSize: u32 = 64;
+	pub const MaxContractTrieIdSize: u32 = Hash::len_bytes() as u32;
+	pub const MaxInstantiateSaltSize: u32 = 128;
+	pub const MaxFundsAssets: u32 = 32;
+	pub const CodeTableSizeLimit: u32 = 4096;
+	pub const CodeGlobalVariableLimit: u32 = 256;
+	pub const CodeParameterLimit: u32 = 128;
+	pub const CodeBranchTableSizeLimit: u32 = 256;
+	pub const CodeStorageByteDeposit: u32 = 1_000_000;
+	pub const ContractStorageByteReadPrice: u32 = 1;
+	pub const ContractStorageByteWritePrice: u32 = 1;
+	pub WasmCostRules: CostRules<Runtime> = Default::default();
+}
+
+impl pallet_cosmwasm::Config for Runtime {
+	const MAX_FRAMES: u8 = 64;
+	type RuntimeEvent = RuntimeEvent;
+	type AccountIdExtended = AccountId;
+	type PalletId = CosmwasmPalletId;
+	type MaxCodeSize = ConstU32<{ 1024 * 1024 }>;
+	type MaxInstrumentedCodeSize = ConstU32<{ 2 * 1024 * 1024 }>;
+	type MaxMessageSize = ConstU32<{ 64 * 1024 }>;
+	type AccountToAddr = accounts::AccountToAddr<Runtime>;
+	type AssetToDenom = assets::AssetToDenom<Runtime>;
+	type Balance = Balance;
+	type AssetId = AssetId;
+	type Assets = Assets;
+	type NativeAsset = Balances;
+	type ChainId = ChainId;
+	type MaxContractLabelSize = MaxContractLabelSize;
+	type MaxContractTrieIdSize = MaxContractTrieIdSize;
+	type MaxInstantiateSaltSize = MaxInstantiateSaltSize;
+	type MaxFundsAssets = MaxFundsAssets;
+
+	type CodeTableSizeLimit = CodeTableSizeLimit;
+	type CodeGlobalVariableLimit = CodeGlobalVariableLimit;
+	type CodeStackLimit = ConstU32<{ u32::MAX }>;
+
+	type CodeParameterLimit = CodeParameterLimit;
+	type CodeBranchTableSizeLimit = CodeBranchTableSizeLimit;
+	type CodeStorageByteDeposit = CodeStorageByteDeposit;
+	type ContractStorageByteReadPrice = ContractStorageByteReadPrice;
+	type ContractStorageByteWritePrice = ContractStorageByteWritePrice;
+
+	type WasmCostRules = WasmCostRules;
+	type UnixTime = Timestamp;
+	type WeightInfo = pallet_cosmwasm::weights::SubstrateWeight<Runtime>;
+
+	// TODO: Add precompile to use execute or query pallet
+	type PalletHook = ();
+
+	type UploadWasmOrigin = frame_system::EnsureSigned<Self::AccountId>;
+
+	type ExecuteWasmOrigin = frame_system::EnsureSigned<Self::AccountId>;
 }
 
 impl pallet_sudo::Config for Runtime {
@@ -436,6 +501,7 @@ construct_runtime!(
 		Aura: pallet_aura,
 		Cosmos: pallet_cosmos,
 		CosmosAccounts: pallet_cosmos_accounts,
+		Cosmwasm: pallet_cosmwasm,
 		Grandpa: pallet_grandpa,
 		Sudo: pallet_sudo,
 		Timestamp: pallet_timestamp,

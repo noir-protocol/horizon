@@ -24,7 +24,7 @@ use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{de, Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
-use sp_core::{ecdsa, H160};
+use sp_core::{crypto::UncheckedFrom, ecdsa, H160, H256};
 use sp_io::hashing::sha2_256;
 use sp_runtime::traits::IdentifyAccount;
 
@@ -84,6 +84,20 @@ impl EcdsaExt for CosmosSigner {
 		let address = H160::from_slice(&hasher.finalize());
 
 		Some(address)
+	}
+}
+
+impl UncheckedFrom<H256> for CosmosSigner {
+	fn unchecked_from(t: H256) -> Self {
+		let mut buf = [0u8; 33];
+		buf[1..33].copy_from_slice(&t.0);
+		buf.into()
+	}
+}
+
+impl AsRef<[u8]> for CosmosSigner {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_ref()
 	}
 }
 
