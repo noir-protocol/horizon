@@ -20,7 +20,7 @@ use alloc::string::String;
 use frame_support::{ensure, traits::fungibles::metadata::Inspect};
 use sp_runtime::{traits::Convert, BoundedVec};
 
-pub struct AssetsCallback<T>(sp_std::marker::PhantomData<T>);
+pub struct AssetsCallback<T>(core::marker::PhantomData<T>);
 impl<T> pallet_assets::AssetsCallback<T::AssetId, T::AccountId> for AssetsCallback<T>
 where
 	T: pallet_cosmos::Config,
@@ -51,7 +51,7 @@ where
 	}
 }
 
-pub struct AssetToDenom<T>(sp_std::marker::PhantomData<T>);
+pub struct AssetToDenom<T>(core::marker::PhantomData<T>);
 impl<T> Convert<String, Result<T::AssetId, ()>> for AssetToDenom<T>
 where
 	T: pallet_cosmos::Config,

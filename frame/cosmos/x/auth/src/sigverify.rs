@@ -17,6 +17,7 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use alloc::string::ToString;
+use core::marker::PhantomData;
 use cosmos_sdk_proto::{
 	cosmos::{
 		crypto::{multisig::LegacyAminoPubKey, secp256k1},
@@ -37,7 +38,6 @@ use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 };
-use sp_std::marker::PhantomData;
 
 pub const SECP256K1_TYPE_URL: &str = "/cosmos.crypto.secp256k1.PubKey";
 
@@ -152,7 +152,7 @@ where
 	}
 }
 
-pub struct ValidateSigCountDecorator<T>(sp_std::marker::PhantomData<T>);
+pub struct ValidateSigCountDecorator<T>(core::marker::PhantomData<T>);
 
 impl<T> AnteDecorator for ValidateSigCountDecorator<T>
 where
@@ -191,7 +191,7 @@ impl<T> ValidateSigCountDecorator<T> {
 	}
 }
 
-pub struct IncrementSequenceDecorator<T>(sp_std::marker::PhantomData<T>);
+pub struct IncrementSequenceDecorator<T>(core::marker::PhantomData<T>);
 
 impl<T> AnteDecorator for IncrementSequenceDecorator<T>
 where

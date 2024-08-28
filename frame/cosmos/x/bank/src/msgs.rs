@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin},
 	traits::Message,
@@ -38,7 +38,6 @@ use pallet_cosmos_types::{
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
 use sp_runtime::{traits::Convert, SaturatedConversion};
-use sp_std::vec::Vec;
 
 pub struct MsgSendHandler<T>(PhantomData<T>);
 
@@ -146,7 +145,7 @@ where
 
 		let msg_event = pallet_cosmos_types::events::CosmosEvent {
 			r#type: EVENT_TYPE_TRANSFER.into(),
-			attributes: sp_std::vec![
+			attributes: alloc::vec![
 				EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from_address.into() },
 				EventAttribute { key: ATTRIBUTE_KEY_RECIPIENT.into(), value: to_address.into() },
 				EventAttribute {
@@ -156,6 +155,6 @@ where
 			],
 		};
 
-		Ok((total_weight, sp_std::vec![msg_event]))
+		Ok((total_weight, alloc::vec![msg_event]))
 	}
 }

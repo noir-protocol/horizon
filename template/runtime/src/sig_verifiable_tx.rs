@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
 	cosmwasm::wasm::v1::{
@@ -31,7 +31,6 @@ use pallet_cosmos_x_wasm_types::tx::{
 	msg_execute_contract, msg_instantiate_contract2, msg_migrate_contract, msg_store_code,
 	msg_update_admin,
 };
-use sp_std::vec::Vec;
 
 pub struct SigVerifiableTx;
 

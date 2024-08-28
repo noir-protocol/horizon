@@ -124,7 +124,7 @@ impl AsEntryName for IbcPacketAckCall {
 }
 
 pub struct NoRelayer<T> {
-	_marker: sp_std::marker::PhantomData<T>,
+	_marker: core::marker::PhantomData<T>,
 }
 
 impl<T: Config> ibc_primitives::IbcHandler<AccountIdOf<T>> for NoRelayer<T> {

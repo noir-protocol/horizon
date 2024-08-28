@@ -40,7 +40,6 @@ sp-arithmetic = { default-features = false, workspace = true }
 sp-core = { default-features = false, workspace = true }
 sp-io = { default-features = false, workspace = true }
 sp-runtime = { default-features = false, workspace = true }
-sp-std = { default-features = false, workspace = true }
 
 composable-support = { workspace = true, default-features = false }
 composable-traits = { workspace = true, default-features = false }
@@ -85,7 +84,6 @@ std = [
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",
-	"sp-std/std",
 	"composable-support/std",
 	"composable-traits/std",
 	"cosmwasm-std/std",

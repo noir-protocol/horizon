@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use alloc::boxed::Box;
+use core::marker::PhantomData;
 use cosmos_sdk_proto::{
 	cosmos::bank::v1beta1::MsgSend,
 	cosmwasm::wasm::v1::{
@@ -31,7 +33,6 @@ use pallet_cosmos_x_wasm::msgs::{
 	MsgExecuteContractHandler, MsgInstantiateContract2Handler, MsgMigrateContractHandler,
 	MsgStoreCodeHandler, MsgUpdateAdminHandler,
 };
-use sp_std::{boxed::Box, marker::PhantomData};
 
 pub struct MsgServiceRouter<T>(PhantomData<T>);
 impl<T> pallet_cosmos_types::msgservice::MsgServiceRouter for MsgServiceRouter<T>

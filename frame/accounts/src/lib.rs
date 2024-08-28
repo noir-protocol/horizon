@@ -19,15 +19,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
+extern crate alloc;
+
 pub mod weights;
 
 use crate::weights::WeightInfo;
+use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use frame_support::traits::BuildGenesisConfig;
 use hp_crypto::EcdsaExt;
 pub use pallet::*;
 use sp_core::H160;
-use sp_std::vec::Vec;
 
 #[frame_support::pallet]
 pub mod pallet {

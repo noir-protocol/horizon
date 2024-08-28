@@ -26,7 +26,6 @@ sp-inherents = { workspace = true, default-features = false }
 sp-offchain = { workspace = true, default-features = false }
 sp-runtime = { workspace = true, default-features = false }
 sp-session = { workspace = true, default-features = false }
-sp-std = { workspace = true, default-features = false }
 sp-transaction-pool = { workspace = true, default-features = false }
 sp-version = { workspace = true, default-features = false }
 
@@ -87,7 +86,6 @@ std = [
 	"sp-genesis-builder/std",
 	"sp-offchain/std",
 	"sp-runtime/std",
-	"sp-std/std",
 	"sp-transaction-pool/std",
 	"sp-version/std",
 	"frame-executive/std",

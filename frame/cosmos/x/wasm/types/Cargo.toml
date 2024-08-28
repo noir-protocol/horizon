@@ -9,14 +9,11 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-cosmos-sdk-proto = { workspace = true, features = ["cosmwasm"] }
-serde_json = { workspace = true }
-
-sp-std = { workspace = true }
+cosmos-sdk-proto = { workspace = true, default-features = false, features = [
+	"cosmwasm",
+] }
+serde_json = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
-std = [
-	"cosmos-sdk-proto/std",
-	"sp-std/std",
-]
+std = ["cosmos-sdk-proto/std", "serde_json/std"]

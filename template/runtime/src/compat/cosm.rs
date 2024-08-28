@@ -18,11 +18,11 @@
 
 //! Adapter types for Cosmos pallet compatibility.
 
+use core::marker::PhantomData;
 use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use pallet_cosmos::AddressMapping;
 use sp_core::{ecdsa, Hasher, H160, H256};
-use sp_std::marker::PhantomData;
 
 /// Hashed address mapping.
 pub struct HashedAddressMapping<T, H>(PhantomData<(T, H)>);

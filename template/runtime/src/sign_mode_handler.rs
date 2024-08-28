@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use alloc::string::ToString;
+use alloc::{string::ToString, vec::Vec};
 use cosmos_sdk_proto::{
 	cosmos::{
 		bank::v1beta1::MsgSend,
@@ -42,7 +42,6 @@ use pallet_cosmos_x_wasm_types::tx::{
 	msg_update_admin,
 };
 use serde_json::{Map, Value};
-use sp_std::vec::Vec;
 
 pub struct SignModeHandler;
 

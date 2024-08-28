@@ -16,9 +16,9 @@
 // limitations under the License.
 
 use crate::{errors::CosmosError, events::CosmosEvent};
+use alloc::{boxed::Box, vec::Vec};
 use cosmos_sdk_proto::Any;
 use frame_support::weights::Weight;
-use sp_std::vec::Vec;
 
 pub struct MsgHandlerErrorInfo {
 	pub weight: Weight,
@@ -30,5 +30,5 @@ pub trait MsgHandler {
 }
 
 pub trait MsgServiceRouter {
-	fn route(msg: &Any) -> Option<sp_std::boxed::Box<dyn MsgHandler>>;
+	fn route(msg: &Any) -> Option<Box<dyn MsgHandler>>;
 }

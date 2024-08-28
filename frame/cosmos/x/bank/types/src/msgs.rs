@@ -49,6 +49,6 @@ pub mod msg_send {
 	}
 
 	pub fn get_signers(msg: &MsgSend) -> Vec<String> {
-		sp_std::vec![msg.from_address.clone()]
+		alloc::vec![msg.from_address.clone()]
 	}
 }

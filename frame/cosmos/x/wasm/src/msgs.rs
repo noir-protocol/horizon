@@ -16,6 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use alloc::vec::Vec;
+use core::marker::PhantomData;
 use cosmos_sdk_proto::{
 	cosmwasm::wasm::v1::{
 		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
@@ -28,7 +30,6 @@ use frame_support::weights::Weight;
 use pallet_cosmos_types::{
 	errors::RootError, events::CosmosEvent, msgservice::MsgHandlerErrorInfo,
 };
-use sp_std::{marker::PhantomData, vec::Vec};
 
 pub struct MsgStoreCodeHandler<T>(PhantomData<T>);
 

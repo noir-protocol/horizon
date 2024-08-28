@@ -15,14 +15,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+extern crate alloc;
+
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
 #[cfg(feature = "with-serde")]
 use serde::{Deserialize, Serialize};
-#[cfg(not(feature = "std"))]
-use sp_std::vec::Vec;
 
 pub const EVENT_TYPE_TX: &str = "tx";
 

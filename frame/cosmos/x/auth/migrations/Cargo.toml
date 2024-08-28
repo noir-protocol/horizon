@@ -13,8 +13,6 @@ cosmos-sdk-proto = { workspace = true, default-features = false }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true, default-features = false }
 
-sp-std = { workspace = true, default-features = false }
-
 [features]
 default = ["std"]
-std = ["cosmos-sdk-proto/std", "sp-std/std", "serde/std", "serde_json/std"]
+std = ["cosmos-sdk-proto/std", "serde/std", "serde_json/std"]

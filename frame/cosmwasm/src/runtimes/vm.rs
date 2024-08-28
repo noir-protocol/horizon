@@ -2,7 +2,7 @@ use super::abstraction::{CanonicalCosmwasmAccount, CosmwasmAccount, Gas};
 use crate::{
 	prelude::*, runtimes::abstraction::GasOutcome, types::*, weights::WeightInfo, Config, Pallet,
 };
-use alloc::{borrow::ToOwned, string::String};
+use alloc::{borrow::ToOwned, collections::btree_map::BTreeMap, string::String, vec::Vec};
 use composable_traits::cosmwasm::CosmwasmSubstrateError;
 use core::marker::{Send, Sync};
 use cosmwasm_std::{CodeInfoResponse, Coin, ContractInfoResponse, Empty, Env, MessageInfo};
@@ -19,7 +19,6 @@ use cosmwasm_vm_wasmi::{
 };
 use frame_support::traits::tokens::Preservation;
 use sp_runtime::DispatchError;
-use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 use wasmi::{core::HostError, Instance, Memory};
 
 /// Different type of contract runtimes. A contract might either be dynamically loaded or statically

@@ -71,8 +71,8 @@ impl std::fmt::Display for CosmosSigner {
 	}
 }
 
-impl sp_std::fmt::Debug for CosmosSigner {
-	fn fmt(&self, f: &mut sp_std::fmt::Formatter<'_>) -> sp_std::fmt::Result {
+impl core::fmt::Debug for CosmosSigner {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		write!(f, "{:?}", self.0)
 	}
 }

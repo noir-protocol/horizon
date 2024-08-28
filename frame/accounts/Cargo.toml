@@ -9,19 +9,14 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-parity-scale-codec = { workspace = true }
-scale-info = { workspace = true }
+parity-scale-codec = { workspace = true, default-features = false }
+scale-info = { workspace = true, default-features = false }
 
-# Substrate FRAME
-frame-support = { workspace = true }
-frame-system = { workspace = true }
+frame-support = { workspace = true, default-features = false }
+frame-system = { workspace = true, default-features = false }
+sp-core = { workspace = true, default-features = false }
 
-# Substrate
-sp-core = { workspace = true }
-sp-std = { workspace = true }
-
-# Horizon
-hp-crypto = { workspace = true }
+hp-crypto = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]

@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use core::marker::PhantomData;
 use cosmos_sdk_proto::cosmos::tx::v1beta1::{Fee, Tx};
 use frame_support::{
 	pallet_prelude::InvalidTransaction,
@@ -41,7 +42,6 @@ use sp_runtime::{
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
 	SaturatedConversion,
 };
-use sp_std::marker::PhantomData;
 
 pub struct DeductFeeDecorator<T>(PhantomData<T>);
 
@@ -99,10 +99,10 @@ where
 			Self::deduct_fees(&deduct_fees_from_acc, fee)?;
 		}
 
-		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::AnteHandled(sp_std::vec![
+		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::AnteHandled(alloc::vec![
 			CosmosEvent {
 				r#type: EVENT_TYPE_TX.into(),
-				attributes: sp_std::vec![
+				attributes: alloc::vec![
 					EventAttribute {
 						key: ATTRIBUTE_KEY_FEE.into(),
 						value: amount_to_string(&fee.amount).into()

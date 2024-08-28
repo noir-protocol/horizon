@@ -25,7 +25,7 @@ use pallet_cosmos_types::address::address_from_bech32;
 use sp_core::Get;
 use sp_runtime::traits::Convert;
 
-pub struct AccountToAddr<T>(sp_std::marker::PhantomData<T>);
+pub struct AccountToAddr<T>(core::marker::PhantomData<T>);
 
 impl<T> Convert<T::AccountId, String> for AccountToAddr<T>
 where

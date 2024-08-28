@@ -18,7 +18,6 @@ ripemd = { workspace = true, default-features = false }
 sp-core = { workspace = true, default-features = false }
 sp-io = { workspace = true, default-features = false }
 sp-runtime = { workspace = true, default-features = false }
-sp-std = { workspace = true, default-features = false }
 
 # Horizon
 hp-crypto = { workspace = true, default-features = false }
@@ -36,7 +35,6 @@ std = [
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",
-	"sp-std/std",
 	"hp-crypto/std",
 	"hp-io/std",
 ]

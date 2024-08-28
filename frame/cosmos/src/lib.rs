@@ -25,7 +25,8 @@ pub mod weights;
 
 pub use self::pallet::*;
 use crate::weights::WeightInfo;
-use alloc::string::String;
+use alloc::{string::String, vec::Vec};
+use core::marker::PhantomData;
 use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message, Any};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
@@ -58,7 +59,6 @@ use sp_runtime::{
 	},
 	RuntimeDebug,
 };
-use sp_std::{marker::PhantomData, vec::Vec};
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum RawOrigin {

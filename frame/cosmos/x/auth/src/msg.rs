@@ -23,7 +23,7 @@ use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 };
 
-pub struct KnownMsgDecorator<T>(sp_std::marker::PhantomData<T>);
+pub struct KnownMsgDecorator<T>(core::marker::PhantomData<T>);
 
 impl<T> AnteDecorator for KnownMsgDecorator<T>
 where

@@ -22,7 +22,6 @@ schemars = { optional = true, default-features = false, workspace = true }
 frame-support = { default-features = false, workspace = true }
 sp-arithmetic = { default-features = false, workspace = true }
 sp-runtime = { default-features = false, workspace = true }
-sp-std = { default-features = false, workspace = true }
 
 [features]
 default = ["std"]
@@ -33,6 +32,5 @@ std = [
 	"frame-support/std",
 	"sp-arithmetic/std",
 	"sp-runtime/std",
-	"sp-std/std",
 	"schemars/std",
 ]
