@@ -19,15 +19,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
+extern crate alloc;
+
 pub mod weights;
 
 pub use self::pallet::*;
 use crate::weights::WeightInfo;
-use cosmos_sdk_proto::{
-	cosmos::tx::v1beta1::Tx,
-	prost::{alloc::string::String, Message},
-	Any,
-};
+use alloc::string::String;
+use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message, Any};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchResultWithPostInfo, InvalidTransaction, Pays},

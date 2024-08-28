@@ -71,6 +71,7 @@ use alloc::{
 	collections::{btree_map::Entry, BTreeMap},
 	format,
 	string::String,
+	vec::Vec,
 };
 use composable_support::abstractions::utils::increment::Increment;
 use cosmwasm_std::{
@@ -100,7 +101,6 @@ use frame_support::{
 	ReversibleStorageHasher, StorageHasher,
 };
 use sp_runtime::traits::SaturatedConversion;
-use sp_std::vec::Vec;
 use wasmi::AsContext;
 use wasmi_validation::PlainValidator;
 
@@ -111,7 +111,7 @@ pub mod pallet {
 		instrument::CostRules, pallet_hook::PalletHook, runtimes::vm::InitialStorageMutability,
 		types::*, weights::WeightInfo,
 	};
-	use alloc::{string::String, vec};
+	use alloc::{string::String, vec::Vec};
 	use composable_support::abstractions::{
 		nonce::Nonce,
 		utils::{increment::SafeIncrement, start_at::ZeroInit},
@@ -132,7 +132,6 @@ pub mod pallet {
 	use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 	use sp_core::crypto::UncheckedFrom;
 	use sp_runtime::traits::{Convert, MaybeDisplay};
-	use sp_std::vec::Vec;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -374,7 +373,7 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub contracts: alloc::vec::Vec<(T::AccountIdExtended, ContractCodeOf<T>)>,
+		pub contracts: Vec<(T::AccountIdExtended, ContractCodeOf<T>)>,
 	}
 
 	impl<T: Config> Default for GenesisConfig<T> {

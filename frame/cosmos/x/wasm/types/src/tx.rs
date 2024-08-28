@@ -15,7 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cosmos_sdk_proto::prost::alloc::string::{String, ToString};
+use alloc::string::{String, ToString};
 use serde_json::{Map, Value};
 use sp_std::{vec, vec::Vec};
 

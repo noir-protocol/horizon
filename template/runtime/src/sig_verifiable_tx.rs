@@ -16,13 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use alloc::string::String;
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
 	cosmwasm::wasm::v1::{
 		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
 		MsgUpdateAdmin,
 	},
-	prost::{alloc::string::String, Message},
+	prost::Message,
 };
 use pallet_cosmos_x_auth_signing::{any_match, sign_verifiable_tx::SigVerifiableTxError};
 use pallet_cosmos_x_bank_types::msgs::msg_send;

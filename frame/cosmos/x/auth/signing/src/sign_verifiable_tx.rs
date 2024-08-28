@@ -16,8 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::alloc::string::String};
-use sp_std::vec::Vec;
+use alloc::{string::String, vec::Vec};
+use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum SigVerifiableTxError {

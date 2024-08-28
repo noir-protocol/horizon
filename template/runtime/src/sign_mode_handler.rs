@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use alloc::string::ToString;
 use cosmos_sdk_proto::{
 	cosmos::{
 		bank::v1beta1::MsgSend,
@@ -28,7 +29,6 @@ use cosmos_sdk_proto::{
 		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
 		MsgUpdateAdmin,
 	},
-	prost::alloc::string::ToString,
 	traits::Message,
 };
 use pallet_cosmos_x_auth_migrations::legacytx::stdsign::StdSignDoc;

@@ -16,12 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use alloc::{string::String, vec::Vec};
 use cosmos_sdk_proto::{
 	cosmos::tx::v1beta1::{ModeInfo, Tx},
-	prost::alloc::string::String,
 	Any,
 };
-use sp_std::vec::Vec;
 
 #[derive(Clone)]
 pub struct SignerData {

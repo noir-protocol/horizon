@@ -15,10 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use cosmos_sdk_proto::{
-	cosmos::base::v1beta1::Coin,
-	prost::alloc::string::{String, ToString},
-};
+use alloc::string::{String, ToString};
+use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
 
 pub fn amount_to_string(amount: &[Coin]) -> String {
 	let mut ret = "".to_string();

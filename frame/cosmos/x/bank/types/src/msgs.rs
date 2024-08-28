@@ -16,12 +16,12 @@
 // limitations under the License.
 
 pub mod msg_send {
-	use cosmos_sdk_proto::{
-		cosmos::bank::v1beta1::MsgSend,
-		prost::alloc::string::{String, ToString},
+	use alloc::{
+		string::{String, ToString},
+		vec::Vec,
 	};
+	use cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend;
 	use serde_json::{Map, Value};
-	use sp_std::vec::Vec;
 
 	const AMINO_NAME: &str = "cosmos-sdk/MsgSend";
 

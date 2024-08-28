@@ -19,4 +19,6 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
+extern crate alloc;
+
 pub mod legacytx;
