@@ -12,6 +12,8 @@ targets = ["x86_64-unknown-linux-gnu"]
 cosmos-sdk-proto = { workspace = true, default-features = false, features = [
 	"cosmwasm",
 ] }
+core2 = { workspace = true, default-features = false, features = ["alloc"] }
+libflate = { workspace = true, default-features = false }
 
 frame-support = { workspace = true, default-features = false }
 
@@ -24,6 +26,8 @@ pallet-cosmwasm = { workspace = true, default-features = false }
 default = ["std"]
 std = [
 	"cosmos-sdk-proto/std",
+	"core2/std",
+	"libflate/std",
 	"frame-support/std",
 	"pallet-cosmos/std",
 	"pallet-cosmos-types/std",

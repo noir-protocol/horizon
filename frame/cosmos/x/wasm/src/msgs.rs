@@ -18,6 +18,7 @@
 
 use alloc::{string::ToString, vec, vec::Vec};
 use core::marker::PhantomData;
+use core2::io::Read;
 use cosmos_sdk_proto::{
 	cosmwasm::wasm::v1::{
 		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
@@ -27,6 +28,7 @@ use cosmos_sdk_proto::{
 	Any,
 };
 use frame_support::{weights::Weight, BoundedVec};
+use libflate::gzip::Decoder;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	address::address_from_bech32,
@@ -66,7 +68,17 @@ where
 		})?;
 		let who = T::AddressMapping::into_account_id(address);
 
-		let code = BoundedVec::<u8, T::MaxCodeSize>::try_from(wasm_byte_code).map_err(|_| {
+		let mut decoder = Decoder::new(&wasm_byte_code[..]).map_err(|_| MsgHandlerErrorInfo {
+			weight: total_weight,
+			error: WasmError::CreateFailed.into(),
+		})?;
+		let mut decoded_code = Vec::new();
+		decoder.read_to_end(&mut decoded_code).map_err(|_| MsgHandlerErrorInfo {
+			weight: total_weight,
+			error: WasmError::CreateFailed.into(),
+		})?;
+
+		let code = BoundedVec::<u8, T::MaxCodeSize>::try_from(decoded_code).map_err(|_| {
 			MsgHandlerErrorInfo { weight: total_weight, error: WasmError::CreateFailed.into() }
 		})?;
 

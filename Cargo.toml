@@ -31,12 +31,14 @@ array-bytes = "6.2.2"
 base64ct = { version = "1.6.0", default-features = false }
 bech32 = { version = "0.11.0", default-features = false }
 clap = { version = "4.5.16", features = ["derive"] }
+core2 = { version = "0.4.0", default-features = false }
 cosmos-sdk-proto = { version = "0.24.0", default-features = false }
 futures = "0.3.28"
 hex = { version = "0.4.3", default-features = false }
 hex-literal = "0.4.1"
 impl-trait-for-tuples = "0.2.2"
 jsonrpsee = "0.22.5"
+libflate = { version = "2.1.0", default-features = false }
 log = { version = "0.4.21", default-features = false }
 num = { version = "0.4.3", default-features = false }
 parity-scale-codec = { version = "3.2.0", default-features = false }
