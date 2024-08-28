@@ -18,6 +18,7 @@
 pub mod msg_send {
 	use alloc::{
 		string::{String, ToString},
+		vec,
 		vec::Vec,
 	};
 	use cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend;
@@ -49,6 +50,6 @@ pub mod msg_send {
 	}
 
 	pub fn get_signers(msg: &MsgSend) -> Vec<String> {
-		alloc::vec![msg.from_address.clone()]
+		vec![msg.from_address.clone()]
 	}
 }

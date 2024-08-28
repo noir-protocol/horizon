@@ -15,8 +15,18 @@ cosmos-sdk-proto = { workspace = true, default-features = false, features = [
 
 frame-support = { workspace = true, default-features = false }
 
+pallet-cosmos = { workspace = true, default-features = false }
 pallet-cosmos-types = { workspace = true, default-features = false }
+pallet-cosmos-x-wasm-types = { workspace = true, default-features = false }
+pallet-cosmwasm = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
-std = ["cosmos-sdk-proto/std", "frame-support/std", "pallet-cosmos-types/std"]
+std = [
+	"cosmos-sdk-proto/std",
+	"frame-support/std",
+	"pallet-cosmos/std",
+	"pallet-cosmos-types/std",
+	"pallet-cosmos-x-wasm-types/std",
+	"pallet-cosmwasm/std",
+]

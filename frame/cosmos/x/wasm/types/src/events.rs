@@ -15,10 +15,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+pub const EVENT_TYPE_STORE_CODE: &str = "store_code";
 
-extern crate alloc;
-
-pub mod errors;
-pub mod events;
-pub mod tx;
+pub const ATTRIBUTE_KEY_CODE_ID: &str = "code_id";
+pub const ATTRIBUTE_KEY_CHECKSUM: &str = "code_checksum";

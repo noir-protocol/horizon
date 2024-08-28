@@ -16,6 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use alloc::vec;
 use core::marker::PhantomData;
 use cosmos_sdk_proto::cosmos::tx::v1beta1::{Fee, Tx};
 use frame_support::{
@@ -99,17 +100,17 @@ where
 			Self::deduct_fees(&deduct_fees_from_acc, fee)?;
 		}
 
-		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::AnteHandled(alloc::vec![
+		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::AnteHandled(vec![
 			CosmosEvent {
 				r#type: EVENT_TYPE_TX.into(),
-				attributes: alloc::vec![
+				attributes: vec![
 					EventAttribute {
 						key: ATTRIBUTE_KEY_FEE.into(),
-						value: amount_to_string(&fee.amount).into()
+						value: amount_to_string(&fee.amount).into(),
 					},
 					EventAttribute { key: ATTRIBUTE_KEY_FEE_PAYER.into(), value: fee_payer.into() },
-				]
-			}
+				],
+			},
 		]));
 
 		Ok(ValidTransaction::default())
@@ -131,7 +132,7 @@ where
 				)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
 
-				// TODO: Resolve imbalance
+			// TODO: Resolve imbalance
 			} else {
 				let asset_id = T::AssetToDenom::convert(amt.denom.clone())
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;

@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin},
 	traits::Message,
@@ -145,16 +145,16 @@ where
 
 		let msg_event = pallet_cosmos_types::events::CosmosEvent {
 			r#type: EVENT_TYPE_TRANSFER.into(),
-			attributes: alloc::vec![
+			attributes: vec![
 				EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from_address.into() },
 				EventAttribute { key: ATTRIBUTE_KEY_RECIPIENT.into(), value: to_address.into() },
 				EventAttribute {
 					key: ATTRIBUTE_KEY_AMOUNT.into(),
-					value: amount_to_string(&amount).into()
+					value: amount_to_string(&amount).into(),
 				},
 			],
 		};
 
-		Ok((total_weight, alloc::vec![msg_event]))
+		Ok((total_weight, vec![msg_event]))
 	}
 }

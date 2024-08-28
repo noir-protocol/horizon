@@ -37,7 +37,7 @@ use pallet_cosmos_x_wasm::msgs::{
 pub struct MsgServiceRouter<T>(PhantomData<T>);
 impl<T> pallet_cosmos_types::msgservice::MsgServiceRouter for MsgServiceRouter<T>
 where
-	T: frame_system::Config + pallet_cosmos::Config,
+	T: frame_system::Config + pallet_cosmos::Config + pallet_cosmwasm::Config,
 {
 	fn route(msg: &Any) -> Option<Box<dyn MsgHandler>> {
 		any_match!(

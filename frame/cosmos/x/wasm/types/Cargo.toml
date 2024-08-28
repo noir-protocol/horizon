@@ -14,6 +14,8 @@ cosmos-sdk-proto = { workspace = true, default-features = false, features = [
 ] }
 serde_json = { workspace = true, default-features = false }
 
+pallet-cosmos-types = { workspace = true, default-features = false }
+
 [features]
 default = ["std"]
-std = ["cosmos-sdk-proto/std", "serde_json/std"]
+std = ["cosmos-sdk-proto/std", "serde_json/std", "pallet-cosmos-types/std"]

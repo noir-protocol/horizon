@@ -40,6 +40,7 @@ extern crate alloc;
 use alloc::string::ToString;
 
 pub use pallet::*;
+use sp_core::H256;
 pub mod crypto;
 pub mod dispatchable_call;
 pub mod ibc;
@@ -386,7 +387,7 @@ pub mod pallet {
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for (who, code) in self.contracts.clone() {
-				<Pallet<T>>::do_upload(&who, code).expect("contracts in genesis are valid")
+				<Pallet<T>>::do_upload(&who, code).expect("contracts in genesis are valid");
 			}
 		}
 	}
@@ -410,7 +411,9 @@ pub mod pallet {
 		pub fn upload(origin: OriginFor<T>, code: ContractCodeOf<T>) -> DispatchResult {
 			T::UploadWasmOrigin::ensure_origin(origin.clone())?;
 			let who = ensure_signed(origin)?;
-			Self::do_upload(&who, code)
+			Self::do_upload(&who, code)?;
+
+			Ok(())
 		}
 
 		/// Instantiate a previously uploaded code resulting in a new contract being generated.
@@ -927,7 +930,10 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub(crate) fn do_upload(who: &AccountIdOf<T>, code: ContractCodeOf<T>) -> DispatchResult {
+	pub fn do_upload(
+		who: &AccountIdOf<T>,
+		code: ContractCodeOf<T>,
+	) -> Result<(H256, u64), DispatchError> {
 		let code_hash = sp_io::hashing::sha2_256(&code);
 		ensure!(!CodeHashToId::<T>::contains_key(code_hash), Error::<T>::CodeAlreadyExists);
 		let deposit = code.len().saturating_mul(T::CodeStorageByteDeposit::get() as _);
@@ -951,7 +957,7 @@ impl<T: Config> Pallet<T> {
 			},
 		);
 		Self::deposit_event(Event::<T>::Uploaded { code_hash, code_id });
-		Ok(())
+		Ok((H256::from(code_hash), code_id))
 	}
 
 	#[allow(clippy::too_many_arguments)]

@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use alloc::vec::Vec;
+use alloc::{string::ToString, vec, vec::Vec};
 use core::marker::PhantomData;
 use cosmos_sdk_proto::{
 	cosmwasm::wasm::v1::{
@@ -26,9 +26,17 @@ use cosmos_sdk_proto::{
 	prost::Message,
 	Any,
 };
-use frame_support::weights::Weight;
+use frame_support::{weights::Weight, BoundedVec};
+use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
-	errors::RootError, events::CosmosEvent, msgservice::MsgHandlerErrorInfo,
+	address::address_from_bech32,
+	errors::RootError,
+	events::{CosmosEvent, EventAttribute},
+	msgservice::MsgHandlerErrorInfo,
+};
+use pallet_cosmos_x_wasm_types::{
+	errors::WasmError,
+	events::{ATTRIBUTE_KEY_CHECKSUM, ATTRIBUTE_KEY_CODE_ID, EVENT_TYPE_STORE_CODE},
 };
 
 pub struct MsgStoreCodeHandler<T>(PhantomData<T>);
@@ -39,18 +47,46 @@ impl<T> Default for MsgStoreCodeHandler<T> {
 	}
 }
 
-impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgStoreCodeHandler<T> {
+impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgStoreCodeHandler<T>
+where
+	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
+{
 	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
 		let total_weight = Weight::zero();
 
-		let MsgStoreCode { sender: _, wasm_byte_code: _, instantiate_permission: _ } =
+		let MsgStoreCode { sender, wasm_byte_code, instantiate_permission: _ } =
 			MsgStoreCode::decode(&mut &*msg.value).map_err(|_| MsgHandlerErrorInfo {
 				weight: total_weight,
 				error: RootError::TxDecodeError.into(),
 			})?;
 
-		// TODO: Implements store wasm code with pallet_cosmwasm
-		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
+		let address = address_from_bech32(&sender).map_err(|_| MsgHandlerErrorInfo {
+			weight: total_weight,
+			error: RootError::TxDecodeError.into(),
+		})?;
+		let who = T::AddressMapping::into_account_id(address);
+
+		let code = BoundedVec::<u8, T::MaxCodeSize>::try_from(wasm_byte_code).map_err(|_| {
+			MsgHandlerErrorInfo { weight: total_weight, error: WasmError::CreateFailed.into() }
+		})?;
+
+		let (code_hash, code_id) =
+			pallet_cosmwasm::Pallet::<T>::do_upload(&who, code).map_err(|_| {
+				MsgHandlerErrorInfo { weight: total_weight, error: WasmError::CreateFailed.into() }
+			})?;
+
+		let msg_event = CosmosEvent {
+			r#type: EVENT_TYPE_STORE_CODE.into(),
+			attributes: vec![
+				EventAttribute { key: ATTRIBUTE_KEY_CHECKSUM.into(), value: code_hash.0.to_vec() },
+				EventAttribute {
+					key: ATTRIBUTE_KEY_CODE_ID.into(),
+					value: code_id.to_string().into(),
+				},
+			],
+		};
+
+		Ok((total_weight, vec![msg_event]))
 	}
 }
 
