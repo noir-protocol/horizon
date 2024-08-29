@@ -461,7 +461,8 @@ pub mod pallet {
 				label,
 				funds,
 				message,
-			);
+			)
+			.map(|_| ());
 			Self::refund_gas(outcome, initial_gas, shared.gas.remaining())
 		}
 
@@ -645,7 +646,7 @@ impl<T: Config> Pallet<T> {
 	/// This state is shared across all VMs (all contracts loaded within a single call) and is
 	/// used to optimize some operations as well as track shared state (readonly storage while
 	/// doing a `query` etc...)
-	pub(crate) fn do_create_vm_shared(
+	pub fn do_create_vm_shared(
 		gas: u64,
 		storage_mutability: InitialStorageMutability,
 	) -> CosmwasmVMShared {
@@ -962,7 +963,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	#[allow(clippy::too_many_arguments)]
-	fn do_instantiate(
+	pub fn do_instantiate(
 		shared: &mut CosmwasmVMShared,
 		who: AccountIdOf<T>,
 		code_identifier: CodeIdentifier,
@@ -971,7 +972,7 @@ impl<T: Config> Pallet<T> {
 		label: ContractLabelOf<T>,
 		funds: FundsOf<T>,
 		message: ContractMessageOf<T>,
-	) -> Result<(), CosmwasmVMError<T>> {
+	) -> Result<AccountIdOf<T>, CosmwasmVMError<T>> {
 		let code_id = match code_identifier {
 			CodeIdentifier::CodeId(code_id) => code_id,
 			CodeIdentifier::CodeHash(code_hash) =>
@@ -979,7 +980,6 @@ impl<T: Config> Pallet<T> {
 		};
 		setup_instantiate_call(who, code_id, &salt, admin, label)?
 			.top_level_call(shared, funds, message)
-			.map(|_| ())
 	}
 
 	fn do_execute(

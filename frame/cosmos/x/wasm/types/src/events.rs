@@ -16,6 +16,8 @@
 // limitations under the License.
 
 pub const EVENT_TYPE_STORE_CODE: &str = "store_code";
+pub const EVENT_TYPE_INSTANTIATE: &str = "instantiate";
 
+pub const ATTRIBUTE_KEY_CONTRACT_ADDR: &str = "_contract_address";
 pub const ATTRIBUTE_KEY_CODE_ID: &str = "code_id";
 pub const ATTRIBUTE_KEY_CHECKSUM: &str = "code_checksum";

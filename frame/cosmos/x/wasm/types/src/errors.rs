@@ -39,6 +39,8 @@ pub const WASM_CODESPACE: u8 = 1;
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum WasmError {
 	CreateFailed = 2,
+	InstantiateFailed = 4,
+	Empty = 12,
 }
 
 impl From<WasmError> for CosmosError {
