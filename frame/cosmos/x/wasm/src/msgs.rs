@@ -54,6 +54,7 @@ where
 	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
 {
 	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
+		// TODO: Apply actual weights
 		let total_weight = Weight::zero();
 
 		let MsgStoreCode { sender, wasm_byte_code, instantiate_permission: _ } =
