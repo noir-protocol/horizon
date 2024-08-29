@@ -90,10 +90,13 @@ where
 		let msg_event = CosmosEvent {
 			r#type: EVENT_TYPE_STORE_CODE.into(),
 			attributes: vec![
-				EventAttribute { key: ATTRIBUTE_KEY_CHECKSUM.into(), value: code_hash.0.to_vec() },
 				EventAttribute {
 					key: ATTRIBUTE_KEY_CODE_ID.into(),
 					value: code_id.to_string().into(),
+				},
+				EventAttribute {
+					key: ATTRIBUTE_KEY_CHECKSUM.into(),
+					value: hex::encode(&code_hash.0).into(),
 				},
 			],
 		};

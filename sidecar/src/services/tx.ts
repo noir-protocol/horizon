@@ -10,7 +10,7 @@ import Long from "long";
 import { createHash } from "crypto";
 import { Tx } from "cosmjs-types/cosmos/tx/v1beta1/tx.js";
 
-type TransactResult = { codespace: string, code: number; gasUsed: number };
+type TransactResult = { codespace: string, code: number; gasUsed: number, events: any[] };
 
 export class TxService implements ApiService {
   chainApi: ApiPromise;
@@ -29,29 +29,44 @@ export class TxService implements ApiService {
 
     console.debug(`txHash: ${txHash.toLowerCase()}`);
 
-    return {
-      txResponse: {
-        height: Long.ZERO,
-        txhash: txHash.toUpperCase(),
-        codespace: '',
-        code: 0,
-        data: '',
-        rawLog: '',
-        logs: [],
-        info: '',
-        gasWanted: Long.ZERO,
-        gasUsed: Long.ZERO,
-        tx: {
-          typeUrl: '',
-          value: new Uint8Array(),
-        },
-        timestamp: '',
-        events: [],
-      },
-    };
+    const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+    while (true) {
+      const txs = this.searchTx(txHash);
+      console.debug(`txs: ${JSON.stringify(txs)}`);
+
+      if (txs.length > 0) {
+        const tx = txs.at(0);
+
+        return {
+          txResponse: {
+            height: Long.fromString(tx.height),
+            txhash: txHash.toUpperCase(),
+            codespace: tx.tx_result.codespace,
+            code: tx.tx_result.code,
+            data: tx.tx_result.data,
+            rawLog: '',
+            logs: [],
+            info: tx.tx_result.info,
+            gasWanted: Long.fromString(tx.tx_result.gas_wanted),
+            gasUsed: Long.fromString(tx.tx_result.gas_used),
+            tx: {
+              typeUrl: '',
+              value: new Uint8Array(),
+            },
+            timestamp: '',
+            events: tx.tx_result.events,
+          },
+        };
+      } else {
+        console.debug('Waiting for events...');
+
+        await sleep(1000);
+      }
+    }
   }
 
-  public searchTx(hash: string): ResultTxSearch {
+  public searchTx(hash: string): ResultTx[] {
     if (hash.startsWith('0x')) {
       hash = hash.slice(2);
     }
@@ -63,10 +78,7 @@ export class TxService implements ApiService {
     if (resultTx) {
       txs.push(resultTx);
     }
-    return {
-      txs,
-      total_count: txs.length.toString(),
-    };
+    return txs;
   }
 
   public async saveTransactResult(
@@ -80,7 +92,7 @@ export class TxService implements ApiService {
 
     const txHash = createHash('sha256').update(Buffer.from(txRaw, 'hex')).digest('hex');
 
-    const { codespace, code, gasUsed } = await this.checkResult(header, extrinsicIndex);
+    const { codespace, code, gasUsed, events } = await this.checkResult(header, extrinsicIndex);
     const txResult: ResultTx = {
       hash: `${txHash.toUpperCase()}`,
       height: header.number.toString(),
@@ -92,7 +104,7 @@ export class TxService implements ApiService {
         info: '',
         gas_wanted: gasLimit.toString(),
         gas_used: gasUsed.toString(),
-        events: [],
+        events,
         codespace,
       },
       tx: txBytes.toString('base64'),
@@ -124,7 +136,11 @@ export class TxService implements ApiService {
           console.debug(`gasUsed: ${gas_used}`);
           console.debug(`events: ${JSON.stringify(events)}`);
 
-          return { codespace: '', code: 0, gasUsed: gas_used };
+          const cosmosEvents = this.encodeEvents(events, 'hex', 'utf8');
+
+          console.debug(`cosmosEvents: ${JSON.stringify(cosmosEvents)}`)
+
+          return { codespace: '', code: 0, gasUsed: gas_used, events: cosmosEvents };
         } else {
           console.debug(JSON.parse(data));
           const [{ module: { index, error } }, info] = JSON.parse(data);
@@ -136,13 +152,13 @@ export class TxService implements ApiService {
           const weight = info.weight.refTime;
 
           // TODO: codespace and gasUsed will be transformed proper values
-          return { codespace: 'sdk', code, gasUsed: weight };
+          return { codespace: 'sdk', code, gasUsed: weight, events: [] };
         }
       });
     return result[0];
   }
 
-  convert(str: string, from: BufferEncoding, to: BufferEncoding) {
+  convert(str: string, from: BufferEncoding, to: BufferEncoding): string {
     if (from === 'hex') {
       str = str.startsWith('0x') ? str.slice(2) : str;
     }
@@ -154,24 +170,7 @@ export class TxService implements ApiService {
 
     const { gas_info, events } = (await this.chainApi.rpc['cosm']['simulate'](txRaw)).toJSON();
 
-    const cosmosEvents = events.map(({ type, attributes }) => {
-      const eventType = this.convert(type, 'hex', 'utf8');
-
-      const eventAttributes = attributes.map(({ key, value }) => {
-        const eventKey = this.convert(key, 'hex', 'utf8');
-        const eventValue = this.convert(value, 'hex', 'utf8');
-
-        return {
-          key: eventKey,
-          value: eventValue,
-        }
-      });
-
-      return {
-        type: eventType,
-        attributes: eventAttributes,
-      }
-    });
+    const cosmosEvents = this.encodeEvents(events, 'hex', 'utf8');
 
     console.debug(`gasInfo: ${JSON.stringify(gas_info)}`);
     console.debug(`events: ${JSON.stringify(cosmosEvents)}`);
@@ -188,5 +187,26 @@ export class TxService implements ApiService {
         msgResponses: [],
       },
     };
+  }
+
+  public encodeEvents(events, from: BufferEncoding, to: BufferEncoding) {
+    return events.map((event) => {
+      return {
+        type: this.convert(event.type ? event.type : event['r#type'], from, to),
+        attributes: this.encodeAttributes(event.attributes, from, to),
+      }
+    });
+  }
+
+  public encodeAttributes(attributes, from: BufferEncoding, to: BufferEncoding) {
+    return attributes.map(({ key, value }) => {
+      const eventKey = this.convert(key, from, to);
+      const eventValue = this.convert(value, from, to);
+
+      return {
+        key: eventKey,
+        value: eventValue,
+      }
+    });
   }
 }

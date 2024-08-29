@@ -325,7 +325,17 @@ export class App {
 			if (hash.includes("'")) {
 				hash = hash.replace(/'/gi, "");
 			}
-			return this.services.get<TxService>("tx").searchTx(hash);
+			const txs = this.services.get<TxService>("tx").searchTx(hash);
+			txs.forEach(tx => {
+				tx.tx_result.events.forEach(event => {
+					event.attributes = this.services.get<TxService>("tx").encodeAttributes(event.attributes, 'utf8', 'base64');
+				});
+			});
+
+			return {
+				txs,
+				total_count: txs.length.toString(),
+			};
 		});
 
 		this.server.get(
