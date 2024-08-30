@@ -21,7 +21,6 @@ use bech32::{Bech32, Hrp};
 use core::str;
 use hp_crypto::EcdsaExt;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::address::address_from_bech32;
 use sp_core::Get;
 use sp_runtime::traits::Convert;
 
@@ -35,7 +34,7 @@ where
 	fn convert(account: T::AccountId) -> String {
 		// TODO: Handle errors
 		let hrp = Hrp::parse(T::AddressPrefix::get()).unwrap();
-		let address = account.to_cosm_address().unwrap();
+		let address = account.to_cosmos_address().unwrap();
 
 		bech32::encode::<Bech32>(hrp, address.as_bytes()).unwrap()
 	}
@@ -46,9 +45,7 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn convert(address: String) -> Result<T::AccountId, ()> {
-		let address = address_from_bech32(&address).map_err(|_| ())?;
-
-		Ok(T::AddressMapping::into_account_id(address))
+		T::AddressMapping::from_bech32(&address).ok_or(())
 	}
 }
 
@@ -57,11 +54,9 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn convert(address_raw: Vec<u8>) -> Result<T::AccountId, ()> {
-		let address = str::from_utf8(&address_raw)
-			.map(address_from_bech32)
+		str::from_utf8(&address_raw)
+			.map(T::AddressMapping::from_bech32)
 			.map_err(|_| ())?
-			.map_err(|_| ())?;
-
-		Ok(T::AddressMapping::into_account_id(address))
+			.ok_or(())
 	}
 }

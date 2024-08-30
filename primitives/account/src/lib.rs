@@ -78,7 +78,7 @@ impl core::fmt::Debug for CosmosSigner {
 }
 
 impl EcdsaExt for CosmosSigner {
-	fn to_cosm_address(&self) -> Option<H160> {
+	fn to_cosmos_address(&self) -> Option<H160> {
 		let mut hasher = ripemd::Ripemd160::new();
 		hasher.update(sha2_256(&self.0 .0));
 		let address = H160::from_slice(&hasher.finalize());

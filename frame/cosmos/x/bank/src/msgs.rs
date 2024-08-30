@@ -26,7 +26,6 @@ use pallet_assets::WeightInfo as _;
 use pallet_balances::WeightInfo as _;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
-	address::address_from_bech32,
 	coin::amount_to_string,
 	errors::{CosmosError, RootError},
 	events::{EventAttribute, EventManager, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
@@ -52,12 +51,10 @@ where
 		let MsgSend { from_address, to_address, amount } =
 			MsgSend::decode(&mut &*msg.value).map_err(|_| RootError::UnpackAnyError)?;
 
-		let from_addr =
-			address_from_bech32(&from_address).map_err(|_| RootError::InvalidAddress)?;
-		let to_addr = address_from_bech32(&to_address).map_err(|_| RootError::InvalidAddress)?;
-
-		let from_account = T::AddressMapping::into_account_id(from_addr);
-		let to_account = T::AddressMapping::into_account_id(to_addr);
+		let from_account =
+			T::AddressMapping::from_bech32(&from_address).ok_or(RootError::InvalidAddress)?;
+		let to_account =
+			T::AddressMapping::from_bech32(&to_address).ok_or(RootError::InvalidAddress)?;
 
 		ctx.gas_meter()
 			.consume_gas(T::DbWeight::get().reads(2).ref_time(), "")

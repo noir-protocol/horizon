@@ -34,7 +34,6 @@ use hp_crypto::EcdsaExt;
 use libflate::gzip::Decoder;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
-	address::address_from_bech32,
 	errors::{CosmosError, RootError},
 	events::{CosmosEvent, EventAttribute, EventManager},
 	msgservice::MsgHandler,
@@ -73,10 +72,7 @@ where
 		let MsgStoreCode { sender, wasm_byte_code, instantiate_permission: _ } =
 			MsgStoreCode::decode(&mut &*msg.value).map_err(|_| RootError::TxDecodeError)?;
 
-		let who = address_from_bech32(&sender)
-			.map(T::AddressMapping::into_account_id)
-			.map_err(|_| RootError::TxDecodeError)?;
-
+		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
 		let mut decoder = Decoder::new(&wasm_byte_code[..]).map_err(|_| WasmError::CreateFailed)?;
 		let mut decoded_code = Vec::new();
 		decoder.read_to_end(&mut decoded_code).map_err(|_| WasmError::CreateFailed)?;
@@ -132,10 +128,7 @@ where
 		if sender.is_empty() {
 			return Err(WasmError::Empty.into());
 		}
-		let who = address_from_bech32(&sender)
-			.map(T::AddressMapping::into_account_id)
-			.map_err(|_| RootError::TxDecodeError)?;
-
+		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
 		let gas = ctx.gas_meter().gas_remaining();
 		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
 			gas,
@@ -144,10 +137,7 @@ where
 		let code_identifier = CodeIdentifier::CodeId(code_id);
 
 		let admin = if !admin.is_empty() {
-			let admin = address_from_bech32(&admin)
-				.map(T::AddressMapping::into_account_id)
-				.map_err(|_| RootError::TxDecodeError)?;
-
+			let admin = T::AddressMapping::from_bech32(&admin).ok_or(RootError::TxDecodeError)?;
 			Some(admin)
 		} else {
 			None
@@ -170,7 +160,7 @@ where
 			message,
 		)
 		.map_err(|_| WasmError::InstantiateFailed)?;
-		let contract_address = contract.to_cosm_address().ok_or(WasmError::InstantiateFailed)?;
+		let contract_address = contract.to_cosmos_address().ok_or(WasmError::InstantiateFailed)?;
 
 		let hrp = Hrp::parse(T::AddressPrefix::get()).unwrap();
 		let contract_address = bech32::encode::<Bech32>(hrp, contract_address.as_bytes()).unwrap();
@@ -218,27 +208,22 @@ where
 		if sender.is_empty() {
 			return Err(WasmError::Empty.into());
 		}
-		let who = address_from_bech32(&sender)
-			.map(T::AddressMapping::into_account_id)
-			.map_err(|_| RootError::TxDecodeError)?;
-
+		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
 		let gas = ctx.gas_meter().gas_remaining();
 		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
 			gas,
 			InitialStorageMutability::ReadWrite,
 		);
 
-		let contract_address = address_from_bech32(&contract)
-			.map(T::AddressMapping::into_account_id)
-			.map_err(|_| RootError::TxDecodeError)?;
-
+		let contract_account =
+			T::AddressMapping::from_bech32(&contract).ok_or(RootError::TxDecodeError)?;
 		let funds: FundsOf<T> = convert_funds::<T>(&funds)?;
 		let message: ContractMessageOf<T> = msg.try_into().map_err(|_| RootError::TxDecodeError)?;
 
 		pallet_cosmwasm::Pallet::<T>::do_execute(
 			&mut shared,
 			who,
-			contract_address,
+			contract_account,
 			funds,
 			message,
 		)

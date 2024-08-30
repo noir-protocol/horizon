@@ -106,7 +106,7 @@ pub mod pallet {
 		T::AccountId: EcdsaExt,
 	{
 		pub fn connect_account(who: &T::AccountId) -> Result<(), DispatchError> {
-			let address = who.to_cosm_address().ok_or(Error::<T>::DeriveFailed)?;
+			let address = who.to_cosmos_address().ok_or(Error::<T>::DeriveFailed)?;
 			Connections::<T>::insert(address, who);
 			Self::deposit_event(Event::<T>::Connected { address, who: who.clone() });
 			Ok(())

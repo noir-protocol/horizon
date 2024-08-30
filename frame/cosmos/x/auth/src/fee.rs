@@ -29,7 +29,6 @@ use frame_support::{
 };
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
-	address::address_from_bech32,
 	coin::amount_to_string,
 	events::{
 		CosmosEvent, EventAttribute, ATTRIBUTE_KEY_FEE, ATTRIBUTE_KEY_FEE_PAYER, EVENT_TYPE_TX,
@@ -91,13 +90,12 @@ where
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 		}
 
-		let deduct_fees_from = address_from_bech32(&fee_payer)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
-		let deduct_fees_from_acc = T::AddressMapping::into_account_id(deduct_fees_from);
+		let deduct_fees_from = T::AddressMapping::from_bech32(&fee_payer)
+			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
 		// TODO: Check fee is zero
 		if !fee.amount.is_empty() {
-			Self::deduct_fees(&deduct_fees_from_acc, fee)?;
+			Self::deduct_fees(&deduct_fees_from, fee)?;
 		}
 
 		pallet_cosmos::Pallet::<T>::deposit_event(pallet_cosmos::Event::AnteHandled(vec![

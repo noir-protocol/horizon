@@ -562,7 +562,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		match self {
 			RuntimeCall::Cosmos(call) => match call.check_self_contained()? {
 				Ok(address) => Some(Ok(
-					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(address),
+					<Runtime as pallet_cosmos::Config>::AddressMapping::from_address_raw(address),
 				)),
 				Err(e) => Some(Err(e)),
 			},
@@ -586,7 +586,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 					}
 				}
 
-				call.validate_self_contained(&info.to_cosm_address().unwrap(), dispatch_info, len)
+				call.validate_self_contained(&info.to_cosmos_address().unwrap(), dispatch_info, len)
 			},
 			_ => None,
 		}
@@ -609,7 +609,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 				}
 
 				call.pre_dispatch_self_contained(
-					&info.to_cosm_address().unwrap(),
+					&info.to_cosmos_address().unwrap(),
 					dispatch_info,
 					len,
 				)
@@ -625,7 +625,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		match self {
 			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) =>
 				Some(call.dispatch(RuntimeOrigin::from(
-					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosm_address().unwrap()),
+					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosmos_address().unwrap()),
 				))),
 			_ => None,
 		}
@@ -636,7 +636,6 @@ impl Runtime {
 	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), TransactionValidityError> {
 		use cosmos_sdk_proto::cosmos::crypto::secp256k1;
 		use fungible::{Inspect, Mutate};
-		use pallet_cosmos_types::address::address_from_bech32;
 		use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
 
 		let tx = Tx::decode(&mut &*tx_bytes)
@@ -654,14 +653,11 @@ impl Runtime {
 				let signer = signers
 					.get(i)
 					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-				let signer_addr = address_from_bech32(signer).map_err(|_| {
-					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-				})?;
 
 				let interim_account =
-					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(
-						signer_addr,
-					);
+					<Runtime as pallet_cosmos::Config>::AddressMapping::from_bech32(signer)
+						.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+
 				let public_key = signer_info
 					.public_key
 					.as_ref()

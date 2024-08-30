@@ -142,7 +142,8 @@ where
 }
 
 pub trait AddressMapping<A> {
-	fn into_account_id(address: H160) -> A;
+	fn from_address_raw(address: H160) -> A;
+	fn from_bech32(address: &str) -> Option<A>;
 }
 
 #[frame_support::pallet]
@@ -523,7 +524,7 @@ impl<T: Config> Pallet<T> {
 
 	/// Get the base account info.
 	pub fn account(address: &H160) -> (Account, Weight) {
-		let account_id = T::AddressMapping::into_account_id(*address);
+		let account_id = T::AddressMapping::from_address_raw(*address);
 
 		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
 		// keepalive `true` takes into account ExistentialDeposit as part of what's considered
