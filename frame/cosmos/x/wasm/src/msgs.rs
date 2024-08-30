@@ -253,6 +253,8 @@ where
 			}],
 		};
 
+		ctx.event_manager().emit_event(msg_event);
+
 		Ok(())
 	}
 }
