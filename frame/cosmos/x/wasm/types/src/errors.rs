@@ -40,6 +40,7 @@ pub const WASM_CODESPACE: u8 = 1;
 pub enum WasmError {
 	CreateFailed = 2,
 	InstantiateFailed = 4,
+	ExecuteFailed = 5,
 	Empty = 12,
 }
 

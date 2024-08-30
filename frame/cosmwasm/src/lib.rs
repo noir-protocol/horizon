@@ -982,7 +982,7 @@ impl<T: Config> Pallet<T> {
 			.top_level_call(shared, funds, message)
 	}
 
-	fn do_execute(
+	pub fn do_execute(
 		shared: &mut CosmwasmVMShared,
 		who: AccountIdOf<T>,
 		contract: AccountIdOf<T>,
