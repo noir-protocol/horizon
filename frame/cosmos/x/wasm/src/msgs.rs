@@ -43,7 +43,8 @@ use pallet_cosmos_x_wasm_types::{
 	errors::WasmError,
 	events::{
 		ATTRIBUTE_KEY_CHECKSUM, ATTRIBUTE_KEY_CODE_ID, ATTRIBUTE_KEY_CONTRACT_ADDR,
-		EVENT_TYPE_EXECUTE, EVENT_TYPE_INSTANTIATE, EVENT_TYPE_MIGRATE, EVENT_TYPE_STORE_CODE,
+		ATTRIBUTE_KEY_NEW_ADMIN, EVENT_TYPE_EXECUTE, EVENT_TYPE_INSTANTIATE, EVENT_TYPE_MIGRATE,
+		EVENT_TYPE_STORE_CODE, EVENT_TYPE_UPDATE_CONTRACT_ADMIN,
 	},
 };
 use pallet_cosmwasm::{
@@ -311,13 +312,56 @@ impl<T> Default for MsgUpdateAdminHandler<T> {
 	}
 }
 
-impl<T, Context> MsgHandler<Context> for MsgUpdateAdminHandler<T> {
-	fn handle(&self, msg: &Any, _ctx: &mut Context) -> Result<(), CosmosError> {
-		let MsgUpdateAdmin { sender: _, new_admin: _, contract: _ } =
+impl<T, Context> MsgHandler<Context> for MsgUpdateAdminHandler<T>
+where
+	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
+	Context: store::Context,
+{
+	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
+		let MsgUpdateAdmin { sender, new_admin, contract } =
 			MsgUpdateAdmin::decode(&mut &*msg.value).map_err(|_| RootError::TxDecodeError)?;
 
-		// TODO: Implements update admin with pallet_cosmwasm
-		Err(RootError::UnknownRequest.into())
+		if sender.is_empty() {
+			return Err(WasmError::Empty.into());
+		}
+		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let gas = ctx.gas_meter().gas_remaining();
+		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
+			gas,
+			InitialStorageMutability::ReadWrite,
+		);
+
+		let new_admin_account = if !new_admin.is_empty() {
+			let new_admin_account =
+				T::AddressMapping::from_bech32(&new_admin).ok_or(RootError::TxDecodeError)?;
+			Some(new_admin_account)
+		} else {
+			None
+		};
+
+		let contract_account =
+			T::AddressMapping::from_bech32(&contract).ok_or(RootError::TxDecodeError)?;
+
+		pallet_cosmwasm::Pallet::<T>::do_update_admin(
+			&mut shared,
+			who,
+			contract_account,
+			new_admin_account,
+		)
+		.map_err(|_| WasmError::MigrationFailed)?;
+
+		// TODO: Same events emitted pallet_cosmos and pallet_cosmwasm
+		let msg_event = CosmosEvent {
+			r#type: EVENT_TYPE_UPDATE_CONTRACT_ADMIN.into(),
+			attributes: vec![
+				EventAttribute { key: ATTRIBUTE_KEY_CONTRACT_ADDR.into(), value: contract.into() },
+				EventAttribute { key: ATTRIBUTE_KEY_NEW_ADMIN.into(), value: new_admin.into() },
+			],
+		};
+
+		ctx.event_manager().emit_event(msg_event);
+
+		Ok(())
 	}
 }
 

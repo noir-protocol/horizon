@@ -19,7 +19,9 @@ pub const EVENT_TYPE_STORE_CODE: &str = "store_code";
 pub const EVENT_TYPE_INSTANTIATE: &str = "instantiate";
 pub const EVENT_TYPE_EXECUTE: &str = "execute";
 pub const EVENT_TYPE_MIGRATE: &str = "migrate";
+pub const EVENT_TYPE_UPDATE_CONTRACT_ADMIN: &str = "update_contract_admin";
 
 pub const ATTRIBUTE_KEY_CONTRACT_ADDR: &str = "_contract_address";
 pub const ATTRIBUTE_KEY_CODE_ID: &str = "code_id";
 pub const ATTRIBUTE_KEY_CHECKSUM: &str = "code_checksum";
+pub const ATTRIBUTE_KEY_NEW_ADMIN: &str = "new_admin_address";

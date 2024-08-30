@@ -1012,7 +1012,7 @@ impl<T: Config> Pallet<T> {
 		)
 	}
 
-	fn do_update_admin(
+	pub fn do_update_admin(
 		shared: &mut CosmwasmVMShared,
 		who: AccountIdOf<T>,
 		contract: AccountIdOf<T>,
