@@ -65,6 +65,7 @@ impl GasMeter for BasicGasMeter {
 		self.limit
 	}
 
+	// TODO: Handle or remove descriptor
 	fn consume_gas(&mut self, amount: Gas, _descriptor: &str) -> Result<Gas, Error> {
 		let consumed = self.consumed.checked_add(amount).ok_or(Error::GasOverflow)?;
 		if consumed > self.limit {
