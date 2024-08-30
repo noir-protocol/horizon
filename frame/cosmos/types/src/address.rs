@@ -23,7 +23,7 @@ pub enum AddressError {
 }
 
 pub fn address_from_bech32(address: &str) -> Result<H160, AddressError> {
-	let (_prefix, data) = bech32::decode(address).map_err(AddressError::Bech32Error)?;
-
-	Ok(H160::from_slice(&data))
+	bech32::decode(address)
+		.map(|(_hrp, data)| H160::from_slice(&data))
+		.map_err(AddressError::Bech32Error)
 }
