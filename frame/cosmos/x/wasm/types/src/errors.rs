@@ -41,6 +41,7 @@ pub enum WasmError {
 	CreateFailed = 2,
 	InstantiateFailed = 4,
 	ExecuteFailed = 5,
+	MigrationFailed = 11,
 	Empty = 12,
 }
 

@@ -992,7 +992,7 @@ impl<T: Config> Pallet<T> {
 		setup_execute_call(who, contract)?.top_level_call(shared, funds, message)
 	}
 
-	fn do_migrate(
+	pub fn do_migrate(
 		shared: &mut CosmwasmVMShared,
 		who: AccountIdOf<T>,
 		contract: AccountIdOf<T>,

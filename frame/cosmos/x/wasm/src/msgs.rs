@@ -43,7 +43,7 @@ use pallet_cosmos_x_wasm_types::{
 	errors::WasmError,
 	events::{
 		ATTRIBUTE_KEY_CHECKSUM, ATTRIBUTE_KEY_CODE_ID, ATTRIBUTE_KEY_CONTRACT_ADDR,
-		EVENT_TYPE_EXECUTE, EVENT_TYPE_INSTANTIATE, EVENT_TYPE_STORE_CODE,
+		EVENT_TYPE_EXECUTE, EVENT_TYPE_INSTANTIATE, EVENT_TYPE_MIGRATE, EVENT_TYPE_STORE_CODE,
 	},
 };
 use pallet_cosmwasm::{
@@ -252,13 +252,54 @@ impl<T> Default for MsgMigrateContractHandler<T> {
 	}
 }
 
-impl<T, Context> MsgHandler<Context> for MsgMigrateContractHandler<T> {
-	fn handle(&self, msg: &Any, _ctx: &mut Context) -> Result<(), CosmosError> {
-		let MsgMigrateContract { sender: _, contract: _, code_id: _, msg: _ } =
+impl<T, Context> MsgHandler<Context> for MsgMigrateContractHandler<T>
+where
+	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
+	Context: store::Context,
+{
+	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
+		let MsgMigrateContract { sender, contract, code_id, msg } =
 			MsgMigrateContract::decode(&mut &*msg.value).map_err(|_| RootError::TxDecodeError)?;
 
-		// TODO: Implements migrate contract with pallet_cosmwasm
-		Err(RootError::UnknownRequest.into())
+		if sender.is_empty() {
+			return Err(WasmError::Empty.into());
+		}
+		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let gas = ctx.gas_meter().gas_remaining();
+		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
+			gas,
+			InitialStorageMutability::ReadWrite,
+		);
+
+		let contract_account =
+			T::AddressMapping::from_bech32(&contract).ok_or(RootError::TxDecodeError)?;
+		let new_code_identifier = CodeIdentifier::CodeId(code_id);
+		let message: ContractMessageOf<T> = msg.try_into().map_err(|_| RootError::TxDecodeError)?;
+
+		pallet_cosmwasm::Pallet::<T>::do_migrate(
+			&mut shared,
+			who,
+			contract_account,
+			new_code_identifier,
+			message,
+		)
+		.map_err(|_| WasmError::MigrationFailed)?;
+
+		// TODO: Same events emitted pallet_cosmos and pallet_cosmwasm
+		let msg_event = CosmosEvent {
+			r#type: EVENT_TYPE_MIGRATE.into(),
+			attributes: vec![
+				EventAttribute {
+					key: ATTRIBUTE_KEY_CODE_ID.into(),
+					value: code_id.to_string().into(),
+				},
+				EventAttribute { key: ATTRIBUTE_KEY_CONTRACT_ADDR.into(), value: contract.into() },
+			],
+		};
+
+		ctx.event_manager().emit_event(msg_event);
+
+		Ok(())
 	}
 }
 
