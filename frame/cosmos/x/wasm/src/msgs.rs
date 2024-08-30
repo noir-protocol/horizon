@@ -122,6 +122,7 @@ where
 	Context: store::Context,
 {
 	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
+		// TODO: Handle fix_msg
 		let MsgInstantiateContract2 {
 			sender,
 			admin,
