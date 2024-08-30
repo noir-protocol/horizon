@@ -766,7 +766,7 @@ where
 			(Ok((data, events)), ReplyOn::Always | ReplyOn::Success) => {
 				log::debug!("Commit & Reply");
 				vm.transaction_commit()?;
-				// TODO:
+				// TODO: Handle msg_response
 				SubCallContinuation::Reply(SubMsgResult::Ok(SubMsgResponse {
 					events,
 					data,
@@ -805,7 +805,7 @@ where
 			// the reply and optionally overwrite the current data with with the
 			// one yield by the reply.
 			SubCallContinuation::Reply(response) => {
-				// TODO: Handle data
+				// TODO: Handle payload and gas_used
 				let new_data = vm.continue_reply(
 					Reply {
 						id: submsg.id,

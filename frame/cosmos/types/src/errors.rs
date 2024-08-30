@@ -34,6 +34,7 @@ pub enum RootError {
 	UnknownRequest = 6,
 	InvalidAddress = 7,
 	InvalidCoins = 10,
+	OutOfGas = 11,
 	UnpackAnyError = 34,
 }
 

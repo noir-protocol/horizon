@@ -16,12 +16,8 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use alloc::{string::String, vec, vec::Vec};
-use cosmos_sdk_proto::{
-	cosmos::{bank::v1beta1::MsgSend, base::v1beta1::Coin},
-	traits::Message,
-	Any,
-};
+use alloc::vec;
+use cosmos_sdk_proto::{cosmos::bank::v1beta1::MsgSend, traits::Message, Any};
 use frame_support::{
 	pallet_prelude::*,
 	traits::{fungibles::Mutate, tokens::Preservation, Currency, ExistenceRequirement},
@@ -32,9 +28,9 @@ use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	address::address_from_bech32,
 	coin::amount_to_string,
-	errors::RootError,
-	events::{CosmosEvent, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
-	msgservice::MsgHandlerErrorInfo,
+	errors::{CosmosError, RootError},
+	events::{EventAttribute, EventManager, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
+	store::{self, GasMeter},
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
 use sp_runtime::{traits::Convert, SaturatedConversion};
@@ -47,62 +43,29 @@ impl<T> Default for MsgSendHandler<T> {
 	}
 }
 
-impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgSendHandler<T>
+impl<T, Context> pallet_cosmos_types::msgservice::MsgHandler<Context> for MsgSendHandler<T>
 where
 	T: pallet_cosmos::Config,
+	Context: store::Context,
 {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
-		let mut total_weight = Weight::zero();
+	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
+		let MsgSend { from_address, to_address, amount } =
+			MsgSend::decode(&mut &*msg.value).map_err(|_| RootError::UnpackAnyError)?;
 
-		let MsgSend { from_address, to_address, amount } = MsgSend::decode(&mut &*msg.value)
-			.map_err(|_| MsgHandlerErrorInfo {
-				weight: total_weight,
-				error: RootError::UnpackAnyError.into(),
-			})?;
-
-		match Self::send_coins(from_address, to_address, amount) {
-			Ok((weight, msg_events)) => {
-				total_weight = total_weight.saturating_add(weight);
-				Ok((total_weight, msg_events))
-			},
-			Err(e) => Err(MsgHandlerErrorInfo {
-				weight: total_weight.saturating_add(e.weight),
-				error: e.error,
-			}),
-		}
-	}
-}
-
-impl<T> MsgSendHandler<T>
-where
-	T: pallet_cosmos::Config,
-{
-	fn send_coins(
-		from_address: String,
-		to_address: String,
-		amount: Vec<Coin>,
-	) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
-		let mut total_weight = Weight::zero();
-
-		let from_addr = address_from_bech32(&from_address).map_err(|_| MsgHandlerErrorInfo {
-			weight: total_weight,
-			error: RootError::InvalidAddress.into(),
-		})?;
-
-		let to_addr = address_from_bech32(&to_address).map_err(|_| MsgHandlerErrorInfo {
-			weight: total_weight,
-			error: RootError::InvalidAddress.into(),
-		})?;
+		let from_addr =
+			address_from_bech32(&from_address).map_err(|_| RootError::InvalidAddress)?;
+		let to_addr = address_from_bech32(&to_address).map_err(|_| RootError::InvalidAddress)?;
 
 		let from_account = T::AddressMapping::into_account_id(from_addr);
 		let to_account = T::AddressMapping::into_account_id(to_addr);
-		total_weight = total_weight.saturating_add(T::DbWeight::get().reads(2));
+
+		ctx.gas_meter()
+			.consume_gas(T::DbWeight::get().reads(2).ref_time(), "")
+			.map_err(|_| RootError::OutOfGas)?;
 
 		for amt in amount.iter() {
-			let transfer_amount = amt.amount.parse::<u128>().map_err(|_| MsgHandlerErrorInfo {
-				weight: total_weight,
-				error: RootError::InvalidCoins.into(),
-			})?;
+			let transfer_amount =
+				amt.amount.parse::<u128>().map_err(|_| RootError::InvalidCoins)?;
 
 			if T::NativeDenom::get() == amt.denom {
 				T::NativeAsset::transfer(
@@ -111,21 +74,18 @@ where
 					transfer_amount.saturated_into(),
 					ExistenceRequirement::KeepAlive,
 				)
-				.map_err(|_| MsgHandlerErrorInfo {
-					weight: total_weight,
-					error: RootError::InsufficientFunds.into(),
-				})?;
+				.map_err(|_| RootError::InsufficientFunds)?;
 
-				total_weight = total_weight.saturating_add(
-					pallet_balances::weights::SubstrateWeight::<T>::transfer_keep_alive(),
-				);
+				ctx.gas_meter()
+					.consume_gas(
+						pallet_balances::weights::SubstrateWeight::<T>::transfer_keep_alive()
+							.ref_time(),
+						"",
+					)
+					.map_err(|_| RootError::OutOfGas)?;
 			} else {
-				let asset_id = T::AssetToDenom::convert(amt.denom.clone()).map_err(|_| {
-					MsgHandlerErrorInfo {
-						weight: total_weight,
-						error: RootError::InvalidCoins.into(),
-					}
-				})?;
+				let asset_id = T::AssetToDenom::convert(amt.denom.clone())
+					.map_err(|_| RootError::InvalidCoins)?;
 				T::Assets::transfer(
 					asset_id,
 					&from_account,
@@ -133,13 +93,15 @@ where
 					transfer_amount.saturated_into(),
 					Preservation::Preserve,
 				)
-				.map_err(|_| MsgHandlerErrorInfo {
-					weight: total_weight,
-					error: RootError::InsufficientFunds.into(),
-				})?;
-				total_weight = total_weight.saturating_add(
-					pallet_assets::weights::SubstrateWeight::<T>::transfer_keep_alive(),
-				);
+				.map_err(|_| RootError::InsufficientFunds)?;
+
+				ctx.gas_meter()
+					.consume_gas(
+						pallet_assets::weights::SubstrateWeight::<T>::transfer_keep_alive()
+							.ref_time(),
+						"",
+					)
+					.map_err(|_| RootError::OutOfGas)?;
 			}
 		}
 
@@ -155,6 +117,8 @@ where
 			],
 		};
 
-		Ok((total_weight, vec![msg_event]))
+		ctx.event_manager().emit_event(msg_event);
+
+		Ok(())
 	}
 }

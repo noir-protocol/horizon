@@ -52,3 +52,12 @@ pub struct EventAttribute {
 	pub key: Vec<u8>,
 	pub value: Vec<u8>,
 }
+
+pub type CosmosEvents = Vec<CosmosEvent>;
+
+pub trait EventManager {
+	fn new() -> Self;
+	fn events(&self) -> CosmosEvents;
+	fn emit_event(&mut self, event: CosmosEvent);
+	fn emit_events(&mut self, events: CosmosEvents);
+}

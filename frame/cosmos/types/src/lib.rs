@@ -25,4 +25,5 @@ pub mod errors;
 pub mod events;
 pub mod handler;
 pub mod msgservice;
+pub mod store;
 pub mod tx;

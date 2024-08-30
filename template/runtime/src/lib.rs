@@ -32,6 +32,7 @@ mod accounts;
 mod ante;
 mod assets;
 mod compat;
+mod context;
 mod msgs;
 mod sig_verifiable_tx;
 mod sign_mode_handler;
@@ -420,6 +421,8 @@ impl pallet_cosmos::Config for Runtime {
 	type MaxDenomLimit = MaxDenomLimit;
 
 	type AddressPrefix = AddressPrefix;
+
+	type Context = context::Context;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {

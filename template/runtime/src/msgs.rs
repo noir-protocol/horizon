@@ -27,7 +27,7 @@ use cosmos_sdk_proto::{
 	Any,
 };
 use hp_crypto::EcdsaExt;
-use pallet_cosmos_types::msgservice::MsgHandler;
+use pallet_cosmos_types::{msgservice::MsgHandler, store};
 use pallet_cosmos_x_auth_signing::any_match;
 use pallet_cosmos_x_bank::msgs::MsgSendHandler;
 use pallet_cosmos_x_wasm::msgs::{
@@ -36,12 +36,13 @@ use pallet_cosmos_x_wasm::msgs::{
 };
 
 pub struct MsgServiceRouter<T>(PhantomData<T>);
-impl<T> pallet_cosmos_types::msgservice::MsgServiceRouter for MsgServiceRouter<T>
+impl<T, Context> pallet_cosmos_types::msgservice::MsgServiceRouter<Context> for MsgServiceRouter<T>
 where
 	T: frame_system::Config + pallet_cosmos::Config + pallet_cosmwasm::Config,
 	T::AccountId: EcdsaExt,
+	Context: store::Context,
 {
-	fn route(msg: &Any) -> Option<Box<dyn MsgHandler>> {
+	fn route(msg: &Any) -> Option<Box<dyn MsgHandler<Context>>> {
 		any_match!(
 			msg, {
 				MsgSend => Some(Box::<MsgSendHandler<T>>::default()),
