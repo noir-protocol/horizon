@@ -17,7 +17,6 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use alloc::{string::ToString, vec, vec::Vec};
-use bech32::{Bech32, Hrp};
 use core::{marker::PhantomData, str::FromStr};
 use core2::io::Read;
 use cosmos_sdk_proto::{
@@ -29,7 +28,6 @@ use cosmos_sdk_proto::{
 	prost::Message,
 	Any,
 };
-use frame_support::traits::Get;
 use hp_crypto::EcdsaExt;
 use libflate::gzip::Decoder;
 use pallet_cosmos::AddressMapping;
@@ -161,19 +159,13 @@ where
 			message,
 		)
 		.map_err(|_| WasmError::InstantiateFailed)?;
-		let contract_address = contract.to_cosmos_address().ok_or(WasmError::InstantiateFailed)?;
-
-		let hrp = Hrp::parse(T::AddressPrefix::get()).unwrap();
-		let contract_address = bech32::encode::<Bech32>(hrp, contract_address.as_bytes()).unwrap();
+		let contract = T::AccountToAddr::convert(contract);
 
 		// TODO: Same events emitted pallet_cosmos and pallet_cosmwasm
 		let msg_event = CosmosEvent {
 			r#type: EVENT_TYPE_INSTANTIATE.into(),
 			attributes: vec![
-				EventAttribute {
-					key: ATTRIBUTE_KEY_CONTRACT_ADDR.into(),
-					value: contract_address.into(),
-				},
+				EventAttribute { key: ATTRIBUTE_KEY_CONTRACT_ADDR.into(), value: contract.into() },
 				EventAttribute {
 					key: ATTRIBUTE_KEY_CODE_ID.into(),
 					value: code_id.to_string().into(),
@@ -217,7 +209,7 @@ where
 		);
 
 		let contract_account =
-			T::AddressMapping::from_bech32(&contract).ok_or(RootError::TxDecodeError)?;
+			T::AccountToAddr::convert(contract.clone()).map_err(|_| RootError::TxDecodeError)?;
 		let funds: FundsOf<T> = convert_funds::<T>(&funds)?;
 		let message: ContractMessageOf<T> = msg.try_into().map_err(|_| RootError::TxDecodeError)?;
 
@@ -273,7 +265,7 @@ where
 		);
 
 		let contract_account =
-			T::AddressMapping::from_bech32(&contract).ok_or(RootError::TxDecodeError)?;
+			T::AccountToAddr::convert(contract.clone()).map_err(|_| RootError::TxDecodeError)?;
 		let new_code_identifier = CodeIdentifier::CodeId(code_id);
 		let message: ContractMessageOf<T> = msg.try_into().map_err(|_| RootError::TxDecodeError)?;
 
@@ -340,7 +332,7 @@ where
 		};
 
 		let contract_account =
-			T::AddressMapping::from_bech32(&contract).ok_or(RootError::TxDecodeError)?;
+			T::AccountToAddr::convert(contract.clone()).map_err(|_| RootError::TxDecodeError)?;
 
 		pallet_cosmwasm::Pallet::<T>::do_update_admin(
 			&mut shared,
