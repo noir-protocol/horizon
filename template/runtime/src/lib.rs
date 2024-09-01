@@ -37,7 +37,7 @@ mod msgs;
 mod sig_verifiable_tx;
 mod sign_mode_handler;
 
-use alloc::{boxed::Box, vec::Vec};
+use alloc::{boxed::Box, string::String, vec::Vec};
 use core::marker::PhantomData;
 use cosmos_sdk_proto::{
 	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
@@ -726,12 +726,13 @@ impl_runtime_apis! {
 		}
 	}
 
-	impl cosmwasm_runtime_api::CosmwasmRuntimeApi<Block, AccountId, AssetId, Balance, Vec<u8>> for Runtime {
+	impl cosmwasm_runtime_api::CosmwasmRuntimeApi<Block, Vec<u8>> for Runtime {
 		fn query(
-			contract: AccountId,
+			contract: String,
 			gas: u64,
 			query_request: Vec<u8>,
 		) -> Result<Vec<u8>, Vec<u8>>{
+			let contract = <Runtime as pallet_cosmwasm::Config>::AccountToAddr::convert(contract).map_err(|_| "Invalid contract address".as_bytes().to_vec())?;
 			match pallet_cosmwasm::query::<Runtime>(
 				contract,
 				gas,

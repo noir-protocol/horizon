@@ -1,9 +1,9 @@
 extern crate alloc;
 
-use crate::cosmwasm_api::CosmwasmApiServer;
 use alloc::sync::Arc;
 use codec::Codec;
-use core::{cmp::Ord, fmt::Display, marker::PhantomData, str::FromStr};
+use core::marker::PhantomData;
+pub use cosmwasm_api::CosmwasmApiServer;
 use cosmwasm_runtime_api::CosmwasmRuntimeApi;
 use jsonrpsee::{
 	core::RpcResult,
@@ -18,16 +18,11 @@ use sp_runtime::traits::Block as BlockT;
 mod cosmwasm_api {
 	use super::*;
 	#[rpc(client, server)]
-	pub trait CosmwasmApi<BlockHash, AccountId, AssetId, Balance, Error>
-	where
-		AccountId: FromStr + Display,
-		AssetId: FromStr + Display + Ord,
-		Balance: FromStr + Display,
-	{
+	pub trait CosmwasmApi<BlockHash, Error> {
 		#[method(name = "cosmwasm_query")]
 		fn query(
 			&self,
-			contract: AccountId,
+			contract: String,
 			gas: u64,
 			query_request: Vec<u8>,
 			at: Option<BlockHash>,
@@ -54,23 +49,19 @@ fn runtime_error_into_rpc_error<E: ToString>(e: E) -> ErrorObjectOwned {
 	)
 }
 
-impl<C, Block, AccountId, AssetId, Balance, Error>
-	CosmwasmApiServer<<Block as BlockT>::Hash, AccountId, AssetId, Balance, Error>
-	for Cosmwasm<C, (Block, AccountId, AssetId, Balance, Error)>
+impl<C, Block, Error> CosmwasmApiServer<<Block as BlockT>::Hash, Error>
+	for Cosmwasm<C, (Block, Error)>
 where
 	Block: BlockT,
-	AccountId: Send + Sync + 'static + Codec + FromStr + Display,
-	AssetId: Send + Sync + 'static + Codec + FromStr + Display + Ord,
-	Balance: Send + Sync + 'static + Codec + FromStr + Display,
 	Error: Send + Sync + 'static + Codec + AsRef<[u8]>,
 	C: Send + Sync + 'static,
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block>,
-	C::Api: CosmwasmRuntimeApi<Block, AccountId, AssetId, Balance, Error>,
+	C::Api: CosmwasmRuntimeApi<Block, Error>,
 {
 	fn query(
 		&self,
-		contract: AccountId,
+		contract: String,
 		gas: u64,
 		query_request: Vec<u8>,
 		at: Option<<Block as BlockT>::Hash>,
