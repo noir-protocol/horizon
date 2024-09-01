@@ -5,6 +5,8 @@ members = [
 	"frame/accounts",
 	"frame/cosmos",
 	"frame/cosmwasm",
+	"frame/cosmwasm/rpc",
+	"frame/cosmwasm/runtime-api",
 	"frame/cosmos/types",
 	"frame/cosmos/x/auth",
 	"frame/cosmos/x/auth/migrations",
@@ -140,12 +142,14 @@ wasmi = { version = "0.30.0", default-features = false }
 wasmi-validation = { version = "0.5.0", default-features = false }
 
 # Composable
-pallet-cosmwasm = { path = "frame/cosmwasm", default-features = false }
 ibc-primitives = { path = "composable/primitives", default-features = false }
+pallet-cosmwasm = { path = "frame/cosmwasm", default-features = false }
 cosmwasm-vm = { path = "composable/vm", default-features = false }
 cosmwasm-vm-wasmi = { path = "composable/vm-wasmi", default-features = false }
 composable-support = { path = "composable/composable-support", default-features = false }
 composable-traits = { path = "composable/composable-traits", default-features = false }
+cosmwasm-rpc = { path = "frame/cosmwasm/rpc", default-features = false }
+cosmwasm-runtime-api = { path = "frame/cosmwasm/runtime-api", default-features = false }
 
 [profile.release]
 panic = "unwind"
