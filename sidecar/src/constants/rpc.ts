@@ -1,5 +1,5 @@
 const rpc = {
-  cosm: {
+  cosmos: {
     broadcastTx: {
       description: "Broadcast cosmos transaction.",
       params: [

@@ -18,4 +18,4 @@
 
 //! Horizon runtime compatibility adapters.
 
-pub mod cosm;
+pub mod cosmos;

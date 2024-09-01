@@ -23,7 +23,9 @@ serde_json = { workspace = true }
 # Substrate FRAME
 frame-system-rpc-runtime-api = { workspace = true, features = ["std"] }
 pallet-transaction-payment-rpc = { workspace = true }
-pallet-transaction-payment-rpc-runtime-api = { workspace = true, features = ["std"] }
+pallet-transaction-payment-rpc-runtime-api = { workspace = true, features = [
+	"std",
+] }
 
 # Substrate
 sc-basic-authorship = { workspace = true }
@@ -63,7 +65,13 @@ hp-io = { workspace = true, features = ["std"] }
 hp-rpc = { workspace = true, features = ["std"] }
 horizon-template-runtime = { workspace = true, features = ["std"] }
 pallet-cosmos-types = { workspace = true, features = ["std", "with-codec"] }
-pallet-cosmos-x-bank-types = { workspace = true, features = ["std", "with-codec"] }
+pallet-cosmos-x-bank-types = { workspace = true, features = [
+	"std",
+	"with-codec",
+] }
+
+cosmwasm-rpc = { workspace = true }
+cosmwasm-runtime-api = { workspace = true, features = ["std"] }
 
 [build-dependencies]
 substrate-build-script-utils = { workspace = true }

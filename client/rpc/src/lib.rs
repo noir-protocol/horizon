@@ -18,9 +18,9 @@
 
 #![deny(unused_crate_dependencies)]
 
-mod cosm;
+mod cosmos;
 
-pub use cosm::{Cosm, CosmApiServer};
+pub use cosmos::{Cosmos, CosmosApiServer};
 pub use jsonrpsee::{
 	core,
 	types::{error, ErrorObject, ErrorObjectOwned},

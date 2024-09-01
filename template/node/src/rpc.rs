@@ -5,8 +5,6 @@
 
 #![warn(missing_docs)]
 
-use std::sync::Arc;
-
 use horizon_template_runtime::{opaque::Block, AccountId, Balance, Nonce};
 use jsonrpsee::RpcModule;
 pub use sc_rpc_api::DenyUnsafe;
@@ -14,6 +12,7 @@ use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_block_builder::BlockBuilder;
 use sp_blockchain::{Error as BlockChainError, HeaderBackend, HeaderMetadata};
+use std::sync::Arc;
 
 /// Full client dependencies.
 pub struct FullDeps<C, P> {
@@ -39,7 +38,7 @@ where
 	P: TransactionPool<Block = Block> + 'static,
 	C::Api: hp_rpc::CosmosTxRuntimeApi<Block>,
 {
-	use hc_rpc::{Cosm, CosmApiServer};
+	use hc_rpc::{Cosmos, CosmosApiServer};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	use substrate_frame_rpc_system::{System, SystemApiServer};
 
@@ -49,7 +48,7 @@ where
 	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 
-	module.merge(Cosm::new(pool, client).into_rpc())?;
+	module.merge(Cosmos::new(pool, client).into_rpc())?;
 
 	// Extend this RPC with a custom API by using the following syntax.
 	// `YourRpcStruct` should have a reference to a client, which is needed

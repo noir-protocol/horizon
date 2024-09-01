@@ -10,7 +10,9 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 bech32 = { workspace = true, default-features = false }
-cosmos-sdk-proto = { workspace = true, default-features = false, features = ["cosmwasm"] }
+cosmos-sdk-proto = { workspace = true, default-features = false, features = [
+	"cosmwasm",
+] }
 parity-scale-codec = { workspace = true, default-features = false }
 ripemd = { workspace = true, default-features = false }
 scale-info = { workspace = true, default-features = false }
@@ -19,7 +21,9 @@ serde_json = { workspace = true, default-features = false }
 # Substrate
 sp-api = { workspace = true, default-features = false }
 sp-block-builder = { workspace = true, default-features = false }
-sp-consensus-aura = { workspace = true, default-features = false, features = ["serde"] }
+sp-consensus-aura = { workspace = true, default-features = false, features = [
+	"serde",
+] }
 sp-core = { workspace = true, default-features = false }
 sp-genesis-builder = { workspace = true, default-features = false }
 sp-inherents = { workspace = true, default-features = false }
@@ -44,7 +48,9 @@ pallet-transaction-payment-rpc-runtime-api = { workspace = true, default-feature
 pallet-timestamp = { workspace = true, default-features = false }
 
 # Frontier
-fp-self-contained = { workspace = true, default-features = false, features = ["serde"] }
+fp-self-contained = { workspace = true, default-features = false, features = [
+	"serde",
+] }
 
 # Horizon
 hp-account = { workspace = true, default-features = false }
@@ -53,7 +59,9 @@ hp-io = { workspace = true, default-features = false }
 hp-rpc = { workspace = true, default-features = false }
 pallet-cosmos = { workspace = true, default-features = false }
 pallet-cosmos-accounts = { workspace = true, default-features = false }
-pallet-cosmos-types = { workspace = true, default-features = false, features = ["with-codec"] }
+pallet-cosmos-types = { workspace = true, default-features = false, features = [
+	"with-codec",
+] }
 pallet-cosmos-x-auth = { workspace = true, default-features = false }
 pallet-cosmos-x-auth-migrations = { workspace = true, default-features = false }
 pallet-cosmos-x-auth-signing = { workspace = true, default-features = false }
@@ -63,6 +71,7 @@ pallet-cosmos-x-wasm = { workspace = true, default-features = false }
 pallet-cosmos-x-wasm-types = { workspace = true, default-features = false }
 
 pallet-cosmwasm = { workspace = true, default-features = false }
+cosmwasm-runtime-api = { workspace = true, default-features = false }
 
 [dev-dependencies]
 base64ct = { workspace = true }
@@ -114,5 +123,6 @@ std = [
 	"pallet-cosmos-x-bank/std",
 	"pallet-cosmos-x-bank-types/std",
 	"pallet-cosmwasm/std",
+	"cosmwasm-runtime-api/std",
 	"substrate-wasm-builder",
 ]

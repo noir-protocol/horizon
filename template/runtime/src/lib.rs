@@ -379,7 +379,7 @@ parameter_types! {
 
 impl pallet_cosmos::Config for Runtime {
 	/// Mapping an address to an account id.
-	type AddressMapping = compat::cosm::HashedAddressMapping<Self, BlakeTwo256>;
+	type AddressMapping = compat::cosmos::HashedAddressMapping<Self, BlakeTwo256>;
 	/// Native asset type.
 	type NativeAsset = Balances;
 	/// Type of an account balance.
@@ -723,6 +723,23 @@ impl_runtime_apis! {
 						None
 					}
 				}).ok_or(SimulateError::UnknownError)
+		}
+	}
+
+	impl cosmwasm_runtime_api::CosmwasmRuntimeApi<Block, AccountId, AssetId, Balance, Vec<u8>> for Runtime {
+		fn query(
+			contract: AccountId,
+			gas: u64,
+			query_request: Vec<u8>,
+		) -> Result<Vec<u8>, Vec<u8>>{
+			match pallet_cosmwasm::query::<Runtime>(
+				contract,
+				gas,
+				query_request,
+			) {
+				Ok(response) => Ok(response.into()),
+				Err(err) => Err(alloc::format!("{:?}", err).into_bytes())
+			}
 		}
 	}
 
