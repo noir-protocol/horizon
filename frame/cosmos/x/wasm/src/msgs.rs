@@ -135,9 +135,10 @@ where
 		);
 		let code_identifier = CodeIdentifier::CodeId(code_id);
 
-		let admin = if !admin.is_empty() {
-			let admin = T::AddressMapping::from_bech32(&admin).ok_or(RootError::TxDecodeError)?;
-			Some(admin)
+		let admin_account = if !admin.is_empty() {
+			let admin_account =
+				T::AccountToAddr::convert(admin).map_err(|_| RootError::InvalidAddress)?;
+			Some(admin_account)
 		} else {
 			None
 		};
@@ -153,7 +154,7 @@ where
 			who,
 			code_identifier,
 			salt,
-			admin,
+			admin_account,
 			label,
 			funds,
 			message,
@@ -324,8 +325,8 @@ where
 		);
 
 		let new_admin_account = if !new_admin.is_empty() {
-			let new_admin_account =
-				T::AddressMapping::from_bech32(&new_admin).ok_or(RootError::TxDecodeError)?;
+			let new_admin_account = T::AccountToAddr::convert(new_admin.clone())
+				.map_err(|_| RootError::InvalidAddress)?;
 			Some(new_admin_account)
 		} else {
 			None
