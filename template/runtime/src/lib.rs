@@ -38,15 +38,7 @@ mod sign_mode_handler;
 
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::marker::PhantomData;
-use cosmos_sdk_proto::{
-	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
-	cosmwasm::wasm::v1::{
-		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
-		MsgUpdateAdmin,
-	},
-	prost::Message,
-	Any,
-};
+use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use frame_support::{
 	construct_runtime, derive_impl,
 	genesis_builder_helper::{build_config, create_default_config},
@@ -54,7 +46,7 @@ use frame_support::{
 	parameter_types,
 	traits::{
 		tokens::{fungible, Fortitude, Preservation},
-		AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU32, ConstU8, Contains, OnTimestampSet,
+		AsEnsureOriginWithArg, ConstBool, ConstU128, ConstU32, ConstU8, OnTimestampSet,
 	},
 	weights::{
 		constants::{RocksDbWeight as RuntimeDbWeight, WEIGHT_REF_TIME_PER_MILLIS},
@@ -68,13 +60,12 @@ use hp_crypto::EcdsaExt;
 use hp_rpc::{GasInfo, SimulateError, SimulateResponse};
 use pallet_cosmos::{
 	config_preludes::{
-		AddressPrefix, ChainId, Context, MaxDenomLimit, MaxMemoCharacters, NativeDenom, TxSigLimit,
-		WeightToGas,
+		AddressPrefix, ChainId, Context, MaxDenomLimit, MaxMemoCharacters, MsgFilter, NativeDenom,
+		TxSigLimit, WeightToGas,
 	},
 	AddressMapping,
 };
 use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
-use pallet_cosmos_x_auth_signing::any_match;
 use pallet_cosmwasm::instrument::CostRules;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
@@ -341,23 +332,6 @@ impl pallet_timestamp::Config for Runtime {
 	type WeightInfo = ();
 }
 
-pub struct MsgFilter;
-impl Contains<Any> for MsgFilter {
-	fn contains(msg: &Any) -> bool {
-		any_match!(
-			msg, {
-				MsgSend => true,
-				MsgStoreCode => true,
-				MsgInstantiateContract2 => true,
-				MsgExecuteContract => true,
-				MsgMigrateContract => true,
-				MsgUpdateAdmin => true,
-			},
-			false
-		)
-	}
-}
-
 impl pallet_cosmos::Config for Runtime {
 	/// Mapping an address to an account id.
 	type AddressMapping = compat::cosmos::HashedAddressMapping<Self, BlakeTwo256>;
@@ -602,10 +576,11 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		info: Self::SignedInfo,
 	) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
 		match self {
-			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) =>
+			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) => {
 				Some(call.dispatch(RuntimeOrigin::from(
 					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosmos_address().unwrap()),
-				))),
+				)))
+			},
 			_ => None,
 		}
 	}
@@ -651,8 +626,11 @@ impl Runtime {
 						pk.copy_from_slice(&public_key.key);
 						CosmosSigner(Public(pk))
 					},
-					_ =>
-						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
+					_ => {
+						return Err(TransactionValidityError::Invalid(
+							InvalidTransaction::BadSigner,
+						))
+					},
 				};
 
 				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(

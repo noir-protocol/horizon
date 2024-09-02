@@ -29,7 +29,15 @@ pub use self::pallet::*;
 use crate::weights::WeightInfo;
 use alloc::{string::String, vec::Vec};
 use core::marker::PhantomData;
-use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message, Any};
+use cosmos_sdk_proto::{
+	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
+	cosmwasm::wasm::v1::{
+		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
+		MsgUpdateAdmin,
+	},
+	prost::Message,
+	Any,
+};
 use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchResultWithPostInfo, InvalidTransaction, Pays},
@@ -51,7 +59,7 @@ use pallet_cosmos_types::{
 	tx::Account,
 };
 use pallet_cosmos_x_auth_signing::{
-	sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
+	any_match, sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -181,8 +189,18 @@ pub mod pallet {
 
 		pub struct MsgFilter;
 		impl Contains<Any> for MsgFilter {
-			fn contains(_msg: &Any) -> bool {
-				false
+			fn contains(msg: &Any) -> bool {
+				any_match!(
+					msg, {
+						MsgSend => true,
+						MsgStoreCode => true,
+						MsgInstantiateContract2 => true,
+						MsgExecuteContract => true,
+						MsgMigrateContract => true,
+						MsgUpdateAdmin => true,
+					},
+					false
+				)
 			}
 		}
 

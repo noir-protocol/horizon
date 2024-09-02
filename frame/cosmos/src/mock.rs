@@ -43,8 +43,8 @@ use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use pallet_cosmos::{
 	config_preludes::{
-		AddressPrefix, ChainId, Context, MaxDenomLimit, MaxMemoCharacters, NativeDenom, TxSigLimit,
-		WeightToGas,
+		AddressPrefix, ChainId, Context, MaxDenomLimit, MaxMemoCharacters, MsgFilter, NativeDenom,
+		TxSigLimit, WeightToGas,
 	},
 	AddressMapping,
 };
@@ -124,23 +124,6 @@ impl pallet_timestamp::Config for Test {
 	type OnTimestampSet = ();
 	type MinimumPeriod = ConstU64<5>;
 	type WeightInfo = ();
-}
-
-pub struct MsgFilter;
-impl Contains<Any> for MsgFilter {
-	fn contains(msg: &Any) -> bool {
-		any_match!(
-			msg, {
-				MsgSend => true,
-				MsgStoreCode => true,
-				MsgInstantiateContract2 => true,
-				MsgExecuteContract => true,
-				MsgMigrateContract => true,
-				MsgUpdateAdmin => true,
-			},
-			false
-		)
-	}
 }
 
 pub struct MsgServiceRouter<T>(PhantomData<T>);
