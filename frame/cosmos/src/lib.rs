@@ -335,15 +335,17 @@ pub mod pallet {
 		/// Handler for managing different signature modes in transactions.
 		#[pallet::no_default]
 		type SignModeHandler: SignModeHandler;
+		/// Defines the weight information for extrinsics in the pallet.
 		#[pallet::no_default]
 		type WeightInfo: WeightInfo;
 		/// A way to convert from cosmos coin denom to asset id.
 		#[pallet::no_default]
 		type AssetToDenom: Convert<String, Result<Self::AssetId, ()>>
 			+ Convert<Self::AssetId, String>;
+		/// The maximum number of characters allowed for a denomination.
 		#[pallet::constant]
 		type MaxDenomLimit: Get<u32>;
-		/// The chain ID.
+		/// The prefix used for addresses.
 		#[pallet::constant]
 		type AddressPrefix: Get<&'static str>;
 
