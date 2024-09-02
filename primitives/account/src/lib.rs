@@ -79,6 +79,10 @@ impl core::fmt::Debug for CosmosSigner {
 
 impl EcdsaExt for CosmosSigner {
 	fn to_cosmos_address(&self) -> Option<H160> {
+		// If the first byte is 0, the account is either a contract or interim account.
+		if *self.0 .0.first().unwrap() == 0 {
+			return None;
+		}
 		let mut hasher = ripemd::Ripemd160::new();
 		hasher.update(sha2_256(&self.0 .0));
 		let address = H160::from_slice(&hasher.finalize());

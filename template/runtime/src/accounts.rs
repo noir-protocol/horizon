@@ -16,47 +16,58 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use crate::AccountId;
 use alloc::{string::String, vec::Vec};
 use bech32::{Bech32, Hrp};
-use core::str;
+use core::marker::PhantomData;
+use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use pallet_cosmos::AddressMapping;
-use sp_core::Get;
+use sp_core::{crypto::UncheckedFrom, Get, H160, H256};
 use sp_runtime::traits::Convert;
 
-pub struct AccountToAddr<T>(core::marker::PhantomData<T>);
+pub struct AccountToAddr<T>(PhantomData<T>);
 
-impl<T> Convert<T::AccountId, String> for AccountToAddr<T>
+impl<T> Convert<AccountId, String> for AccountToAddr<T>
 where
 	T: pallet_cosmos::Config,
-	T::AccountId: EcdsaExt,
 {
-	fn convert(account: T::AccountId) -> String {
-		// TODO: Handle errors
+	fn convert(account: AccountId) -> String {
+		// TODO: Handle error
+		let data = if account.0 .0.first().unwrap() == &0 {
+			&account.0 .0[1..]
+		} else {
+			&account.to_cosmos_address().unwrap().0[..]
+		};
+
 		let hrp = Hrp::parse(T::AddressPrefix::get()).unwrap();
-		let address = account.to_cosmos_address().unwrap();
-
-		bech32::encode::<Bech32>(hrp, address.as_bytes()).unwrap()
+		bech32::encode::<Bech32>(hrp, data).unwrap()
 	}
 }
 
-impl<T> Convert<String, Result<T::AccountId, ()>> for AccountToAddr<T>
+impl<T> Convert<String, Result<AccountId, ()>> for AccountToAddr<T>
 where
-	T: pallet_cosmos::Config,
+	T: pallet_cosmos::Config<AccountId = CosmosSigner>,
 {
-	fn convert(address: String) -> Result<T::AccountId, ()> {
-		T::AddressMapping::from_bech32(&address).ok_or(())
-	}
-}
-
-impl<T> Convert<Vec<u8>, Result<T::AccountId, ()>> for AccountToAddr<T>
-where
-	T: pallet_cosmos::Config,
-{
-	fn convert(address_raw: Vec<u8>) -> Result<T::AccountId, ()> {
-		str::from_utf8(&address_raw)
-			.map(T::AddressMapping::from_bech32)
+	fn convert(address: String) -> Result<AccountId, ()> {
+		bech32::decode(&address)
+			.map(|(_hrp, data)| Self::convert(data))
 			.map_err(|_| ())?
-			.ok_or(())
+	}
+}
+
+impl<T> Convert<Vec<u8>, Result<AccountId, ()>> for AccountToAddr<T>
+where
+	T: pallet_cosmos::Config<AccountId = CosmosSigner>,
+{
+	fn convert(address_raw: Vec<u8>) -> Result<AccountId, ()> {
+		// Cosmos address length is 20, contract address is 32.
+		let account = match address_raw.len() {
+			20 => T::AddressMapping::from_address_raw(H160::from_slice(&address_raw)),
+			32 => AccountId::unchecked_from(H256::from_slice(&address_raw)),
+			_ => return Err(()),
+		};
+
+		Ok(account)
 	}
 }
