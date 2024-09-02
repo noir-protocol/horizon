@@ -184,17 +184,16 @@ pub mod pallet {
 			}
 		}
 
-		pub struct GasToWeight;
-		impl Convert<Gas, Weight> for GasToWeight {
-			fn convert(gas: Gas) -> Weight {
-				Weight::from_parts(gas, 0u64)
-			}
-		}
-
 		pub struct WeightToGas;
 		impl Convert<Weight, Gas> for WeightToGas {
 			fn convert(weight: Weight) -> Gas {
 				weight.ref_time()
+			}
+		}
+
+		impl Convert<Gas, Weight> for WeightToGas {
+			fn convert(gas: Gas) -> Weight {
+				Weight::from_parts(gas, 0u64)
 			}
 		}
 
@@ -266,7 +265,6 @@ pub mod pallet {
 			type NativeDenom = NativeDenom;
 			type ChainId = ChainId;
 			type MsgFilter = MsgFilter;
-			type GasToWeight = GasToWeight;
 			type WeightToGas = WeightToGas;
 			type TxSigLimit = TxSigLimit;
 			type MaxDenomLimit = MaxDenomLimit;
@@ -326,10 +324,8 @@ pub mod pallet {
 		type ChainId: Get<&'static str>;
 		/// The message filter.
 		type MsgFilter: Contains<Any>;
-		/// Converter for converting Gas to Weight.
-		type GasToWeight: Convert<Gas, Weight>;
-		/// Converter for converting Weight to Gas.
-		type WeightToGas: Convert<Weight, Gas>;
+		/// Converts Gas to Weight and Weight to Gas.
+		type WeightToGas: Convert<Weight, Gas> + Convert<Gas, Weight>;
 		/// The maximum number of transaction signatures allowed.
 		#[pallet::constant]
 		type TxSigLimit: Get<u64>;
@@ -402,7 +398,7 @@ pub mod pallet {
 				.and_then(|tx| tx.auth_info)
 				.and_then(|auth_info| auth_info.fee)
 				.map_or(T::WeightInfo::default_weight(), |fee| {
-					T::GasToWeight::convert(fee.gas_limit)
+					T::WeightToGas::convert(fee.gas_limit)
 				})
 		 })]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {

@@ -67,8 +67,13 @@ use frame_system::EnsureRoot;
 use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use hp_rpc::{GasInfo, SimulateError, SimulateResponse};
-use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::tx::Gas;
+use pallet_cosmos::{
+	config_preludes::{
+		AddressPrefix, ChainId, MaxDenomLimit, MaxMemoCharacters, NativeDenom, TxSigLimit,
+		WeightToGas,
+	},
+	AddressMapping,
+};
 use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
 use pallet_cosmos_x_auth_signing::any_match;
 use pallet_cosmwasm::instrument::CostRules;
@@ -354,29 +359,6 @@ impl Contains<Any> for MsgFilter {
 	}
 }
 
-pub struct GasToWeight;
-impl Convert<Gas, Weight> for GasToWeight {
-	fn convert(gas: Gas) -> Weight {
-		Weight::from_parts(gas, 0u64)
-	}
-}
-
-pub struct WeightToGas;
-impl Convert<Weight, Gas> for WeightToGas {
-	fn convert(weight: Weight) -> Gas {
-		weight.ref_time()
-	}
-}
-
-parameter_types! {
-	pub const MaxMemoCharacters: u64 = 256;
-	pub NativeDenom: &'static str = "acdt";
-	pub ChainId: &'static str = "dev";
-	pub const TxSigLimit: u64 = 7;
-	pub const MaxDenomLimit: u32 = 128;
-	pub const AddressPrefix: &'static str = "cosmos";
-}
-
 impl pallet_cosmos::Config for Runtime {
 	/// Mapping an address to an account id.
 	type AddressMapping = compat::cosmos::HashedAddressMapping<Self, BlakeTwo256>;
@@ -403,9 +385,7 @@ impl pallet_cosmos::Config for Runtime {
 	type ChainId = ChainId;
 	/// The message filter.
 	type MsgFilter = MsgFilter;
-	/// Converter for converting Gas to Weight.
-	type GasToWeight = GasToWeight;
-	/// Converter for converting Weight to Gas.
+	/// Converts Weight to Gas and Gas to Weight.
 	type WeightToGas = WeightToGas;
 	/// The maximum number of transaction signatures allowed.
 	type TxSigLimit = TxSigLimit;
