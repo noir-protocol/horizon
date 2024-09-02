@@ -35,7 +35,7 @@ use pallet_cosmos_types::{
 	},
 	handler::AnteDecorator,
 };
-use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
+use pallet_cosmos_x_auth_signing::sign_verifiable_tx::traits::SigVerifiableTx;
 use sp_core::Get;
 use sp_runtime::{
 	traits::{Convert, Zero},

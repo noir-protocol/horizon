@@ -21,24 +21,14 @@ use alloc::{boxed::Box, string::String, vec::Vec};
 use bech32::{Bech32, Hrp};
 use core::marker::PhantomData;
 use cosmos_sdk_proto::{
-	cosmos::{
-		bank::v1beta1::MsgSend,
-		tx::v1beta1::{
-			mode_info::{Single, Sum},
-			ModeInfo, SignDoc, TxRaw,
-		},
-	},
+	cosmos::bank::v1beta1::MsgSend,
 	cosmwasm::wasm::v1::{
 		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
 		MsgUpdateAdmin,
 	},
 	Any,
 };
-use frame_support::{
-	derive_impl, parameter_types,
-	traits::{AsEnsureOriginWithArg, Contains},
-	PalletId,
-};
+use frame_support::{derive_impl, parameter_types, traits::AsEnsureOriginWithArg, PalletId};
 use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use pallet_cosmos::{
@@ -49,24 +39,15 @@ use pallet_cosmos::{
 	AddressMapping,
 };
 use pallet_cosmos_types::msgservice::MsgHandler;
-use pallet_cosmos_x_auth_migrations::legacytx::stdsign::StdSignDoc;
 use pallet_cosmos_x_auth_signing::{
-	any_match,
-	sign_mode_handler::{SignModeHandlerError, SignerData},
-	sign_verifiable_tx::SigVerifiableTxError,
+	any_match, sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
 };
 use pallet_cosmos_x_bank::msgs::MsgSendHandler;
-use pallet_cosmos_x_bank_types::msgs::msg_send;
 use pallet_cosmos_x_wasm::msgs::{
 	MsgExecuteContractHandler, MsgInstantiateContract2Handler, MsgMigrateContractHandler,
 	MsgStoreCodeHandler, MsgUpdateAdminHandler,
 };
-use pallet_cosmos_x_wasm_types::tx::{
-	msg_execute_contract, msg_instantiate_contract2, msg_migrate_contract, msg_store_code,
-	msg_update_admin,
-};
 use pallet_cosmwasm::instrument::CostRules;
-use serde_json::{Map, Value};
 use sp_core::{crypto::UncheckedFrom, ecdsa, ConstU128, ConstU32, ConstU64, Hasher, H160, H256};
 use sp_runtime::traits::{BlakeTwo256, Convert, IdentityLookup};
 
@@ -84,6 +65,7 @@ frame_support::construct_runtime!(
 		Balances: pallet_balances,
 		Cosmos: pallet_cosmos,
 		Cosmwasm: pallet_cosmwasm,
+		CosmosAccounts: pallet_cosmos_accounts,
 		Timestamp: pallet_timestamp,
 	}
 );
@@ -148,90 +130,7 @@ where
 	}
 }
 
-pub struct SigVerifiableTx;
-impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVerifiableTx {
-	fn get_signers(tx: &Tx) -> Result<Vec<String>, SigVerifiableTxError> {
-		let mut signers = Vec::<String>::new();
-
-		let body = tx.body.as_ref().ok_or(SigVerifiableTxError::EmptyTxBody)?;
-		for msg in body.messages.iter() {
-			let msg_signers = any_match!(
-				msg, {
-					MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgStoreCode => MsgStoreCode::decode(&mut &*msg.value).as_ref().map(msg_store_code::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgInstantiateContract2 => MsgInstantiateContract2::decode(&mut &*msg.value).as_ref().map(msg_instantiate_contract2::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgExecuteContract => MsgExecuteContract::decode(&mut &*msg.value).as_ref().map(msg_execute_contract::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgMigrateContract => MsgMigrateContract::decode(&mut &*msg.value).as_ref().map(msg_migrate_contract::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgUpdateAdmin => MsgUpdateAdmin::decode(&mut &*msg.value).as_ref().map(msg_update_admin::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-				},
-				Err(SigVerifiableTxError::InvalidMsg)
-			)?;
-
-			for msg_signer in msg_signers.iter() {
-				if !signers.contains(msg_signer) {
-					signers.push(msg_signer.clone());
-				}
-			}
-		}
-
-		let fee_payer = &tx
-			.auth_info
-			.as_ref()
-			.and_then(|auth_info| auth_info.fee.as_ref())
-			.ok_or(SigVerifiableTxError::EmptyFee)?
-			.payer;
-
-		if !fee_payer.is_empty() && !signers.contains(fee_payer) {
-			signers.push(fee_payer.clone());
-		}
-
-		Ok(signers)
-	}
-
-	fn fee_payer(tx: &Tx) -> Result<String, SigVerifiableTxError> {
-		let fee = tx
-			.auth_info
-			.as_ref()
-			.and_then(|auth_info| auth_info.fee.as_ref())
-			.ok_or(SigVerifiableTxError::EmptyFee)?;
-
-		let fee_payer = if fee.payer.is_empty() {
-			Self::get_signers(tx)?
-				.first()
-				.ok_or(SigVerifiableTxError::EmptySigners)?
-				.clone()
-		} else {
-			fee.payer.clone()
-		};
-
-		Ok(fee_payer)
-	}
-
-	fn sequence(tx: &Tx) -> Result<u64, SigVerifiableTxError> {
-		let auth_info = tx.auth_info.as_ref().ok_or(SigVerifiableTxError::EmptyAuthInfo)?;
-		let fee = auth_info.fee.as_ref().ok_or(SigVerifiableTxError::EmptyFee)?;
-
-		let sequence = if !fee.payer.is_empty() {
-			auth_info
-				.signer_infos
-				.first()
-				.ok_or(SigVerifiableTxError::EmptySigners)?
-				.sequence
-		} else {
-			// TODO: Verify that the last signer is the fee payer.
-			auth_info
-				.signer_infos
-				.last()
-				.ok_or(SigVerifiableTxError::EmptySigners)?
-				.sequence
-		};
-
-		Ok(sequence)
-	}
-}
-
 pub struct HashedAddressMapping<T, H>(PhantomData<(T, H)>);
-
 impl<T, H> AddressMapping<T::AccountId> for HashedAddressMapping<T, H>
 where
 	T: pallet_cosmos_accounts::Config,
@@ -263,81 +162,9 @@ where
 	}
 }
 
-pub struct SignModeHandler;
-
-impl pallet_cosmos_x_auth_signing::sign_mode_handler::SignModeHandler for SignModeHandler {
-	fn get_sign_bytes(
-		mode: &ModeInfo,
-		data: &SignerData,
-		tx: &Tx,
-	) -> Result<Vec<u8>, SignModeHandlerError> {
-		let sum = mode.sum.as_ref().ok_or(SignModeHandlerError::EmptyModeInfo)?;
-		let sign_bytes = match sum {
-			Sum::Single(Single { mode }) => match mode {
-				1 /* SIGN_MODE_DIRECT */ => {
-					let tx_raw = TxRaw::decode(&mut &*tx.encode_to_vec()).map_err(|_| SignModeHandlerError::DecodeTxError)?;
-					SignDoc {
-						body_bytes: tx_raw.body_bytes,
-						auth_info_bytes: tx_raw.auth_info_bytes,
-						chain_id: data.chain_id.clone(),
-						account_number: data.account_number,
-					}.encode_to_vec()
-				},
-				127 /* SIGN_MODE_LEGACY_AMINO_JSON */ => {
-					let fee = tx.auth_info.as_ref().and_then(|auth_info| auth_info.fee.as_ref()).ok_or(SignModeHandlerError::EmptyFee)?;
-					let body = tx.body.as_ref().ok_or(SignModeHandlerError::EmptyTxBody)?;
-
-					let mut coins = Vec::<Value>::new();
-					for amt in fee.amount.iter() {
-						let mut coin = Map::new();
-						coin.insert("amount".to_string(), Value::String(amt.amount.clone()));
-						coin.insert("denom".to_string(), Value::String(amt.denom.clone()));
-
-						coins.push(Value::Object(coin));
-					}
-
-					let mut std_fee = Map::new();
-					std_fee.insert("gas".to_string(), Value::String(fee.gas_limit.to_string()));
-					std_fee.insert("amount".to_string(), Value::Array(coins));
-
-					let mut msgs = Vec::<Value>::new();
-					for msg in body.messages.iter() {
-						let sign_msg = any_match!(
-							msg, {
-								MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-								MsgStoreCode => MsgStoreCode::decode(&mut &*msg.value).as_ref().map(msg_store_code::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-								MsgInstantiateContract2 => MsgInstantiateContract2::decode(&mut &*msg.value).as_ref().map(msg_instantiate_contract2::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-								MsgExecuteContract => MsgExecuteContract::decode(&mut &*msg.value).as_ref().map(msg_execute_contract::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-								MsgMigrateContract => MsgMigrateContract::decode(&mut &*msg.value).as_ref().map(msg_migrate_contract::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-								MsgUpdateAdmin => MsgUpdateAdmin::decode(&mut &*msg.value).as_ref().map(msg_update_admin::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-							},
-							Err(SignModeHandlerError::InvalidMsg))?;
-
-						msgs.push(sign_msg);
-					}
-
-					let sign_doc = StdSignDoc {
-						account_number: data.account_number.to_string(),
-						chain_id: data.chain_id.clone(),
-						fee: Value::Object(std_fee),
-						memo: body.memo.clone(),
-						msgs,
-						sequence: data.sequence.to_string(),
-					};
-					serde_json::to_value(sign_doc).map_err(|_| SignModeHandlerError::SerializeError)?.to_string().as_bytes().to_vec()
-				},
-				_ => return Err(SignModeHandlerError::InvalidMode),
-			},
-			_ => return Err(SignModeHandlerError::InvalidMode),
-		};
-
-		Ok(sign_bytes)
-	}
-}
-
 #[derive_impl(pallet_cosmos::config_preludes::TestDefaultConfig)]
 impl pallet_cosmos::Config for Test {
-	type AddressMapping = HashedAddressMapping<Self::AccountId, BlakeTwo256>;
+	type AddressMapping = HashedAddressMapping<Test, BlakeTwo256>;
 	type NativeAsset = Balances;
 	type Assets = Assets;
 	type RuntimeEvent = RuntimeEvent;
@@ -388,7 +215,7 @@ impl Convert<AssetId, String> for AssetToDenom {
 	}
 }
 
-struct AccountToAddr<T>(PhantomData<T>);
+pub struct AccountToAddr<T>(PhantomData<T>);
 impl<T> Convert<AccountId, String> for AccountToAddr<T>
 where
 	T: pallet_cosmos::Config,
@@ -470,4 +297,11 @@ impl pallet_cosmwasm::Config for Test {
 	type UploadWasmOrigin = frame_system::EnsureSigned<Self::AccountId>;
 
 	type ExecuteWasmOrigin = frame_system::EnsureSigned<Self::AccountId>;
+}
+
+impl pallet_cosmos_accounts::Config for Test {
+	/// The overarching event type.
+	type RuntimeEvent = RuntimeEvent;
+	/// Weight information for extrinsics in this pallet.
+	type WeightInfo = pallet_cosmos_accounts::weights::CosmosWeight<Test>;
 }

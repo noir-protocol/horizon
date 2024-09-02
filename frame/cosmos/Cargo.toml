@@ -33,7 +33,6 @@ pallet-cosmos-x-auth-signing = { workspace = true, default-features = false }
 
 [dev-dependencies]
 bech32 = { workspace = true, default-features = false }
-serde_json = { workspace = true, default-features = false }
 
 hp-account = { workspace = true, default-features = false }
 hp-crypto = { workspace = true, default-features = false }
@@ -43,11 +42,8 @@ pallet-cosmos = { workspace = true, default-features = false }
 pallet-cosmos-accounts = { workspace = true, default-features = false }
 pallet-cosmwasm = { workspace = true, default-features = false }
 pallet-timestamp = { workspace = true, default-features = false }
-pallet-cosmos-x-auth-migrations = { workspace = true, default-features = false }
 pallet-cosmos-x-bank = { workspace = true, default-features = false }
-pallet-cosmos-x-bank-types = { workspace = true, default-features = false }
 pallet-cosmos-x-wasm = { workspace = true, default-features = false }
-pallet-cosmos-x-wasm-types = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
@@ -66,7 +62,6 @@ std = [
 	"pallet-cosmos-x-auth-signing/std",
 	"pallet-cosmos-types/std",
 	"bech32/std",
-	"serde_json/std",
 	"hp-account/std",
 	"hp-crypto/std",
 	"pallet-assets/std",
@@ -74,10 +69,7 @@ std = [
 	"pallet-cosmos-accounts/std",
 	"pallet-cosmwasm/std",
 	"pallet-timestamp/std",
-	"pallet-cosmos-x-auth-migrations/std",
 	"pallet-cosmos-x-bank/std",
-	"pallet-cosmos-x-bank-types/std",
 	"pallet-cosmos-x-wasm/std",
-	"pallet-cosmos-x-wasm-types/std",
 ]
 try-runtime = []

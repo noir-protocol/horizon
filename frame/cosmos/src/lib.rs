@@ -59,7 +59,8 @@ use pallet_cosmos_types::{
 	tx::Account,
 };
 use pallet_cosmos_x_auth_signing::{
-	any_match, sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
+	any_match, sign_mode_handler::traits::SignModeHandler,
+	sign_verifiable_tx::traits::SigVerifiableTx,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;

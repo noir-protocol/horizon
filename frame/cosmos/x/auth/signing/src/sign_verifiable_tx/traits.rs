@@ -16,36 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use super::SigVerifiableTxError;
 use alloc::{string::String, vec::Vec};
-use cosmos_sdk_proto::{
-	cosmos::tx::v1beta1::{ModeInfo, Tx},
-	Any,
-};
+use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
 
-#[derive(Clone)]
-pub struct SignerData {
-	pub address: String,
-	pub chain_id: String,
-	pub account_number: u64,
-	pub sequence: u64,
-	pub pub_key: Any,
-}
+pub trait SigVerifiableTx {
+	fn get_signers(tx: &Tx) -> Result<Vec<String>, SigVerifiableTxError>;
 
-#[derive(Clone, PartialEq, Eq, Debug)]
-pub enum SignModeHandlerError {
-	EmptyTxBody,
-	EmptyFee,
-	EmptyModeInfo,
-	DecodeTxError,
-	InvalidMsg,
-	InvalidMode,
-	SerializeError,
-}
+	fn fee_payer(tx: &Tx) -> Result<String, SigVerifiableTxError>;
 
-pub trait SignModeHandler {
-	fn get_sign_bytes(
-		mode: &ModeInfo,
-		data: &SignerData,
-		tx: &Tx,
-	) -> Result<Vec<u8>, SignModeHandlerError>;
+	fn sequence(tx: &Tx) -> Result<u64, SigVerifiableTxError>;
 }

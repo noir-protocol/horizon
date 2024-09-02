@@ -30,8 +30,8 @@ use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{address::acc_address_from_bech32, handler::AnteDecorator};
 use pallet_cosmos_x_auth_signing::{
-	sign_mode_handler::{SignModeHandler, SignerData},
-	sign_verifiable_tx::SigVerifiableTx,
+	sign_mode_handler::{traits::SignModeHandler, SignerData},
+	sign_verifiable_tx::traits::SigVerifiableTx,
 };
 use ripemd::Digest;
 use sp_core::{sha2_256, Get, H160};

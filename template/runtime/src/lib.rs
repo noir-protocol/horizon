@@ -33,8 +33,6 @@ mod ante;
 mod assets;
 mod compat;
 mod msgs;
-mod sig_verifiable_tx;
-mod sign_mode_handler;
 
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::marker::PhantomData;
@@ -66,6 +64,9 @@ use pallet_cosmos::{
 	AddressMapping,
 };
 use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
+use pallet_cosmos_x_auth_signing::{
+	sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
+};
 use pallet_cosmwasm::instrument::CostRules;
 use pallet_grandpa::{
 	fg_primitives, AuthorityId as GrandpaId, AuthorityList as GrandpaAuthorityList,
@@ -363,9 +364,9 @@ impl pallet_cosmos::Config for Runtime {
 	/// The maximum number of transaction signatures allowed.
 	type TxSigLimit = TxSigLimit;
 	/// Defines the features for all signature verification handlers.
-	type SigVerifiableTx = sig_verifiable_tx::SigVerifiableTx;
+	type SigVerifiableTx = SigVerifiableTx;
 	/// Handler for managing different signature modes in transactions.
-	type SignModeHandler = sign_mode_handler::SignModeHandler;
+	type SignModeHandler = SignModeHandler;
 
 	type WeightInfo = pallet_cosmos::weights::CosmosWeight<Runtime>;
 
@@ -382,7 +383,7 @@ impl pallet_cosmos_accounts::Config for Runtime {
 	/// The overarching event type.
 	type RuntimeEvent = RuntimeEvent;
 	/// Weight information for extrinsics in this pallet.
-	type WeightInfo = pallet_cosmos_accounts::weights::HorizonWeight<Runtime>;
+	type WeightInfo = pallet_cosmos_accounts::weights::CosmosWeight<Runtime>;
 }
 
 parameter_types! {
@@ -576,11 +577,10 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		info: Self::SignedInfo,
 	) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
 		match self {
-			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) => {
+			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) =>
 				Some(call.dispatch(RuntimeOrigin::from(
 					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosmos_address().unwrap()),
-				)))
-			},
+				))),
 			_ => None,
 		}
 	}
@@ -590,7 +590,7 @@ impl Runtime {
 	fn migrate_cosm_account(tx_bytes: &[u8]) -> Result<(), TransactionValidityError> {
 		use cosmos_sdk_proto::cosmos::crypto::secp256k1;
 		use fungible::{Inspect, Mutate};
-		use pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx;
+		use pallet_cosmos_x_auth_signing::sign_verifiable_tx::traits::SigVerifiableTx;
 
 		let tx = Tx::decode(&mut &*tx_bytes)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
@@ -626,11 +626,8 @@ impl Runtime {
 						pk.copy_from_slice(&public_key.key);
 						CosmosSigner(Public(pk))
 					},
-					_ => {
-						return Err(TransactionValidityError::Invalid(
-							InvalidTransaction::BadSigner,
-						))
-					},
+					_ =>
+						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
 				};
 
 				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
