@@ -21,6 +21,8 @@
 
 extern crate alloc;
 
+#[cfg(test)]
+pub mod mock;
 pub mod weights;
 
 pub use self::pallet::*;

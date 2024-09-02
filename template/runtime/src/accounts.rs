@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizion.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -34,7 +34,7 @@ where
 {
 	fn convert(account: AccountId) -> String {
 		// TODO: Handle error
-		let data = if account.0 .0.first().unwrap() == &0 {
+		let data = if *account.0 .0.first().unwrap() == 0 {
 			&account.0 .0[1..]
 		} else {
 			&account.to_cosmos_address().unwrap().0[..]

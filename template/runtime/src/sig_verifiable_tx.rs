@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizion.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -103,6 +103,7 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 				.ok_or(SigVerifiableTxError::EmptySigners)?
 				.sequence
 		} else {
+			// TODO: Verify that the last signer is the fee payer.
 			auth_info
 				.signer_infos
 				.last()

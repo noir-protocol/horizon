@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizion.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later

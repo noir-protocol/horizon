@@ -32,7 +32,6 @@ mod accounts;
 mod ante;
 mod assets;
 mod compat;
-mod context;
 mod msgs;
 mod sig_verifiable_tx;
 mod sign_mode_handler;
@@ -69,7 +68,7 @@ use hp_crypto::EcdsaExt;
 use hp_rpc::{GasInfo, SimulateError, SimulateResponse};
 use pallet_cosmos::{
 	config_preludes::{
-		AddressPrefix, ChainId, MaxDenomLimit, MaxMemoCharacters, NativeDenom, TxSigLimit,
+		AddressPrefix, ChainId, Context, MaxDenomLimit, MaxMemoCharacters, NativeDenom, TxSigLimit,
 		WeightToGas,
 	},
 	AddressMapping,
@@ -402,7 +401,7 @@ impl pallet_cosmos::Config for Runtime {
 
 	type AddressPrefix = AddressPrefix;
 
-	type Context = context::Context;
+	type Context = Context;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
