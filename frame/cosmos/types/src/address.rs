@@ -15,15 +15,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use sp_core::H160;
+use alloc::{
+	string::{String, ToString},
+	vec::Vec,
+};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum AddressError {
 	Bech32Error(bech32::DecodeError),
+	IncorrectLength,
 }
 
-pub fn address_from_bech32(address: &str) -> Result<H160, AddressError> {
+pub fn acc_address_from_bech32(address: &str) -> Result<(String, Vec<u8>), AddressError> {
 	bech32::decode(address)
-		.map(|(_hrp, data)| H160::from_slice(&data))
+		.map(|(hrp, data)| (hrp.to_string(), data))
 		.map_err(AddressError::Bech32Error)
 }

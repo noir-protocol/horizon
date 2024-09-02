@@ -39,7 +39,7 @@ use frame_support::{
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use pallet_cosmos_types::{
-	address::address_from_bech32,
+	address::acc_address_from_bech32,
 	errors::{CosmosError, RootError},
 	events,
 	events::{CosmosEvent, CosmosEvents, EventManager as _},
@@ -96,8 +96,15 @@ where
 					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
 				})?;
 
-				address_from_bech32(&fee_payer)
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
+				let (_hrp, address_raw) = acc_address_from_bech32(&fee_payer).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
+
+				if address_raw.len() != 20 {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+				}
+
+				Ok(H160::from_slice(&address_raw))
 			};
 
 			Some(check())

@@ -28,7 +28,7 @@ use cosmos_sdk_proto::{
 };
 use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::{address::address_from_bech32, handler::AnteDecorator};
+use pallet_cosmos_types::{address::acc_address_from_bech32, handler::AnteDecorator};
 use pallet_cosmos_x_auth_signing::{
 	sign_mode_handler::{SignModeHandler, SignerData},
 	sign_verifiable_tx::SigVerifiableTx,
@@ -74,9 +74,14 @@ where
 				.get(i)
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-			let signer_addr = address_from_bech32(signer)
+			let (_hrp, signer_addr) = acc_address_from_bech32(signer)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
+			if signer_addr.len() != 20 {
+				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+			}
+
+			let signer_addr = H160::from_slice(&signer_addr);
 			let (account, _) = pallet_cosmos::Pallet::<T>::account(&signer_addr);
 			if signer_info.sequence > account.sequence {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::Future));
@@ -130,10 +135,16 @@ where
 				hasher.update(sha2_256(&public_key.key));
 				let address = H160::from_slice(&hasher.finalize());
 
-				let signer_addr = address_from_bech32(&signer_data.address).map_err(|_| {
-					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-				})?;
+				let (_hrp, signer_addr) =
+					acc_address_from_bech32(&signer_data.address).map_err(|_| {
+						TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+					})?;
 
+				if signer_addr.len() != 20 {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+				}
+
+				let signer_addr = H160::from_slice(&signer_addr);
 				if signer_addr != address {
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 				}
