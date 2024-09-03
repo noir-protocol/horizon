@@ -32,3 +32,40 @@ macro_rules! any_match {
         }
 	};
 }
+
+#[cfg(test)]
+mod tests {
+	use cosmos_sdk_proto::{
+		cosmos::bank::v1beta1::MsgSend,
+		cosmwasm::wasm::v1::{MsgExecuteContract, MsgStoreCode},
+		prost::Name,
+		traits::Message,
+		Any,
+	};
+
+	#[test]
+	fn any_match_test() {
+		let any = Any { type_url: MsgSend::type_url(), value: MsgSend::default().encode_to_vec() };
+		let result = any_match!(
+			any, {
+				MsgSend => any.type_url,
+				MsgStoreCode => any.type_url,
+			},
+			"Unsupported msg".to_string()
+		);
+		assert_eq!(result, MsgSend::type_url());
+
+		let any = Any {
+			type_url: MsgExecuteContract::type_url(),
+			value: MsgExecuteContract::default().encode_to_vec(),
+		};
+		let result = any_match!(
+			any, {
+				MsgSend => any.type_url,
+				MsgStoreCode => any.type_url,
+			},
+			"Unsupported msg".to_string()
+		);
+		assert_eq!(result, "Unsupported msg".to_string());
+	}
+}

@@ -49,7 +49,10 @@ use pallet_cosmos_x_wasm::msgs::{
 };
 use pallet_cosmwasm::instrument::CostRules;
 use sp_core::{crypto::UncheckedFrom, ecdsa, ConstU128, ConstU32, ConstU64, Hasher, H160, H256};
-use sp_runtime::traits::{BlakeTwo256, Convert, IdentityLookup};
+use sp_runtime::{
+	traits::{BlakeTwo256, Convert, IdentityLookup},
+	BuildStorage,
+};
 
 type Block = frame_system::mocking::MockBlock<Test>;
 type AssetId = u64;
@@ -304,4 +307,9 @@ impl pallet_cosmos_accounts::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	/// Weight information for extrinsics in this pallet.
 	type WeightInfo = pallet_cosmos_accounts::weights::CosmosWeight<Test>;
+}
+
+pub fn new_test_ext() -> sp_io::TestExternalities {
+	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	sp_io::TestExternalities::new(t)
 }
