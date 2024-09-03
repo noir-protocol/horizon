@@ -33,6 +33,7 @@ sp-runtime = { workspace = true, default-features = false }
 [dev-dependencies]
 array-bytes = { workspace = true }
 base64ct = { workspace = true, features = ["alloc"] }
+hex = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
@@ -47,6 +48,7 @@ std = [
 	"sp-core/std",
 	"sp-runtime-interface/std",
 	"sp-runtime/std",
+	"hex/std",
 ]
 with-codec = ["parity-scale-codec", "scale-info"]
 with-serde = ["serde"]

@@ -30,3 +30,18 @@ pub fn acc_address_from_bech32(address: &str) -> Result<(String, Vec<u8>), Addre
 		.map(|(hrp, data)| (hrp.to_string(), data))
 		.map_err(AddressError::Bech32Error)
 }
+
+#[cfg(test)]
+mod tests {
+	use super::acc_address_from_bech32;
+
+	#[test]
+	fn acc_address_from_bech32_test() {
+		let address = "cosmos1qd69nuwj95gta4akjgyxtj9ujmz4w8edmqysqw";
+		let (hrp, address_raw) = acc_address_from_bech32(address).unwrap();
+		assert_eq!(hrp, "cosmos");
+
+		let address_raw = hex::encode(address_raw);
+		assert_eq!(address_raw, "037459f1d22d10bed7b6920865c8bc96c5571f2d");
+	}
+}
