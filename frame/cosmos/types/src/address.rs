@@ -23,7 +23,6 @@ use alloc::{
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum AddressError {
 	Bech32Error(bech32::DecodeError),
-	IncorrectLength,
 }
 
 pub fn acc_address_from_bech32(address: &str) -> Result<(String, Vec<u8>), AddressError> {
