@@ -15,8 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate alloc;
-
 #[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
 #[cfg(feature = "with-codec")]
