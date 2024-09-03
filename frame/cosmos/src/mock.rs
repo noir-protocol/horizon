@@ -48,7 +48,9 @@ use pallet_cosmos_x_wasm::msgs::{
 	MsgStoreCodeHandler, MsgUpdateAdminHandler,
 };
 use pallet_cosmwasm::instrument::CostRules;
-use sp_core::{crypto::UncheckedFrom, ecdsa, ConstU128, ConstU32, ConstU64, Hasher, H160, H256};
+use sp_core::{
+	crypto::UncheckedFrom, ecdsa, ConstU128, ConstU32, ConstU64, Hasher, Pair, H160, H256,
+};
 use sp_runtime::{
 	traits::{BlakeTwo256, Convert, IdentityLookup},
 	BuildStorage,
@@ -310,6 +312,15 @@ impl pallet_cosmos_accounts::Config for Test {
 }
 
 pub fn new_test_ext() -> sp_io::TestExternalities {
-	let t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
+
+	let alice = CosmosSigner(ecdsa::Pair::from_string("//Alice", None).unwrap().public());
+	let bob = CosmosSigner(ecdsa::Pair::from_string("//Bob", None).unwrap().public());
+
+	pallet_balances::GenesisConfig::<Test> {
+		balances: vec![(alice, 1_000_000_000), (bob, 1_000_000_000)],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
 	sp_io::TestExternalities::new(t)
 }
