@@ -16,9 +16,21 @@
 // limitations under the License.
 
 use alloc::string::{String, ToString};
-use cosmos_sdk_proto::cosmos::base::v1beta1::Coin;
+use serde::{Deserialize, Serialize};
 
-pub fn amount_to_string(amount: &[Coin]) -> String {
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Coin {
+	pub amount: String,
+	pub denom: String,
+}
+
+impl From<&cosmos_sdk_proto::cosmos::base::v1beta1::Coin> for Coin {
+	fn from(coin: &cosmos_sdk_proto::cosmos::base::v1beta1::Coin) -> Self {
+		Self { amount: coin.amount.clone(), denom: coin.denom.clone() }
+	}
+}
+
+pub fn amount_to_string(amount: &[cosmos_sdk_proto::cosmos::base::v1beta1::Coin]) -> String {
 	let mut ret = "".to_string();
 	for (i, coin) in amount.iter().enumerate() {
 		ret.push_str(&coin.amount);

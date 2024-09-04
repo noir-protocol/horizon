@@ -44,7 +44,7 @@ use pallet_cosmos_x_wasm_types::tx::{
 	msg_execute_contract, msg_instantiate_contract2, msg_migrate_contract, msg_store_code,
 	msg_update_admin,
 };
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 #[derive(Clone)]
 pub struct SignerData {
@@ -86,22 +86,7 @@ impl traits::SignModeHandler for SignModeHandler {
 					}.encode_to_vec()
 				},
 				127 /* SIGN_MODE_LEGACY_AMINO_JSON */ => {
-					let fee = tx.auth_info.as_ref().and_then(|auth_info| auth_info.fee.as_ref()).ok_or(SignModeHandlerError::EmptyFee)?;
 					let body = tx.body.as_ref().ok_or(SignModeHandlerError::EmptyTxBody)?;
-
-					let mut coins = Vec::<Value>::new();
-					for amt in fee.amount.iter() {
-						let mut coin = Map::new();
-						coin.insert("amount".to_string(), Value::String(amt.amount.clone()));
-						coin.insert("denom".to_string(), Value::String(amt.denom.clone()));
-
-						coins.push(Value::Object(coin));
-					}
-
-					let mut std_fee = Map::new();
-					std_fee.insert("gas".to_string(), Value::String(fee.gas_limit.to_string()));
-					std_fee.insert("amount".to_string(), Value::Array(coins));
-
 					let mut msgs = Vec::<Value>::new();
 					for msg in body.messages.iter() {
 						let sign_msg = any_match!(
@@ -118,10 +103,12 @@ impl traits::SignModeHandler for SignModeHandler {
 						msgs.push(sign_msg);
 					}
 
+					let fee = tx.auth_info.as_ref().and_then(|auth_info| auth_info.fee.as_ref()).ok_or(SignModeHandlerError::EmptyFee)?;
+
 					let sign_doc = StdSignDoc {
 						account_number: data.account_number.to_string(),
 						chain_id: data.chain_id.clone(),
-						fee: Value::Object(std_fee),
+						fee: fee.into(),
 						memo: body.memo.clone(),
 						msgs,
 						sequence: data.sequence.to_string(),
