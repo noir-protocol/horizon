@@ -21,17 +21,15 @@ pub mod traits;
 use crate::any_match;
 use alloc::{string::String, vec::Vec};
 use cosmos_sdk_proto::{
-	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
-	cosmwasm::wasm::v1::{
-		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
-		MsgUpdateAdmin,
-	},
-	prost::Message,
+	cosmos::{bank, tx::v1beta1::Tx},
+	cosmwasm::wasm,
 };
-use pallet_cosmos_x_bank_types::msgs::msg_send;
+use pallet_cosmos_types::tx_msgs::Msg;
+use pallet_cosmos_x_bank_types::msgs::msg_send::MsgSend;
 use pallet_cosmos_x_wasm_types::tx::{
-	msg_execute_contract, msg_instantiate_contract2, msg_migrate_contract, msg_store_code,
-	msg_update_admin,
+	msg_execute_contract::MsgExecuteContract, msg_instantiate_contract2::MsgInstantiateContract2,
+	msg_migrate_contract::MsgMigrateContract, msg_store_code::MsgStoreCode,
+	msg_update_admin::MsgUpdateAdmin,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -52,12 +50,12 @@ impl traits::SigVerifiableTx for SigVerifiableTx {
 		for msg in body.messages.iter() {
 			let msg_signers = any_match!(
 				msg, {
-					MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgStoreCode => MsgStoreCode::decode(&mut &*msg.value).as_ref().map(msg_store_code::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgInstantiateContract2 => MsgInstantiateContract2::decode(&mut &*msg.value).as_ref().map(msg_instantiate_contract2::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgExecuteContract => MsgExecuteContract::decode(&mut &*msg.value).as_ref().map(msg_execute_contract::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgMigrateContract => MsgMigrateContract::decode(&mut &*msg.value).as_ref().map(msg_migrate_contract::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgUpdateAdmin => MsgUpdateAdmin::decode(&mut &*msg.value).as_ref().map(msg_update_admin::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					bank::v1beta1::MsgSend => MsgSend::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					wasm::v1::MsgStoreCode => MsgStoreCode::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					wasm::v1::MsgInstantiateContract2 => MsgInstantiateContract2::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					wasm::v1::MsgExecuteContract => MsgExecuteContract::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					wasm::v1::MsgMigrateContract => MsgMigrateContract::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					wasm::v1::MsgUpdateAdmin => MsgUpdateAdmin::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
 				},
 				Err(SigVerifiableTxError::InvalidMsg)
 			)?;

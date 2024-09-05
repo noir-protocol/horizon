@@ -12,6 +12,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 cosmos-sdk-proto = { workspace = true, default-features = false }
 serde_json = { workspace = true, default-features = false }
 
+pallet-cosmos-types = { workspace = true, default-features = false }
 pallet-cosmos-x-auth-migrations = { workspace = true, default-features = false }
 pallet-cosmos-x-bank-types = { workspace = true, default-features = false }
 pallet-cosmos-x-wasm-types = { workspace = true, default-features = false }
@@ -27,6 +28,7 @@ default = ["std"]
 std = [
 	"cosmos-sdk-proto/std",
 	"serde_json/std",
+	"pallet-cosmos-types/std",
 	"pallet-cosmos-x-auth-migrations/std",
 	"pallet-cosmos-x-bank-types/std",
 	"pallet-cosmos-x-wasm-types/std",

@@ -25,24 +25,22 @@ use alloc::{
 };
 use cosmos_sdk_proto::{
 	cosmos::{
-		bank::v1beta1::MsgSend,
+		bank,
 		tx::v1beta1::{
 			mode_info::{Single, Sum},
 			ModeInfo, SignDoc, Tx, TxRaw,
 		},
 	},
-	cosmwasm::wasm::v1::{
-		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
-		MsgUpdateAdmin,
-	},
+	cosmwasm::wasm,
 	traits::Message,
 	Any,
 };
-use pallet_cosmos_x_auth_migrations::legacytx::stdsign::StdSignDoc;
-use pallet_cosmos_x_bank_types::msgs::msg_send;
+use pallet_cosmos_x_auth_migrations::legacytx::stdsign::{LegacyMsg, StdSignDoc};
+use pallet_cosmos_x_bank_types::msgs::msg_send::MsgSend;
 use pallet_cosmos_x_wasm_types::tx::{
-	msg_execute_contract, msg_instantiate_contract2, msg_migrate_contract, msg_store_code,
-	msg_update_admin,
+	msg_execute_contract::MsgExecuteContract, msg_instantiate_contract2::MsgInstantiateContract2,
+	msg_migrate_contract::MsgMigrateContract, msg_store_code::MsgStoreCode,
+	msg_update_admin::MsgUpdateAdmin,
 };
 use serde_json::Value;
 
@@ -89,22 +87,20 @@ impl traits::SignModeHandler for SignModeHandler {
 					let body = tx.body.as_ref().ok_or(SignModeHandlerError::EmptyTxBody)?;
 					let mut msgs = Vec::<Value>::new();
 					for msg in body.messages.iter() {
-						let sign_msg = any_match!(
+						let legacy_msg = any_match!(
 							msg, {
-								MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-								MsgStoreCode => MsgStoreCode::decode(&mut &*msg.value).as_ref().map(msg_store_code::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-								MsgInstantiateContract2 => MsgInstantiateContract2::decode(&mut &*msg.value).as_ref().map(msg_instantiate_contract2::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-								MsgExecuteContract => MsgExecuteContract::decode(&mut &*msg.value).as_ref().map(msg_execute_contract::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-								MsgMigrateContract => MsgMigrateContract::decode(&mut &*msg.value).as_ref().map(msg_migrate_contract::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
-								MsgUpdateAdmin => MsgUpdateAdmin::decode(&mut &*msg.value).as_ref().map(msg_update_admin::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								bank::v1beta1::MsgSend => MsgSend::try_from(msg).map(LegacyMsg::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								wasm::v1::MsgStoreCode => MsgStoreCode::try_from(msg).map(LegacyMsg::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								wasm::v1::MsgInstantiateContract2 => MsgInstantiateContract2::try_from(msg).map(LegacyMsg::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								wasm::v1::MsgExecuteContract => MsgExecuteContract::try_from(msg).map(LegacyMsg::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								wasm::v1::MsgMigrateContract => MsgMigrateContract::try_from(msg).map(LegacyMsg::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
+								wasm::v1::MsgUpdateAdmin => MsgUpdateAdmin::try_from(msg).map(LegacyMsg::get_sign_bytes).map_err(|_| SignModeHandlerError::InvalidMsg),
 							},
 							Err(SignModeHandlerError::InvalidMsg))?;
 
-						msgs.push(sign_msg);
+						msgs.push(legacy_msg);
 					}
-
 					let fee = tx.auth_info.as_ref().and_then(|auth_info| auth_info.fee.as_ref()).ok_or(SignModeHandlerError::EmptyFee)?;
-
 					let sign_doc = StdSignDoc {
 						account_number: data.account_number.to_string(),
 						chain_id: data.chain_id.clone(),

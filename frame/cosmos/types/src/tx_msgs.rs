@@ -15,16 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use alloc::{string::String, vec::Vec};
 
-extern crate alloc;
-
-pub mod address;
-pub mod coin;
-pub mod errors;
-pub mod events;
-pub mod handler;
-pub mod msgservice;
-pub mod store;
-pub mod tx;
-pub mod tx_msgs;
+pub trait Msg {
+	fn get_signers(self) -> Vec<String>;
+}

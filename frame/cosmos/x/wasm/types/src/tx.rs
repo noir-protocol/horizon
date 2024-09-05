@@ -15,160 +15,201 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use alloc::{
-	string::{String, ToString},
-	vec,
-	vec::Vec,
-};
-use serde_json::{Map, Value};
+use alloc::{string::String, vec, vec::Vec};
+use cosmos_sdk_proto::{cosmwasm::wasm, prost::Message, Any};
+use pallet_cosmos_types::{coin::Coin, tx_msgs::Msg};
+use pallet_cosmos_x_auth_migrations::legacytx::stdsign::LegacyMsg;
+use serde::{Deserialize, Serialize};
 
 pub mod msg_store_code {
 	use super::*;
-	use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgStoreCode;
 
-	pub fn get_sign_bytes(msg: &MsgStoreCode) -> Value {
-		let mut value = Map::new();
-		value.insert("sender".to_string(), Value::String(msg.sender.clone()));
-		value.insert("wasm_byte_code".to_string(), Value::from(msg.wasm_byte_code.clone()));
-
-		if let Some(config) = msg.instantiate_permission.clone() {
-			let mut permission = Map::new();
-			permission.insert("permission".to_string(), Value::from(config.permission));
-			permission.insert(
-				"addresses".to_string(),
-				Value::Array(
-					config.addresses.into_iter().map(Value::String).collect::<Vec<Value>>(),
-				),
-			);
-
-			value.insert("instantiate_permission".to_string(), Value::Object(permission));
-		} else {
-			value.insert("instantiate_permission".to_string(), Value::Null);
-		}
-
-		Value::Object(value)
+	#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+	pub struct AccessConfig {
+		pub addresses: Vec<String>,
+		pub permission: i32,
 	}
 
-	pub fn get_signers(msg: &MsgStoreCode) -> Vec<String> {
-		vec![msg.sender.clone()]
+	impl From<wasm::v1::AccessConfig> for AccessConfig {
+		fn from(config: wasm::v1::AccessConfig) -> Self {
+			Self { addresses: config.addresses, permission: config.permission }
+		}
+	}
+
+	#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+	pub struct MsgStoreCode {
+		pub instantiate_permission: Option<AccessConfig>,
+		pub sender: String,
+		pub wasm_byte_code: Vec<u8>,
+	}
+
+	impl TryFrom<&Any> for MsgStoreCode {
+		type Error = ();
+
+		fn try_from(any: &Any) -> Result<Self, Self::Error> {
+			let msg = wasm::v1::MsgStoreCode::decode(&mut &*any.value).map_err(|_| ())?;
+			Ok(Self {
+				instantiate_permission: msg.instantiate_permission.map(Into::into),
+				sender: msg.sender,
+				wasm_byte_code: msg.wasm_byte_code,
+			})
+		}
+	}
+
+	impl LegacyMsg for MsgStoreCode {
+		const AMINO_NAME: &'static str = "wasm/MsgStoreCode";
+	}
+
+	impl Msg for MsgStoreCode {
+		fn get_signers(self) -> Vec<String> {
+			vec![self.sender.clone()]
+		}
 	}
 }
 
 pub mod msg_instantiate_contract2 {
 	use super::*;
-	use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgInstantiateContract2;
 
-	pub fn get_sign_bytes(msg: &MsgInstantiateContract2) -> Value {
-		let mut value = Map::new();
-
-		value.insert("sender".to_string(), Value::String(msg.sender.clone()));
-		value.insert("admin".to_string(), Value::String(msg.admin.clone()));
-		value.insert("code_id".to_string(), Value::from(msg.code_id));
-		value.insert("label".to_string(), Value::String(msg.label.clone()));
-		value.insert(
-			"msg".to_string(),
-			Value::Array(msg.msg.clone().into_iter().map(Value::from).collect::<Vec<Value>>()),
-		);
-		let funds = msg
-			.funds
-			.clone()
-			.into_iter()
-			.map(|coin| {
-				let mut fund = Map::new();
-				fund.insert("denom".to_string(), Value::String(coin.denom.clone()));
-				fund.insert("amount".to_string(), Value::String(coin.amount.clone()));
-				fund
-			})
-			.map(Value::Object)
-			.collect::<Vec<Value>>();
-		value.insert("funds".to_string(), Value::Array(funds));
-		value.insert(
-			"salt".to_string(),
-			Value::Array(msg.salt.clone().into_iter().map(Value::from).collect::<Vec<Value>>()),
-		);
-		value.insert("fix_msg".to_string(), Value::Bool(msg.fix_msg));
-
-		Value::Object(value)
+	#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+	pub struct MsgInstantiateContract2 {
+		pub admin: String,
+		pub code_id: u64,
+		pub fix_msg: bool,
+		pub funds: Vec<Coin>,
+		pub label: String,
+		pub msg: Vec<u8>,
+		pub salt: Vec<u8>,
+		pub sender: String,
 	}
 
-	pub fn get_signers(msg: &MsgInstantiateContract2) -> Vec<String> {
-		vec![msg.sender.clone()]
+	impl TryFrom<&Any> for MsgInstantiateContract2 {
+		type Error = ();
+
+		fn try_from(any: &Any) -> Result<Self, Self::Error> {
+			let msg =
+				wasm::v1::MsgInstantiateContract2::decode(&mut &*any.value).map_err(|_| ())?;
+			Ok(Self {
+				admin: msg.admin,
+				code_id: msg.code_id,
+				fix_msg: msg.fix_msg,
+				funds: msg.funds.iter().map(Into::into).collect(),
+				label: msg.label,
+				msg: msg.msg,
+				salt: msg.salt,
+				sender: msg.sender,
+			})
+		}
+	}
+
+	impl LegacyMsg for MsgInstantiateContract2 {
+		const AMINO_NAME: &'static str = "wasm/MsgInstantiateContract2";
+	}
+
+	impl Msg for MsgInstantiateContract2 {
+		fn get_signers(self) -> Vec<String> {
+			vec![self.sender.clone()]
+		}
 	}
 }
 
 pub mod msg_execute_contract {
 	use super::*;
-	use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgExecuteContract;
 
-	pub fn get_sign_bytes(msg: &MsgExecuteContract) -> Value {
-		let mut value = Map::new();
-
-		value.insert("sender".to_string(), Value::String(msg.sender.clone()));
-		value.insert("contract".to_string(), Value::String(msg.contract.clone()));
-		value.insert(
-			"msg".to_string(),
-			Value::Array(msg.msg.clone().into_iter().map(Value::from).collect::<Vec<Value>>()),
-		);
-		let funds = msg
-			.funds
-			.clone()
-			.into_iter()
-			.map(|coin| {
-				let mut fund = Map::new();
-				fund.insert("denom".to_string(), Value::String(coin.denom.clone()));
-				fund.insert("amount".to_string(), Value::String(coin.amount.clone()));
-				fund
-			})
-			.map(Value::Object)
-			.collect::<Vec<Value>>();
-		value.insert("funds".to_string(), Value::Array(funds));
-
-		Value::Object(value)
+	#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+	pub struct MsgExecuteContract {
+		pub contract: String,
+		pub funds: Vec<Coin>,
+		pub msg: Vec<u8>,
+		pub sender: String,
 	}
 
-	pub fn get_signers(msg: &MsgExecuteContract) -> Vec<String> {
-		vec![msg.sender.clone()]
+	impl TryFrom<&Any> for MsgExecuteContract {
+		type Error = ();
+
+		fn try_from(any: &Any) -> Result<Self, Self::Error> {
+			let msg = wasm::v1::MsgExecuteContract::decode(&mut &*any.value).map_err(|_| ())?;
+			Ok(Self {
+				contract: msg.contract,
+				funds: msg.funds.iter().map(Into::into).collect(),
+				msg: msg.msg,
+				sender: msg.sender,
+			})
+		}
+	}
+
+	impl LegacyMsg for MsgExecuteContract {
+		const AMINO_NAME: &'static str = "wasm/MsgExecuteContract";
+	}
+
+	impl Msg for MsgExecuteContract {
+		fn get_signers(self) -> Vec<String> {
+			vec![self.sender.clone()]
+		}
 	}
 }
 
 pub mod msg_migrate_contract {
 	use super::*;
-	use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgMigrateContract;
 
-	pub fn get_sign_bytes(msg: &MsgMigrateContract) -> Value {
-		let mut value = Map::new();
-
-		value.insert("sender".to_string(), Value::String(msg.sender.clone()));
-		value.insert("contract".to_string(), Value::String(msg.contract.clone()));
-		value.insert("code_id".to_string(), Value::from(msg.code_id));
-		value.insert(
-			"msg".to_string(),
-			Value::Array(msg.msg.clone().into_iter().map(Value::from).collect::<Vec<Value>>()),
-		);
-
-		Value::Object(value)
+	#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+	pub struct MsgMigrateContract {
+		pub code_id: u64,
+		pub contract: String,
+		pub msg: Vec<u8>,
+		pub sender: String,
 	}
 
-	pub fn get_signers(msg: &MsgMigrateContract) -> Vec<String> {
-		vec![msg.sender.clone()]
+	impl TryFrom<&Any> for MsgMigrateContract {
+		type Error = ();
+
+		fn try_from(any: &Any) -> Result<Self, Self::Error> {
+			let msg = wasm::v1::MsgMigrateContract::decode(&mut &*any.value).map_err(|_| ())?;
+			Ok(Self {
+				code_id: msg.code_id,
+				contract: msg.contract,
+				msg: msg.msg,
+				sender: msg.sender,
+			})
+		}
+	}
+
+	impl LegacyMsg for MsgMigrateContract {
+		const AMINO_NAME: &'static str = "wasm/MsgMigrateContract";
+	}
+
+	impl Msg for MsgMigrateContract {
+		fn get_signers(self) -> Vec<String> {
+			vec![self.sender.clone()]
+		}
 	}
 }
 
 pub mod msg_update_admin {
 	use super::*;
-	use cosmos_sdk_proto::cosmwasm::wasm::v1::MsgUpdateAdmin;
 
-	pub fn get_sign_bytes(msg: &MsgUpdateAdmin) -> Value {
-		let mut value: Map<String, Value> = Map::new();
-
-		value.insert("sender".to_string(), Value::String(msg.sender.clone()));
-		value.insert("new_admin".to_string(), Value::String(msg.new_admin.clone()));
-		value.insert("contract".to_string(), Value::String(msg.contract.clone()));
-
-		Value::Object(value)
+	#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+	pub struct MsgUpdateAdmin {
+		pub contract: String,
+		pub new_admin: String,
+		pub sender: String,
 	}
 
-	pub fn get_signers(msg: &MsgUpdateAdmin) -> Vec<String> {
-		vec![msg.sender.clone()]
+	impl TryFrom<&Any> for MsgUpdateAdmin {
+		type Error = ();
+
+		fn try_from(any: &Any) -> Result<Self, Self::Error> {
+			let msg = wasm::v1::MsgUpdateAdmin::decode(&mut &*any.value).map_err(|_| ())?;
+			Ok(Self { contract: msg.contract, new_admin: msg.new_admin, sender: msg.sender })
+		}
+	}
+
+	impl LegacyMsg for MsgUpdateAdmin {
+		const AMINO_NAME: &'static str = "wasm/MsgUpdateAdmin";
+	}
+
+	impl Msg for MsgUpdateAdmin {
+		fn get_signers(self) -> Vec<String> {
+			vec![self.sender.clone()]
+		}
 	}
 }

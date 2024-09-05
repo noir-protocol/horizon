@@ -46,3 +46,14 @@ impl From<&Fee> for StdFee {
 		Self { amount: fee.amount.iter().map(Into::into).collect(), gas: fee.gas_limit.to_string() }
 	}
 }
+
+pub trait LegacyMsg {
+	const AMINO_NAME: &'static str;
+
+	fn get_sign_bytes(self) -> Value
+	where
+		Self: Sized + Serialize,
+	{
+		serde_json::json!({"type": Self::AMINO_NAME.to_string(), "value": serde_json::to_value(self).unwrap()})
+	}
+}

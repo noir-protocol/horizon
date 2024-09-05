@@ -15,41 +15,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use alloc::{string::String, vec, vec::Vec};
+use cosmos_sdk_proto::{cosmos::bank, prost::Message, Any};
+use pallet_cosmos_types::{coin::Coin, tx_msgs::Msg};
+use pallet_cosmos_x_auth_migrations::legacytx::stdsign::LegacyMsg;
+use serde::{Deserialize, Serialize};
+
 pub mod msg_send {
-	use alloc::{
-		string::{String, ToString},
-		vec,
-		vec::Vec,
-	};
-	use cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend;
-	use serde_json::{Map, Value};
+	use super::*;
 
-	const AMINO_NAME: &str = "cosmos-sdk/MsgSend";
-
-	pub fn get_sign_bytes(msg: &MsgSend) -> Value {
-		let mut value = Map::new();
-		value.insert("from_address".to_string(), Value::String(msg.from_address.clone()));
-		value.insert("to_address".to_string(), Value::String(msg.to_address.clone()));
-
-		let mut coins = Vec::<Value>::new();
-		for amt in msg.amount.iter() {
-			let mut coin = Map::new();
-			coin.insert("amount".to_string(), Value::String(amt.amount.clone()));
-			coin.insert("denom".to_string(), Value::String(amt.denom.clone()));
-
-			coins.push(Value::Object(coin));
-		}
-
-		value.insert("amount".to_string(), Value::Array(coins));
-
-		let mut legacy_msg = Map::new();
-		legacy_msg.insert("type".to_string(), Value::String(AMINO_NAME.to_string()));
-		legacy_msg.insert("value".to_string(), Value::Object(value));
-
-		Value::Object(legacy_msg)
+	#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+	pub struct MsgSend {
+		amount: Vec<Coin>,
+		from_address: String,
+		to_address: String,
 	}
 
-	pub fn get_signers(msg: &MsgSend) -> Vec<String> {
-		vec![msg.from_address.clone()]
+	impl TryFrom<&Any> for MsgSend {
+		type Error = ();
+
+		fn try_from(any: &Any) -> Result<Self, Self::Error> {
+			let msg = bank::v1beta1::MsgSend::decode(&mut &*any.value).map_err(|_| ())?;
+			Ok(Self {
+				amount: msg.amount.iter().map(Into::into).collect(),
+				from_address: msg.from_address,
+				to_address: msg.to_address,
+			})
+		}
+	}
+
+	impl Msg for MsgSend {
+		fn get_signers(self) -> Vec<String> {
+			vec![self.from_address.clone()]
+		}
+	}
+
+	impl LegacyMsg for MsgSend {
+		const AMINO_NAME: &'static str = "cosmos-sdk/MsgSend";
 	}
 }
