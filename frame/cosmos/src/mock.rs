@@ -327,9 +327,8 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		len: usize,
 	) -> Option<TransactionValidity> {
 		match self {
-			RuntimeCall::Cosmos(call) => {
-				call.validate_self_contained(&info.to_cosmos_address().unwrap(), dispatch_info, len)
-			},
+			RuntimeCall::Cosmos(call) =>
+				call.validate_self_contained(&info.to_cosmos_address().unwrap(), dispatch_info, len),
 			_ => None,
 		}
 	}
@@ -355,11 +354,10 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		info: Self::SignedInfo,
 	) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
 		match self {
-			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) => {
+			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) =>
 				Some(call.dispatch(RuntimeOrigin::from(
 					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosmos_address().unwrap()),
-				)))
-			},
+				))),
 			_ => None,
 		}
 	}
@@ -376,6 +374,7 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
+
 	pallet_assets::GenesisConfig::<Test> {
 		assets: vec![(0, alice, true, 1_000)],
 		metadata: vec![(0, "stake".as_bytes().to_vec(), "stake".as_bytes().to_vec(), 18)],

@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::{mock::*, RawOrigin};
+use crate::mock::*;
 use base64ct::{Base64, Encoding};
 use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use frame_support::{assert_err, assert_ok};
@@ -36,6 +36,8 @@ fn pallet_cosmos_msg_send_test() {
 		let alice = CosmosSigner(ecdsa::Pair::from_string("//Alice", None).unwrap().public());
 		let alice_address = alice.to_cosmos_address().unwrap();
 
-		assert_ok!(Cosmos::transact(RuntimeOrigin::from(RawOrigin::CosmosTransaction(alice_address)), tx_bytes));
+		assert_eq!(Balances::balance(&alice), 100);
+
+		assert_ok!(Cosmos::transact(pallet_cosmos::RawOrigin::CosmosTransaction(alice_address).into(), tx_bytes));
 	});
 }
