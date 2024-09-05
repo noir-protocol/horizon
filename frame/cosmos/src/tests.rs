@@ -16,12 +16,26 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::mock::*;
+use crate::{mock::*, RawOrigin};
+use base64ct::{Base64, Encoding};
+use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
+use frame_support::{assert_err, assert_ok};
+use hp_account::CosmosSigner;
+use hp_crypto::EcdsaExt;
+use sp_core::{ecdsa, Pair};
 
 #[test]
-fn pallet_cosmos_test() {
+fn pallet_cosmos_msg_send_test() {
 	new_test_ext().execute_with(|| {
 		System::set_block_number(1);
 		System::reset_events();
+
+		let tx_raw =  "CpoBCpcBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEncKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMW41amd4NjR6dzM4c3M3Nm16dXU0dWM3amV5cXcydmZqazYwZmR6GhcKBGFjZHQSDzEwMDAwMDAwMDAwMDAwMBJsCk4KRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECChCRNB/lZkv6F4LV4Ed5aJBoyRawTLNl7DFTdVaE2aESBAoCCH8SGgoSCgRhY2R0EgoxMDQwMDAwMDAwEIDa8esEGkBgXIiPoBpecG7QpKDJPaztFogqvmxjDHF5ORfWBrOoSzf0+AAmch1CXrG4OmiKL0y8v9ITx0QzWYUc7ueXcdIm";
+		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+
+		let alice = CosmosSigner(ecdsa::Pair::from_string("//Alice", None).unwrap().public());
+		let alice_address = alice.to_cosmos_address().unwrap();
+
+		assert_ok!(Cosmos::transact(RuntimeOrigin::from(RawOrigin::CosmosTransaction(alice_address)), tx_bytes));
 	});
 }

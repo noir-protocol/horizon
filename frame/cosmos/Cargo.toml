@@ -32,7 +32,12 @@ pallet-cosmos-types = { workspace = true, default-features = false, features = [
 pallet-cosmos-x-auth-signing = { workspace = true, default-features = false }
 
 [dev-dependencies]
+base64ct = { workspace = true, default-features = false }
 bech32 = { workspace = true, default-features = false }
+
+fp-self-contained = { workspace = true, default-features = false, features = [
+	"serde",
+] }
 
 hp-account = { workspace = true, default-features = false }
 hp-crypto = { workspace = true, default-features = false }
@@ -61,7 +66,9 @@ std = [
 	"hp-io/std",
 	"pallet-cosmos-x-auth-signing/std",
 	"pallet-cosmos-types/std",
+	"base64ct/std",
 	"bech32/std",
+	"fp-self-contained/std",
 	"hp-account/std",
 	"hp-crypto/std",
 	"pallet-assets/std",

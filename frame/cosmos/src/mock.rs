@@ -31,13 +31,7 @@ use cosmos_sdk_proto::{
 use frame_support::{derive_impl, parameter_types, traits::AsEnsureOriginWithArg, PalletId};
 use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
-use pallet_cosmos::{
-	config_preludes::{
-		AddressPrefix, ChainId, Context, MaxDenomLimit, MaxMemoCharacters, MsgFilter, NativeDenom,
-		TxSigLimit, WeightToGas,
-	},
-	AddressMapping,
-};
+use pallet_cosmos::{config_preludes::ChainId, AddressMapping};
 use pallet_cosmos_types::msgservice::MsgHandler;
 use pallet_cosmos_x_auth_signing::{
 	any_match, sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
@@ -52,7 +46,7 @@ use sp_core::{
 	crypto::UncheckedFrom, ecdsa, ConstU128, ConstU32, ConstU64, Hasher, Pair, H160, H256,
 };
 use sp_runtime::{
-	traits::{BlakeTwo256, Convert, IdentityLookup},
+	traits::{BlakeTwo256, Convert, IdentityLookup, PostDispatchInfoOf},
 	BuildStorage,
 };
 
@@ -77,10 +71,12 @@ frame_support::construct_runtime!(
 
 #[derive_impl(frame_system::config_preludes::TestDefaultConfig)]
 impl frame_system::Config for Test {
-	type AccountId = CosmosSigner;
+	type AccountId = AccountId;
 	type Lookup = IdentityLookup<Self::AccountId>;
 	type Block = Block;
-	type AccountData = pallet_balances::AccountData<u128>;
+	type AccountData = pallet_balances::AccountData<Balance>;
+	type RuntimeOrigin = RuntimeOrigin;
+	type RuntimeCall = RuntimeCall;
 }
 
 #[derive_impl(pallet_balances::config_preludes::TestDefaultConfig)]
@@ -176,15 +172,6 @@ impl pallet_cosmos::Config for Test {
 	type AnteHandler = ();
 	type Balance = Balance;
 	type AssetId = AssetId;
-	type MaxMemoCharacters = MaxMemoCharacters;
-	type NativeDenom = NativeDenom;
-	type ChainId = ChainId;
-	type MsgFilter = MsgFilter;
-	type WeightToGas = WeightToGas;
-	type TxSigLimit = TxSigLimit;
-	type MaxDenomLimit = MaxDenomLimit;
-	type AddressPrefix = AddressPrefix;
-	type Context = Context;
 	type MsgServiceRouter = MsgServiceRouter<Test>;
 	type SigVerifiableTx = SigVerifiableTx;
 	type WeightInfo = pallet_cosmos::weights::CosmosWeight<Test>;
@@ -311,6 +298,73 @@ impl pallet_cosmos_accounts::Config for Test {
 	type WeightInfo = pallet_cosmos_accounts::weights::CosmosWeight<Test>;
 }
 
+impl fp_self_contained::SelfContainedCall for RuntimeCall {
+	type SignedInfo = AccountId;
+
+	fn is_self_contained(&self) -> bool {
+		match self {
+			RuntimeCall::Cosmos(call) => call.is_self_contained(),
+			_ => false,
+		}
+	}
+
+	fn check_self_contained(&self) -> Option<Result<Self::SignedInfo, TransactionValidityError>> {
+		match self {
+			RuntimeCall::Cosmos(call) => match call.check_self_contained()? {
+				Ok(address) => Some(Ok(
+					<Test as pallet_cosmos::Config>::AddressMapping::from_address_raw(address),
+				)),
+				Err(e) => Some(Err(e)),
+			},
+			_ => None,
+		}
+	}
+
+	fn validate_self_contained(
+		&self,
+		info: &Self::SignedInfo,
+		dispatch_info: &DispatchInfoOf<RuntimeCall>,
+		len: usize,
+	) -> Option<TransactionValidity> {
+		match self {
+			RuntimeCall::Cosmos(call) => {
+				call.validate_self_contained(&info.to_cosmos_address().unwrap(), dispatch_info, len)
+			},
+			_ => None,
+		}
+	}
+
+	fn pre_dispatch_self_contained(
+		&self,
+		info: &Self::SignedInfo,
+		dispatch_info: &DispatchInfoOf<RuntimeCall>,
+		len: usize,
+	) -> Option<Result<(), TransactionValidityError>> {
+		match self {
+			RuntimeCall::Cosmos(call) => call.pre_dispatch_self_contained(
+				&info.to_cosmos_address().unwrap(),
+				dispatch_info,
+				len,
+			),
+			_ => None,
+		}
+	}
+
+	fn apply_self_contained(
+		self,
+		info: Self::SignedInfo,
+	) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
+		match self {
+			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) => {
+				Some(call.dispatch(RuntimeOrigin::from(
+					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosmos_address().unwrap()),
+				)))
+			},
+			_ => None,
+		}
+	}
+}
+
 pub fn new_test_ext() -> sp_io::TestExternalities {
 	let mut t = frame_system::GenesisConfig::<Test>::default().build_storage().unwrap();
 
@@ -318,9 +372,17 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	let bob = CosmosSigner(ecdsa::Pair::from_string("//Bob", None).unwrap().public());
 
 	pallet_balances::GenesisConfig::<Test> {
-		balances: vec![(alice, 1_000_000_000), (bob, 1_000_000_000)],
+		balances: vec![(alice, 1_000_000_000_000_000_000), (bob, 1_000_000_000_000_000_000)],
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
+	pallet_assets::GenesisConfig::<Test> {
+		assets: vec![(0, alice, true, 1_000)],
+		metadata: vec![(0, "stake".as_bytes().to_vec(), "stake".as_bytes().to_vec(), 18)],
+		accounts: vec![(0, alice, 1_000_000_000_000_000_000)],
+	}
+	.assimilate_storage(&mut t)
+	.unwrap();
+
 	sp_io::TestExternalities::new(t)
 }
