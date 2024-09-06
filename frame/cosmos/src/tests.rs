@@ -89,7 +89,8 @@ fn pallet_cosmos_msg_store_code_test() {
 		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
 		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
 
-		let (_gas_wanted, _gas_used, events) = System::read_events_no_consensus()
+		let (_gas_wanted, _gas_used, events) = System::events()
+			.into_iter()
 			.find_map(|record| {
 				if let RuntimeEvent::Cosmos(pallet_cosmos::Event::Executed {
 					gas_wanted,
@@ -146,6 +147,9 @@ fn pallet_cosmos_msg_instantiate_contract2_test() {
 
 		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
 		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
+
+		System::set_block_number(2);
+		System::reset_events();
 
 		let tx_raw = fs::read_to_string("./txs/msg_instantiate_contract2").unwrap();
 		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
