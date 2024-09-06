@@ -166,3 +166,61 @@ fn pallet_cosmos_msg_instantiate_contract2_test() {
 		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
 	});
 }
+
+#[test]
+fn pallet_cosmos_msg_execute_contract_test() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		System::reset_events();
+
+		let alice = CosmosSigner(ecdsa::Pair::from_string("//Alice", None).unwrap().public());
+
+		let tx_raw = fs::read_to_string("./txs/msg_store_code").unwrap();
+		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+
+		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
+		let source = call.check_self_contained().unwrap().unwrap();
+		let extrinsic = CheckedExtrinsic::<CosmosSigner, _, (), H160> {
+			signed: fp_self_contained::CheckedSignature::SelfContained(source),
+			function: RuntimeCall::Cosmos(call.clone()),
+		};
+		let dispatch_info = extrinsic.get_dispatch_info();
+
+		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
+
+		System::set_block_number(2);
+		System::reset_events();
+
+		let tx_raw = fs::read_to_string("./txs/msg_instantiate_contract2").unwrap();
+		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+
+		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
+		let source = call.check_self_contained().unwrap().unwrap();
+		let extrinsic = CheckedExtrinsic::<CosmosSigner, _, (), H160> {
+			signed: fp_self_contained::CheckedSignature::SelfContained(source),
+			function: RuntimeCall::Cosmos(call.clone()),
+		};
+		let dispatch_info = extrinsic.get_dispatch_info();
+
+		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
+
+		System::set_block_number(3);
+		System::reset_events();
+
+		let tx_raw = fs::read_to_string("./txs/msg_execute_contract").unwrap();
+		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+
+		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
+		let source = call.check_self_contained().unwrap().unwrap();
+		let extrinsic = CheckedExtrinsic::<CosmosSigner, _, (), H160> {
+			signed: fp_self_contained::CheckedSignature::SelfContained(source),
+			function: RuntimeCall::Cosmos(call.clone()),
+		};
+		let dispatch_info = extrinsic.get_dispatch_info();
+
+		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
+	});
+}
