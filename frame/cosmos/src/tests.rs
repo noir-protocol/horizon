@@ -19,10 +19,11 @@
 use crate::mock::*;
 use base64ct::{Base64, Encoding};
 use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
-use frame_support::{assert_err, assert_ok, traits::fungible::Inspect};
+use fp_self_contained::{CheckedExtrinsic, SelfContainedCall};
+use frame_support::{assert_ok, dispatch::GetDispatchInfo, traits::fungible::Inspect};
 use hp_account::CosmosSigner;
-use hp_crypto::EcdsaExt;
-use sp_core::{ecdsa, Pair};
+use pallet_cosmos_x_bank_types::msgs::msg_send::MsgSend;
+use sp_core::{ecdsa, Pair, H160};
 
 #[test]
 fn pallet_cosmos_msg_send_test() {
@@ -30,13 +31,36 @@ fn pallet_cosmos_msg_send_test() {
 		System::set_block_number(1);
 		System::reset_events();
 
+		let alice = CosmosSigner(ecdsa::Pair::from_string("//Alice", None).unwrap().public());
+
 		let tx_raw =  "CpoBCpcBChwvY29zbW9zLmJhbmsudjFiZXRhMS5Nc2dTZW5kEncKLWNvc21vczFxZDY5bnV3ajk1Z3RhNGFramd5eHRqOXVqbXo0dzhlZG1xeXNxdxItY29zbW9zMW41amd4NjR6dzM4c3M3Nm16dXU0dWM3amV5cXcydmZqazYwZmR6GhcKBGFjZHQSDzEwMDAwMDAwMDAwMDAwMBJsCk4KRgofL2Nvc21vcy5jcnlwdG8uc2VjcDI1NmsxLlB1YktleRIjCiECChCRNB/lZkv6F4LV4Ed5aJBoyRawTLNl7DFTdVaE2aESBAoCCH8SGgoSCgRhY2R0EgoxMDQwMDAwMDAwEIDa8esEGkBgXIiPoBpecG7QpKDJPaztFogqvmxjDHF5ORfWBrOoSzf0+AAmch1CXrG4OmiKL0y8v9ITx0QzWYUc7ueXcdIm";
 		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+		let tx = Tx::decode(&mut &*tx_bytes).unwrap();
 
-		let alice = CosmosSigner(ecdsa::Pair::from_string("//Alice", None).unwrap().public());
-		let alice_address = alice.to_cosmos_address().unwrap();
+		let mut expected_balance = 1_000_000_000_000_000_000u128;
+		assert_eq!(Balances::balance(&alice), expected_balance);
 
-		assert_eq!(Balances::balance(&alice), 1_000_000_000_000_000_000);
-		// assert_ok!(Cosmos::transact(pallet_cosmos::RawOrigin::CosmosTransaction(alice_address).into(), tx_bytes));
+		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
+		let source = call.check_self_contained().unwrap().unwrap();
+		let extrinsic = CheckedExtrinsic::<CosmosSigner, _, (), H160> {
+			signed: fp_self_contained::CheckedSignature::SelfContained(source),
+			function: RuntimeCall::Cosmos(call.clone()),
+		};
+		let dispatch_info = extrinsic.get_dispatch_info();
+
+		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
+
+		let msg = tx.body.as_ref().unwrap().messages.first().unwrap();
+		let msg = MsgSend::try_from(msg).unwrap();
+
+		let amount = msg.amount.first().unwrap().amount.parse::<u128>().unwrap();
+		expected_balance -= amount;
+
+		let fee = tx.auth_info.as_ref().unwrap().fee.clone().unwrap();
+		let fee_amount = fee.amount.first().unwrap().amount.parse::<u128>().unwrap();
+		expected_balance -= fee_amount;
+
+		assert_eq!(Balances::balance(&alice), expected_balance);
 	});
 }

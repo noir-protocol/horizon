@@ -60,12 +60,12 @@ frame_support::construct_runtime!(
 	pub enum Test
 	{
 		System: frame_system,
-		Assets: pallet_assets,
-		Balances: pallet_balances,
-		Cosmos: pallet_cosmos,
-		Cosmwasm: pallet_cosmwasm,
-		CosmosAccounts: pallet_cosmos_accounts,
 		Timestamp: pallet_timestamp,
+		Balances: pallet_balances,
+		Assets: pallet_assets,
+		CosmosAccounts: pallet_cosmos_accounts,
+		Cosmwasm: pallet_cosmwasm,
+		Cosmos: pallet_cosmos,
 	}
 );
 
@@ -163,13 +163,15 @@ where
 	}
 }
 
+type AnteHandler<T> = pallet_cosmos_x_auth::AnteDecorators<T>;
+
 #[derive_impl(pallet_cosmos::config_preludes::TestDefaultConfig)]
 impl pallet_cosmos::Config for Test {
 	type AddressMapping = HashedAddressMapping<Test, BlakeTwo256>;
 	type NativeAsset = Balances;
 	type Assets = Assets;
 	type RuntimeEvent = RuntimeEvent;
-	type AnteHandler = ();
+	type AnteHandler = AnteHandler<Test>;
 	type Balance = Balance;
 	type AssetId = AssetId;
 	type MsgServiceRouter = MsgServiceRouter<Test>;
@@ -382,6 +384,10 @@ pub fn new_test_ext() -> sp_io::TestExternalities {
 	}
 	.assimilate_storage(&mut t)
 	.unwrap();
+
+	pallet_cosmos_accounts::GenesisConfig::<Test> { accounts: vec![alice, bob] }
+		.assimilate_storage(&mut t)
+		.unwrap();
 
 	sp_io::TestExternalities::new(t)
 }

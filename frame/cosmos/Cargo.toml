@@ -47,7 +47,9 @@ pallet-cosmos = { workspace = true, default-features = false }
 pallet-cosmos-accounts = { workspace = true, default-features = false }
 pallet-cosmwasm = { workspace = true, default-features = false }
 pallet-timestamp = { workspace = true, default-features = false }
+pallet-cosmos-x-auth = { workspace = true, default-features = false }
 pallet-cosmos-x-bank = { workspace = true, default-features = false }
+pallet-cosmos-x-bank-types = { workspace = true, default-features = false }
 pallet-cosmos-x-wasm = { workspace = true, default-features = false }
 
 [features]
@@ -76,7 +78,9 @@ std = [
 	"pallet-cosmos-accounts/std",
 	"pallet-cosmwasm/std",
 	"pallet-timestamp/std",
+	"pallet-cosmos-x-auth/std",
 	"pallet-cosmos-x-bank/std",
+	"pallet-cosmos-x-bank-types/std",
 	"pallet-cosmos-x-wasm/std",
 ]
 try-runtime = []

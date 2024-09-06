@@ -26,9 +26,9 @@ pub mod msg_send {
 
 	#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 	pub struct MsgSend {
-		amount: Vec<Coin>,
-		from_address: String,
-		to_address: String,
+		pub amount: Vec<Coin>,
+		pub from_address: String,
+		pub to_address: String,
 	}
 
 	impl TryFrom<&Any> for MsgSend {
