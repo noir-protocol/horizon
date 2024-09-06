@@ -22,6 +22,8 @@ export class TxService implements ApiService {
   }
 
   public async broadcastTx(txBytes: string): Promise<BroadcastTxResponse> {
+    console.debug(`txBytes: ${txBytes}`);
+
     const rawTx = `0x${Buffer.from(txBytes, 'base64').toString('hex')}`;
 
     let txHash = (await this.chainApi.rpc['cosmos']['broadcastTx'](rawTx)).toString();
@@ -33,7 +35,7 @@ export class TxService implements ApiService {
 
     while (true) {
       const txs = this.searchTx(txHash);
-      console.debug(`txs: ${JSON.stringify(txs)}`);
+      // console.debug(`txs: ${JSON.stringify(txs)}`);
 
       if (txs.length > 0) {
         const tx = txs.at(0);

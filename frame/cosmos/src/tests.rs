@@ -22,8 +22,10 @@ use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use fp_self_contained::{CheckedExtrinsic, SelfContainedCall};
 use frame_support::{assert_ok, dispatch::GetDispatchInfo, traits::fungible::Inspect};
 use hp_account::CosmosSigner;
+use pallet_cosmos_types::events::{CosmosEvent, EventAttribute};
 use pallet_cosmos_x_bank_types::msgs::msg_send::MsgSend;
 use sp_core::{ecdsa, Pair, H160};
+use std::fs;
 
 #[test]
 fn pallet_cosmos_msg_send_test() {
@@ -62,5 +64,60 @@ fn pallet_cosmos_msg_send_test() {
 		expected_balance -= fee_amount;
 
 		assert_eq!(Balances::balance(&alice), expected_balance);
+	});
+}
+
+#[test]
+fn pallet_cosmos_msg_store_code_test() {
+	new_test_ext().execute_with(|| {
+		System::set_block_number(1);
+		System::reset_events();
+
+		let alice = CosmosSigner(ecdsa::Pair::from_string("//Alice", None).unwrap().public());
+
+		let tx_raw = fs::read_to_string("./txs/msg_store_code").unwrap();
+		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+
+		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
+		let source = call.check_self_contained().unwrap().unwrap();
+		let extrinsic = CheckedExtrinsic::<CosmosSigner, _, (), H160> {
+			signed: fp_self_contained::CheckedSignature::SelfContained(source),
+			function: RuntimeCall::Cosmos(call.clone()),
+		};
+		let dispatch_info = extrinsic.get_dispatch_info();
+
+		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
+
+		let (_gas_wanted, _gas_used, events) = System::read_events_no_consensus()
+			.find_map(|record| {
+				if let RuntimeEvent::Cosmos(pallet_cosmos::Event::Executed {
+					gas_wanted,
+					gas_used,
+					events,
+				}) = record.event
+				{
+					Some((gas_wanted, gas_used, events))
+				} else {
+					None
+				}
+			})
+			.unwrap();
+
+		for CosmosEvent { r#type, attributes } in events.iter() {
+			println!("type: {}", String::from_utf8_lossy(&r#type));
+
+			for EventAttribute { key, value } in attributes.iter() {
+				let key = String::from_utf8_lossy(key).to_string();
+				let value = String::from_utf8_lossy(value).to_string();
+
+				if key == "code_id" {
+					assert_eq!(value, "1");
+				}
+				if key == "code_checksum" {
+					assert_eq!(value, "db366741dcbad5f2e4933cda49133cd2a11fdb32b08c67cb1d22379bd392448e");
+				}
+			}
+		}
 	});
 }
