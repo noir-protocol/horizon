@@ -15,6 +15,7 @@ cosmos-sdk-proto = { workspace = true, default-features = false, features = [
 ] }
 core2 = { workspace = true, default-features = false, features = ["alloc"] }
 hex = { workspace = true, default-features = false }
+log = { workspace = true, default-features = false }
 libflate = { workspace = true, default-features = false }
 
 frame-support = { workspace = true, default-features = false }
@@ -33,6 +34,7 @@ std = [
 	"cosmos-sdk-proto/std",
 	"core2/std",
 	"hex/std",
+	"log/std",
 	"libflate/std",
 	"frame-support/std",
 	"sp-runtime/std",

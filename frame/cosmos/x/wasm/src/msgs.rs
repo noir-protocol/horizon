@@ -359,6 +359,7 @@ where
 }
 
 fn convert_funds<T: pallet_cosmwasm::Config>(coins: &[Coin]) -> Result<FundsOf<T>, CosmosError> {
+	// TODO: Handle native asset
 	let mut funds = FundsOf::<T>::default();
 	for coin in coins.iter() {
 		let asset_id =
