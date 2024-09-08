@@ -76,7 +76,8 @@ fn pallet_cosmos_msg_store_code_test() {
 		let alice = CosmosSigner(ecdsa::Pair::from_string("//Alice", None).unwrap().public());
 
 		let tx_raw = fs::read_to_string("./txs/msg_store_code").unwrap();
-		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+		let tx_raw = tx_raw.trim();
+		let tx_bytes = Base64::decode_vec(tx_raw).unwrap();
 
 		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
 		let source = call.check_self_contained().unwrap().unwrap();
@@ -118,7 +119,7 @@ fn pallet_cosmos_msg_store_code_test() {
 				if key == "code_checksum" {
 					assert_eq!(
 						value,
-						"db366741dcbad5f2e4933cda49133cd2a11fdb32b08c67cb1d22379bd392448e"
+						"4d8e90dd340993033f1b9e8e3a3ee7f8673c582ca9bcdd8c8cf3c7470d6537d5"
 					);
 				}
 			}
@@ -135,7 +136,8 @@ fn pallet_cosmos_msg_instantiate_contract2_test() {
 		let alice = CosmosSigner(ecdsa::Pair::from_string("//Alice", None).unwrap().public());
 
 		let tx_raw = fs::read_to_string("./txs/msg_store_code").unwrap();
-		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+		let tx_raw = tx_raw.trim();
+		let tx_bytes = Base64::decode_vec(tx_raw).unwrap();
 
 		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
 		let source = call.check_self_contained().unwrap().unwrap();
@@ -152,7 +154,8 @@ fn pallet_cosmos_msg_instantiate_contract2_test() {
 		System::reset_events();
 
 		let tx_raw = fs::read_to_string("./txs/msg_instantiate_contract2").unwrap();
-		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+		let tx_raw = tx_raw.trim();
+		let tx_bytes = Base64::decode_vec(tx_raw).unwrap();
 
 		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
 		let source = call.check_self_contained().unwrap().unwrap();
@@ -176,7 +179,8 @@ fn pallet_cosmos_msg_execute_contract_test() {
 		let alice = CosmosSigner(ecdsa::Pair::from_string("//Alice", None).unwrap().public());
 
 		let tx_raw = fs::read_to_string("./txs/msg_store_code").unwrap();
-		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+		let tx_raw = tx_raw.trim();
+		let tx_bytes = Base64::decode_vec(tx_raw).unwrap();
 
 		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
 		let source = call.check_self_contained().unwrap().unwrap();
@@ -193,7 +197,8 @@ fn pallet_cosmos_msg_execute_contract_test() {
 		System::reset_events();
 
 		let tx_raw = fs::read_to_string("./txs/msg_instantiate_contract2").unwrap();
-		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+		let tx_raw = tx_raw.trim();
+		let tx_bytes = Base64::decode_vec(tx_raw).unwrap();
 
 		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
 		let source = call.check_self_contained().unwrap().unwrap();
@@ -210,7 +215,8 @@ fn pallet_cosmos_msg_execute_contract_test() {
 		System::reset_events();
 
 		let tx_raw = fs::read_to_string("./txs/msg_execute_contract").unwrap();
-		let tx_bytes = Base64::decode_vec(&tx_raw).unwrap();
+		let tx_raw = tx_raw.trim();
+		let tx_bytes = Base64::decode_vec(tx_raw).unwrap();
 
 		let call = pallet_cosmos::Call::<Test>::transact { tx_bytes };
 		let source = call.check_self_contained().unwrap().unwrap();
