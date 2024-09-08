@@ -88,7 +88,14 @@ export class AbciService implements ApiService {
       const { address, queryData } = QuerySmartContractStateRequest.decode(Uint8Array.from(Buffer.from(data, 'hex')));
 
       const gas = 10000000000;
-      const response = await this.chainApi.rpc['cosmwasm']['query'](address, gas, `0x${Buffer.from(queryData).toString('hex')}`);
+      const msg = {
+        wasm: {
+          smart: {
+            contract_addr: address, msg: `0x${Buffer.from(queryData).toString('hex')}`
+          }
+        }
+      };
+      const response = await this.chainApi.rpc['cosmwasm']['query'](address, gas, `0x${Buffer.from(JSON.stringify(msg), 'utf8').toString('hex')}`);
 
       return {
         code: 0,

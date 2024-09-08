@@ -12,6 +12,7 @@ use jsonrpsee::{
 };
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
+use sp_core::Bytes;
 use sp_runtime::traits::Block as BlockT;
 
 #[allow(clippy::too_many_arguments)]
@@ -24,9 +25,9 @@ mod cosmwasm_api {
 			&self,
 			contract: String,
 			gas: u64,
-			query_request: Vec<u8>,
+			query_request: Bytes,
 			at: Option<BlockHash>,
-		) -> RpcResult<Vec<u8>>;
+		) -> RpcResult<Bytes>;
 	}
 }
 
@@ -63,15 +64,16 @@ where
 		&self,
 		contract: String,
 		gas: u64,
-		query_request: Vec<u8>,
+		query_request: Bytes,
 		at: Option<<Block as BlockT>::Hash>,
-	) -> RpcResult<Vec<u8>> {
+	) -> RpcResult<Bytes> {
 		let api = self.client.runtime_api();
 		let at = at.unwrap_or_else(|| self.client.info().best_hash);
 		let runtime_api_result = api
-			.query(at, contract, gas, query_request)
+			.query(at, contract, gas, query_request.to_vec())
 			.map_err(runtime_error_into_rpc_error)?;
 		runtime_api_result
+			.map(Bytes::from)
 			.map_err(|e| runtime_error_into_rpc_error(String::from_utf8_lossy(e.as_ref())))
 	}
 }

@@ -15,6 +15,7 @@ hex = { workspace = true }
 # substrate primitives
 sp-api = { workspace = true }
 sp-blockchain = { workspace = true }
+sp-core = { workspace = true }
 sp-runtime = { workspace = true }
 
 # local

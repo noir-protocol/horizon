@@ -35,10 +35,10 @@ const rpc = {
         },
         {
           name: "query_request",
-          type: "Vec<u8>",
+          type: "Bytes",
         },
       ],
-      type: "Vec<u8>",
+      type: "Bytes",
     },
   }
 };
