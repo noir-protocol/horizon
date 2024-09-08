@@ -21,6 +21,26 @@ const rpc = {
       type: "SimulateResponse",
     },
   },
+  cosmwasm: {
+    query: {
+      description: "Query Cosmwasm state",
+      params: [
+        {
+          name: "contract",
+          type: "String",
+        },
+        {
+          name: "gas",
+          type: "u64",
+        },
+        {
+          name: "query_request",
+          type: "Vec<u8>",
+        },
+      ],
+      type: "Vec<u8>",
+    },
+  }
 };
 
 export default rpc;
