@@ -16,7 +16,6 @@
 // limitations under the License.
 
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::too_many_arguments)]
 
 extern crate alloc;
 
