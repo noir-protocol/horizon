@@ -3,7 +3,6 @@ use crate::{
 	prelude::*, runtimes::abstraction::GasOutcome, types::*, weights::WeightInfo, Config, Pallet,
 };
 use alloc::{borrow::ToOwned, collections::btree_map::BTreeMap, string::String, vec::Vec};
-use composable_traits::cosmwasm::CosmwasmSubstrateError;
 use core::marker::{Send, Sync};
 use cosmwasm_std::{CodeInfoResponse, Coin, ContractInfoResponse, Empty, Env, MessageInfo};
 use cosmwasm_vm::{
@@ -81,20 +80,6 @@ pub enum CosmwasmVMError<T: Config> {
 	Xcm(String),
 	AssetConversion,
 	Precompile,
-}
-
-impl<T: Config> From<CosmwasmSubstrateError> for CosmwasmVMError<T> {
-	fn from(value: CosmwasmSubstrateError) -> Self {
-		match value {
-			CosmwasmSubstrateError::AssetConversion => Self::AssetConversion,
-			CosmwasmSubstrateError::AccountConvert => Self::AccountConvert,
-			CosmwasmSubstrateError::DispatchError => Self::Precompile,
-			CosmwasmSubstrateError::QuerySerialize => Self::QuerySerialize,
-			CosmwasmSubstrateError::ExecuteSerialize => Self::ExecuteSerialize,
-			CosmwasmSubstrateError::Ibc => Self::Ibc("CosmwasmSubstrate".to_string()),
-			CosmwasmSubstrateError::Xcm => Self::Ibc("CosmwasmSubstrate".to_string()),
-		}
-	}
 }
 
 impl<T: Config + core::marker::Send + core::marker::Sync + 'static> HostError
