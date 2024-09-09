@@ -15,14 +15,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#[cfg(not(feature = "std"))]
+use alloc::vec::Vec;
 #[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
 #[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
 #[cfg(feature = "with-serde")]
 use serde::{Deserialize, Serialize};
-#[cfg(not(feature = "std"))]
-use sp_std::vec::Vec;
 
 pub const EVENT_TYPE_TX: &str = "tx";
 
@@ -49,4 +49,13 @@ pub struct CosmosEvent {
 pub struct EventAttribute {
 	pub key: Vec<u8>,
 	pub value: Vec<u8>,
+}
+
+pub type CosmosEvents = Vec<CosmosEvent>;
+
+pub trait EventManager {
+	fn new() -> Self;
+	fn events(&self) -> CosmosEvents;
+	fn emit_event(&mut self, event: CosmosEvent);
+	fn emit_events(&mut self, events: CosmosEvents);
 }

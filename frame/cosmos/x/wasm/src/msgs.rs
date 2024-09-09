@@ -16,7 +16,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use alloc::{string::ToString, vec, vec::Vec};
+use core::{marker::PhantomData, str::FromStr};
+use core2::io::Read;
 use cosmos_sdk_proto::{
+	cosmos::base::v1beta1::Coin,
 	cosmwasm::wasm::v1::{
 		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
 		MsgUpdateAdmin,
@@ -24,11 +28,30 @@ use cosmos_sdk_proto::{
 	prost::Message,
 	Any,
 };
-use frame_support::weights::Weight;
+use hp_crypto::EcdsaExt;
+use libflate::gzip::Decoder;
+use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
-	errors::RootError, events::CosmosEvent, msgservice::MsgHandlerErrorInfo,
+	errors::{CosmosError, RootError},
+	events::{CosmosEvent, EventAttribute, EventManager},
+	msgservice::MsgHandler,
+	store::{self, GasMeter},
 };
-use sp_std::{marker::PhantomData, vec::Vec};
+use pallet_cosmos_x_wasm_types::{
+	errors::WasmError,
+	events::{
+		ATTRIBUTE_KEY_CHECKSUM, ATTRIBUTE_KEY_CODE_ID, ATTRIBUTE_KEY_CONTRACT_ADDR,
+		ATTRIBUTE_KEY_NEW_ADMIN, EVENT_TYPE_EXECUTE, EVENT_TYPE_INSTANTIATE, EVENT_TYPE_MIGRATE,
+		EVENT_TYPE_STORE_CODE, EVENT_TYPE_UPDATE_CONTRACT_ADMIN,
+	},
+};
+use pallet_cosmwasm::{
+	runtimes::vm::InitialStorageMutability,
+	types::{
+		CodeIdentifier, ContractCodeOf, ContractLabelOf, ContractMessageOf, ContractSaltOf, FundsOf,
+	},
+};
+use sp_runtime::{traits::Convert, SaturatedConversion};
 
 pub struct MsgStoreCodeHandler<T>(PhantomData<T>);
 
@@ -38,18 +61,45 @@ impl<T> Default for MsgStoreCodeHandler<T> {
 	}
 }
 
-impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgStoreCodeHandler<T> {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
-		let total_weight = Weight::zero();
+impl<T, Context> MsgHandler<Context> for MsgStoreCodeHandler<T>
+where
+	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
+	Context: store::Context,
+{
+	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
+		// TODO: Apply actual weights
+		let MsgStoreCode { sender, wasm_byte_code, instantiate_permission: _ } =
+			MsgStoreCode::decode(&mut &*msg.value).map_err(|_| RootError::TxDecodeError)?;
 
-		let MsgStoreCode { sender: _, wasm_byte_code: _, instantiate_permission: _ } =
-			MsgStoreCode::decode(&mut &*msg.value).map_err(|_| MsgHandlerErrorInfo {
-				weight: total_weight,
-				error: RootError::TxDecodeError.into(),
-			})?;
+		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let mut decoder = Decoder::new(&wasm_byte_code[..]).map_err(|_| WasmError::CreateFailed)?;
+		let mut decoded_code = Vec::new();
+		decoder.read_to_end(&mut decoded_code).map_err(|_| WasmError::CreateFailed)?;
 
-		// TODO: Implements store wasm code with pallet_cosmwasm
-		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
+		let code: ContractCodeOf<T> =
+			decoded_code.try_into().map_err(|_| WasmError::CreateFailed)?;
+
+		let (code_hash, code_id) = pallet_cosmwasm::Pallet::<T>::do_upload(&who, code)
+			.map_err(|_| WasmError::CreateFailed)?;
+
+		// TODO: Same events emitted pallet_cosmos and pallet_cosmwasm
+		let msg_event = CosmosEvent {
+			r#type: EVENT_TYPE_STORE_CODE.into(),
+			attributes: vec![
+				EventAttribute {
+					key: ATTRIBUTE_KEY_CODE_ID.into(),
+					value: code_id.to_string().into(),
+				},
+				EventAttribute {
+					key: ATTRIBUTE_KEY_CHECKSUM.into(),
+					value: hex::encode(code_hash.0).into(),
+				},
+			],
+		};
+
+		ctx.event_manager().emit_event(msg_event);
+
+		Ok(())
 	}
 }
 
@@ -61,26 +111,72 @@ impl<T> Default for MsgInstantiateContract2Handler<T> {
 	}
 }
 
-impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgInstantiateContract2Handler<T> {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
-		let total_weight = Weight::zero();
+impl<T, Context> MsgHandler<Context> for MsgInstantiateContract2Handler<T>
+where
+	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
+	T::AccountId: EcdsaExt,
+	Context: store::Context,
+{
+	// TODO: Consume gas
+	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
+		// TODO: Ignore fix_msg
+		let MsgInstantiateContract2 { sender, admin, code_id, label, msg, funds, salt, fix_msg: _ } =
+			MsgInstantiateContract2::decode(&mut &*msg.value)
+				.map_err(|_| RootError::TxDecodeError)?;
 
-		let MsgInstantiateContract2 {
-			sender: _,
-			admin: _,
-			code_id: _,
-			label: _,
-			msg: _,
-			funds: _,
-			salt: _,
-			fix_msg: _,
-		} = MsgInstantiateContract2::decode(&mut &*msg.value).map_err(|_| MsgHandlerErrorInfo {
-			weight: total_weight,
-			error: RootError::TxDecodeError.into(),
-		})?;
+		if sender.is_empty() {
+			return Err(WasmError::Empty.into());
+		}
+		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let gas = ctx.gas_meter().gas_remaining();
+		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
+			gas,
+			InitialStorageMutability::ReadWrite,
+		);
+		let code_identifier = CodeIdentifier::CodeId(code_id);
 
-		// TODO: Implements instantiate contract with pallet_cosmwasm
-		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
+		let admin_account = if !admin.is_empty() {
+			let admin_account =
+				T::AccountToAddr::convert(admin).map_err(|_| RootError::InvalidAddress)?;
+			Some(admin_account)
+		} else {
+			None
+		};
+
+		let salt: ContractSaltOf<T> = salt.try_into().map_err(|_| RootError::TxDecodeError)?;
+		let label: ContractLabelOf<T> =
+			label.as_bytes().to_vec().try_into().map_err(|_| RootError::TxDecodeError)?;
+		let funds = convert_funds::<T>(&funds)?;
+		let message: ContractMessageOf<T> = msg.try_into().map_err(|_| RootError::TxDecodeError)?;
+
+		let contract = pallet_cosmwasm::Pallet::<T>::do_instantiate(
+			&mut shared,
+			who,
+			code_identifier,
+			salt,
+			admin_account,
+			label,
+			funds,
+			message,
+		)
+		.map_err(|_| WasmError::InstantiateFailed)?;
+		let contract = T::AccountToAddr::convert(contract);
+
+		// TODO: Same events emitted pallet_cosmos and pallet_cosmwasm
+		let msg_event = CosmosEvent {
+			r#type: EVENT_TYPE_INSTANTIATE.into(),
+			attributes: vec![
+				EventAttribute { key: ATTRIBUTE_KEY_CONTRACT_ADDR.into(), value: contract.into() },
+				EventAttribute {
+					key: ATTRIBUTE_KEY_CODE_ID.into(),
+					value: code_id.to_string().into(),
+				},
+			],
+		};
+
+		ctx.event_manager().emit_event(msg_event);
+
+		Ok(())
 	}
 }
 
@@ -92,18 +188,53 @@ impl<T> Default for MsgExecuteContractHandler<T> {
 	}
 }
 
-impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgExecuteContractHandler<T> {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
-		let total_weight = Weight::zero();
+impl<T, Context> MsgHandler<Context> for MsgExecuteContractHandler<T>
+where
+	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
+	T::AccountId: EcdsaExt,
+	Context: store::Context,
+{
+	// TODO: Consume gas
+	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
+		let MsgExecuteContract { sender, contract, msg, funds } =
+			MsgExecuteContract::decode(&mut &*msg.value).map_err(|_| RootError::TxDecodeError)?;
 
-		let MsgExecuteContract { sender: _, contract: _, msg: _, funds: _ } =
-			MsgExecuteContract::decode(&mut &*msg.value).map_err(|_| MsgHandlerErrorInfo {
-				weight: total_weight,
-				error: RootError::TxDecodeError.into(),
-			})?;
+		if sender.is_empty() {
+			return Err(WasmError::Empty.into());
+		}
+		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let gas = ctx.gas_meter().gas_remaining();
+		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
+			gas,
+			InitialStorageMutability::ReadWrite,
+		);
 
-		// TODO: Implements execute contract with pallet_cosmwasm
-		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
+		let contract_account =
+			T::AccountToAddr::convert(contract.clone()).map_err(|_| RootError::TxDecodeError)?;
+		let funds: FundsOf<T> = convert_funds::<T>(&funds)?;
+		let message: ContractMessageOf<T> = msg.try_into().map_err(|_| RootError::TxDecodeError)?;
+
+		pallet_cosmwasm::Pallet::<T>::do_execute(
+			&mut shared,
+			who,
+			contract_account,
+			funds,
+			message,
+		)
+		.map_err(|_| WasmError::ExecuteFailed)?;
+
+		// TODO: Same events emitted pallet_cosmos and pallet_cosmwasm
+		let msg_event = CosmosEvent {
+			r#type: EVENT_TYPE_EXECUTE.into(),
+			attributes: vec![EventAttribute {
+				key: ATTRIBUTE_KEY_CONTRACT_ADDR.into(),
+				value: contract.into(),
+			}],
+		};
+
+		ctx.event_manager().emit_event(msg_event);
+
+		Ok(())
 	}
 }
 
@@ -115,18 +246,54 @@ impl<T> Default for MsgMigrateContractHandler<T> {
 	}
 }
 
-impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgMigrateContractHandler<T> {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
-		let total_weight = Weight::zero();
+impl<T, Context> MsgHandler<Context> for MsgMigrateContractHandler<T>
+where
+	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
+	Context: store::Context,
+{
+	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
+		let MsgMigrateContract { sender, contract, code_id, msg } =
+			MsgMigrateContract::decode(&mut &*msg.value).map_err(|_| RootError::TxDecodeError)?;
 
-		let MsgMigrateContract { sender: _, contract: _, code_id: _, msg: _ } =
-			MsgMigrateContract::decode(&mut &*msg.value).map_err(|_| MsgHandlerErrorInfo {
-				weight: total_weight,
-				error: RootError::TxDecodeError.into(),
-			})?;
+		if sender.is_empty() {
+			return Err(WasmError::Empty.into());
+		}
+		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let gas = ctx.gas_meter().gas_remaining();
+		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
+			gas,
+			InitialStorageMutability::ReadWrite,
+		);
 
-		// TODO: Implements migrate contract with pallet_cosmwasm
-		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
+		let contract_account =
+			T::AccountToAddr::convert(contract.clone()).map_err(|_| RootError::TxDecodeError)?;
+		let new_code_identifier = CodeIdentifier::CodeId(code_id);
+		let message: ContractMessageOf<T> = msg.try_into().map_err(|_| RootError::TxDecodeError)?;
+
+		pallet_cosmwasm::Pallet::<T>::do_migrate(
+			&mut shared,
+			who,
+			contract_account,
+			new_code_identifier,
+			message,
+		)
+		.map_err(|_| WasmError::MigrationFailed)?;
+
+		// TODO: Same events emitted pallet_cosmos and pallet_cosmwasm
+		let msg_event = CosmosEvent {
+			r#type: EVENT_TYPE_MIGRATE.into(),
+			attributes: vec![
+				EventAttribute {
+					key: ATTRIBUTE_KEY_CODE_ID.into(),
+					value: code_id.to_string().into(),
+				},
+				EventAttribute { key: ATTRIBUTE_KEY_CONTRACT_ADDR.into(), value: contract.into() },
+			],
+		};
+
+		ctx.event_manager().emit_event(msg_event);
+
+		Ok(())
 	}
 }
 
@@ -138,17 +305,71 @@ impl<T> Default for MsgUpdateAdminHandler<T> {
 	}
 }
 
-impl<T> pallet_cosmos_types::msgservice::MsgHandler for MsgUpdateAdminHandler<T> {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo> {
-		let total_weight = Weight::zero();
+impl<T, Context> MsgHandler<Context> for MsgUpdateAdminHandler<T>
+where
+	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
+	Context: store::Context,
+{
+	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
+		let MsgUpdateAdmin { sender, new_admin, contract } =
+			MsgUpdateAdmin::decode(&mut &*msg.value).map_err(|_| RootError::TxDecodeError)?;
 
-		let MsgUpdateAdmin { sender: _, new_admin: _, contract: _ } =
-			MsgUpdateAdmin::decode(&mut &*msg.value).map_err(|_| MsgHandlerErrorInfo {
-				weight: total_weight,
-				error: RootError::TxDecodeError.into(),
-			})?;
+		if sender.is_empty() {
+			return Err(WasmError::Empty.into());
+		}
+		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let gas = ctx.gas_meter().gas_remaining();
+		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
+			gas,
+			InitialStorageMutability::ReadWrite,
+		);
 
-		// TODO: Implements update admin with pallet_cosmwasm
-		Err(MsgHandlerErrorInfo { weight: total_weight, error: RootError::UnknownRequest.into() })
+		let new_admin_account = if !new_admin.is_empty() {
+			let new_admin_account = T::AccountToAddr::convert(new_admin.clone())
+				.map_err(|_| RootError::InvalidAddress)?;
+			Some(new_admin_account)
+		} else {
+			None
+		};
+
+		let contract_account =
+			T::AccountToAddr::convert(contract.clone()).map_err(|_| RootError::TxDecodeError)?;
+
+		pallet_cosmwasm::Pallet::<T>::do_update_admin(
+			&mut shared,
+			who,
+			contract_account,
+			new_admin_account,
+		)
+		.map_err(|_| WasmError::MigrationFailed)?;
+
+		// TODO: Same events emitted pallet_cosmos and pallet_cosmwasm
+		let msg_event = CosmosEvent {
+			r#type: EVENT_TYPE_UPDATE_CONTRACT_ADMIN.into(),
+			attributes: vec![
+				EventAttribute { key: ATTRIBUTE_KEY_CONTRACT_ADDR.into(), value: contract.into() },
+				EventAttribute { key: ATTRIBUTE_KEY_NEW_ADMIN.into(), value: new_admin.into() },
+			],
+		};
+
+		ctx.event_manager().emit_event(msg_event);
+
+		Ok(())
 	}
+}
+
+fn convert_funds<T: pallet_cosmwasm::Config>(coins: &[Coin]) -> Result<FundsOf<T>, CosmosError> {
+	// TODO: Handle native asset
+	let mut funds = FundsOf::<T>::default();
+	for coin in coins.iter() {
+		let asset_id =
+			T::AssetToDenom::convert(coin.denom.clone()).map_err(|_| RootError::TxDecodeError)?;
+		let amount = u128::from_str(&coin.amount).map_err(|_| RootError::TxDecodeError)?;
+
+		funds
+			.try_insert(asset_id, (amount.saturated_into(), true))
+			.map_err(|_| RootError::TxDecodeError)?;
+	}
+
+	Ok(funds)
 }

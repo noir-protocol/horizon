@@ -2,8 +2,7 @@ use super::abstraction::{CanonicalCosmwasmAccount, CosmwasmAccount, Gas};
 use crate::{
 	prelude::*, runtimes::abstraction::GasOutcome, types::*, weights::WeightInfo, Config, Pallet,
 };
-use alloc::{borrow::ToOwned, string::String};
-use composable_traits::cosmwasm::CosmwasmSubstrateError;
+use alloc::{borrow::ToOwned, collections::btree_map::BTreeMap, string::String, vec::Vec};
 use core::marker::{Send, Sync};
 use cosmwasm_std::{CodeInfoResponse, Coin, ContractInfoResponse, Empty, Env, MessageInfo};
 use cosmwasm_vm::{
@@ -19,7 +18,6 @@ use cosmwasm_vm_wasmi::{
 };
 use frame_support::traits::tokens::Preservation;
 use sp_runtime::DispatchError;
-use sp_std::{collections::btree_map::BTreeMap, vec::Vec};
 use wasmi::{core::HostError, Instance, Memory};
 
 /// Different type of contract runtimes. A contract might either be dynamically loaded or statically
@@ -82,20 +80,6 @@ pub enum CosmwasmVMError<T: Config> {
 	Xcm(String),
 	AssetConversion,
 	Precompile,
-}
-
-impl<T: Config> From<CosmwasmSubstrateError> for CosmwasmVMError<T> {
-	fn from(value: CosmwasmSubstrateError) -> Self {
-		match value {
-			CosmwasmSubstrateError::AssetConversion => Self::AssetConversion,
-			CosmwasmSubstrateError::AccountConvert => Self::AccountConvert,
-			CosmwasmSubstrateError::DispatchError => Self::Precompile,
-			CosmwasmSubstrateError::QuerySerialize => Self::QuerySerialize,
-			CosmwasmSubstrateError::ExecuteSerialize => Self::ExecuteSerialize,
-			CosmwasmSubstrateError::Ibc => Self::Ibc("CosmwasmSubstrate".to_string()),
-			CosmwasmSubstrateError::Xcm => Self::Ibc("CosmwasmSubstrate".to_string()),
-		}
-	}
 }
 
 impl<T: Config + core::marker::Send + core::marker::Sync + 'static> HostError

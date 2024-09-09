@@ -19,13 +19,25 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
+extern crate alloc;
+
+#[cfg(test)]
+pub mod mock;
+#[cfg(test)]
+mod tests;
 pub mod weights;
 
 pub use self::pallet::*;
 use crate::weights::WeightInfo;
+use alloc::{string::String, vec::Vec};
+use core::marker::PhantomData;
 use cosmos_sdk_proto::{
-	cosmos::tx::v1beta1::Tx,
-	prost::{alloc::string::String, Message},
+	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
+	cosmwasm::wasm::v1::{
+		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
+		MsgUpdateAdmin,
+	},
+	prost::Message,
 	Any,
 };
 use frame_support::{
@@ -39,15 +51,18 @@ use frame_support::{
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use pallet_cosmos_types::{
-	address::address_from_bech32,
+	address::acc_address_from_bech32,
 	errors::{CosmosError, RootError},
-	events::CosmosEvent,
+	events,
+	events::{CosmosEvent, CosmosEvents, EventManager as _},
 	handler::AnteDecorator,
 	msgservice::MsgServiceRouter,
-	tx::{Account, Gas},
+	store::{self, BasicGasMeter, Context, Gas, GasMeter},
+	tx::Account,
 };
 use pallet_cosmos_x_auth_signing::{
-	sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
+	any_match, sign_mode_handler::traits::SignModeHandler,
+	sign_verifiable_tx::traits::SigVerifiableTx,
 };
 use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
@@ -59,7 +74,6 @@ use sp_runtime::{
 	},
 	RuntimeDebug,
 };
-use sp_std::{marker::PhantomData, vec::Vec};
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
 pub enum RawOrigin {
@@ -95,8 +109,15 @@ where
 					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
 				})?;
 
-				address_from_bech32(&fee_payer)
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
+				let (_hrp, address_raw) = acc_address_from_bech32(&fee_payer).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
+
+				if address_raw.len() != 20 {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+				}
+
+				Ok(H160::from_slice(&address_raw))
 			};
 
 			Some(check())
@@ -141,7 +162,8 @@ where
 }
 
 pub trait AddressMapping<A> {
-	fn into_account_id(address: H160) -> A;
+	fn from_address_raw(address: H160) -> A;
+	fn from_bech32(address: &str) -> Option<A>;
 }
 
 #[frame_support::pallet]
@@ -170,15 +192,18 @@ pub mod pallet {
 
 		pub struct MsgFilter;
 		impl Contains<Any> for MsgFilter {
-			fn contains(_msg: &Any) -> bool {
-				false
-			}
-		}
-
-		pub struct GasToWeight;
-		impl Convert<Gas, Weight> for GasToWeight {
-			fn convert(gas: Gas) -> Weight {
-				Weight::from_parts(gas, 0u64)
+			fn contains(msg: &Any) -> bool {
+				any_match!(
+					msg, {
+						MsgSend => true,
+						MsgStoreCode => true,
+						MsgInstantiateContract2 => true,
+						MsgExecuteContract => true,
+						MsgMigrateContract => true,
+						MsgUpdateAdmin => true,
+					},
+					false
+				)
 			}
 		}
 
@@ -189,12 +214,67 @@ pub mod pallet {
 			}
 		}
 
+		impl Convert<Gas, Weight> for WeightToGas {
+			fn convert(gas: Gas) -> Weight {
+				Weight::from_parts(gas, 0u64)
+			}
+		}
+
 		parameter_types! {
 			pub const MaxMemoCharacters: u64 = 256;
 			pub NativeDenom: &'static str = "acdt";
 			pub ChainId: &'static str = "dev";
 			pub const TxSigLimit: u64 = 7;
 			pub const MaxDenomLimit: u32 = 128;
+			pub const AddressPrefix: &'static str = "cosmos";
+		}
+
+		#[derive(Clone, Debug, Default)]
+		pub struct EventManager {
+			events: CosmosEvents,
+		}
+
+		impl events::EventManager for EventManager {
+			fn new() -> Self {
+				Self::default()
+			}
+
+			fn events(&self) -> CosmosEvents {
+				self.events.clone()
+			}
+
+			fn emit_event(&mut self, event: events::CosmosEvent) {
+				self.events.push(event);
+			}
+
+			fn emit_events(&mut self, events: CosmosEvents) {
+				self.events.extend(events);
+			}
+		}
+
+		pub struct Context {
+			pub gas_meter: BasicGasMeter,
+			pub event_manager: EventManager,
+		}
+
+		impl store::Context for Context {
+			type GasMeter = BasicGasMeter;
+			type EventManager = EventManager;
+
+			fn new(limit: Gas) -> Self {
+				Self {
+					gas_meter: Self::GasMeter::new(limit),
+					event_manager: Self::EventManager::new(),
+				}
+			}
+
+			fn gas_meter(&mut self) -> &mut Self::GasMeter {
+				&mut self.gas_meter
+			}
+
+			fn event_manager(&mut self) -> &mut Self::EventManager {
+				&mut self.event_manager
+			}
 		}
 
 		#[frame_support::register_default_impl(TestDefaultConfig)]
@@ -208,10 +288,11 @@ pub mod pallet {
 			type NativeDenom = NativeDenom;
 			type ChainId = ChainId;
 			type MsgFilter = MsgFilter;
-			type GasToWeight = GasToWeight;
 			type WeightToGas = WeightToGas;
 			type TxSigLimit = TxSigLimit;
 			type MaxDenomLimit = MaxDenomLimit;
+			type AddressPrefix = AddressPrefix;
+			type Context = Context;
 		}
 	}
 
@@ -260,16 +341,14 @@ pub mod pallet {
 		type NativeDenom: Get<&'static str>;
 		/// Router for handling message services.
 		#[pallet::no_default]
-		type MsgServiceRouter: MsgServiceRouter;
+		type MsgServiceRouter: MsgServiceRouter<Self::Context>;
 		/// The chain ID.
 		#[pallet::constant]
 		type ChainId: Get<&'static str>;
 		/// The message filter.
 		type MsgFilter: Contains<Any>;
-		/// Converter for converting Gas to Weight.
-		type GasToWeight: Convert<Gas, Weight>;
-		/// Converter for converting Weight to Gas.
-		type WeightToGas: Convert<Weight, Gas>;
+		/// Converts Gas to Weight and Weight to Gas.
+		type WeightToGas: Convert<Weight, Gas> + Convert<Gas, Weight>;
 		/// The maximum number of transaction signatures allowed.
 		#[pallet::constant]
 		type TxSigLimit: Get<u64>;
@@ -279,13 +358,21 @@ pub mod pallet {
 		/// Handler for managing different signature modes in transactions.
 		#[pallet::no_default]
 		type SignModeHandler: SignModeHandler;
+		/// Defines the weight information for extrinsics in the pallet.
 		#[pallet::no_default]
 		type WeightInfo: WeightInfo;
 		/// A way to convert from cosmos coin denom to asset id.
 		#[pallet::no_default]
-		type DenomToAsset: Convert<String, Result<Self::AssetId, ()>>;
+		type AssetToDenom: Convert<String, Result<Self::AssetId, ()>>
+			+ Convert<Self::AssetId, String>;
+		/// The maximum number of characters allowed for a denomination.
 		#[pallet::constant]
 		type MaxDenomLimit: Get<u32>;
+		/// The prefix used for addresses.
+		#[pallet::constant]
+		type AddressPrefix: Get<&'static str>;
+
+		type Context: store::Context;
 	}
 
 	#[pallet::genesis_config]
@@ -336,7 +423,7 @@ pub mod pallet {
 				.and_then(|tx| tx.auth_info)
 				.and_then(|auth_info| auth_info.fee)
 				.map_or(T::WeightInfo::default_weight(), |fee| {
-					T::GasToWeight::convert(fee.gas_limit)
+					T::WeightToGas::convert(fee.gas_limit)
 				})
 		 })]
 		pub fn transact(origin: OriginFor<T>, tx_bytes: Vec<u8>) -> DispatchResultWithPostInfo {
@@ -399,63 +486,73 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn apply_validated_transaction(_source: H160, tx: Tx) -> DispatchResultWithPostInfo {
-		let mut total_weight = T::WeightInfo::default_weight();
-		let mut events = Vec::<CosmosEvent>::new();
-
 		let body = tx.body.ok_or(DispatchErrorWithPostInfo {
-			post_info: PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes },
+			post_info: PostDispatchInfo {
+				actual_weight: Some(T::WeightInfo::default_weight()),
+				pays_fee: Pays::Yes,
+			},
 			error: Error::<T>::CosmosError(RootError::TxDecodeError.into()).into(),
 		})?;
+		let gas_limit = tx
+			.auth_info
+			.as_ref()
+			.and_then(|auth_info| auth_info.fee.as_ref())
+			.ok_or(DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(T::WeightInfo::default_weight()),
+					pays_fee: Pays::Yes,
+				},
+				error: Error::<T>::CosmosError(RootError::TxDecodeError.into()).into(),
+			})?
+			.gas_limit;
+
+		let mut ctx = T::Context::new(gas_limit);
+		ctx.gas_meter()
+			.consume_gas(T::WeightInfo::default_weight().ref_time(), "")
+			.map_err(|_| DispatchErrorWithPostInfo {
+				post_info: PostDispatchInfo {
+					actual_weight: Some(Weight::from_parts(ctx.gas_meter().consumed_gas(), 0)),
+					pays_fee: Pays::Yes,
+				},
+				error: Error::<T>::CosmosError(RootError::OutOfGas.into()).into(),
+			})?;
 
 		for msg in body.messages.iter() {
 			let handler = T::MsgServiceRouter::route(msg).ok_or(DispatchErrorWithPostInfo {
 				post_info: PostDispatchInfo {
-					actual_weight: Some(total_weight),
+					actual_weight: Some(Weight::from_parts(ctx.gas_meter().consumed_gas(), 0)),
 					pays_fee: Pays::Yes,
 				},
 				error: Error::<T>::CosmosError(RootError::UnknownRequest.into()).into(),
 			})?;
-			match handler.handle(msg) {
-				Ok((weight, msg_events)) => {
-					total_weight = total_weight.saturating_add(weight);
-					events.extend(msg_events);
-				},
-				Err(e) => {
-					total_weight = total_weight.saturating_add(e.weight);
 
-					return Err(DispatchErrorWithPostInfo {
-						post_info: PostDispatchInfo {
-							actual_weight: Some(total_weight),
-							pays_fee: Pays::Yes,
-						},
-						error: Error::<T>::CosmosError(e.error).into(),
-					});
-				},
-			}
-		}
-
-		let fee = tx.auth_info.as_ref().and_then(|auth_info| auth_info.fee.as_ref()).ok_or(
-			DispatchErrorWithPostInfo {
+			handler.handle(msg, &mut ctx).map_err(|e| DispatchErrorWithPostInfo {
 				post_info: PostDispatchInfo {
-					actual_weight: Some(total_weight),
+					actual_weight: Some(Weight::from_parts(ctx.gas_meter().consumed_gas(), 0)),
 					pays_fee: Pays::Yes,
 				},
-				error: Error::<T>::CosmosError(RootError::TxDecodeError.into()).into(),
-			},
-		)?;
+				error: Error::<T>::CosmosError(e).into(),
+			})?;
+		}
 
 		Self::deposit_event(Event::Executed {
-			gas_wanted: fee.gas_limit,
-			gas_used: T::WeightToGas::convert(total_weight),
-			events,
+			gas_wanted: gas_limit,
+			gas_used: T::WeightToGas::convert(Weight::from_parts(
+				ctx.gas_meter().consumed_gas(),
+				0,
+			)),
+			events: ctx.event_manager().events(),
 		});
 
-		Ok(PostDispatchInfo { actual_weight: Some(total_weight), pays_fee: Pays::Yes })
+		Ok(PostDispatchInfo {
+			actual_weight: Some(Weight::from_parts(ctx.gas_meter().consumed_gas(), 0)),
+			pays_fee: Pays::Yes,
+		})
 	}
 
 	/// Get the base account info.
 	pub fn account(address: &H160) -> (Account, Weight) {
-		let account_id = T::AddressMapping::into_account_id(*address);
+		let account_id = T::AddressMapping::from_address_raw(*address);
 
 		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
 		// keepalive `true` takes into account ExistentialDeposit as part of what's considered

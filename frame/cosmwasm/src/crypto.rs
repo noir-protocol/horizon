@@ -1,5 +1,5 @@
 use crate::{Config, Pallet, SUBSTRATE_ECDSA_SIGNATURE_LEN};
-use sp_std::{vec, vec::Vec};
+use alloc::{vec, vec::Vec};
 
 use sp_core::{ecdsa, ed25519};
 impl<T: Config> Pallet<T> {

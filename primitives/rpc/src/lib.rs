@@ -18,12 +18,14 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::too_many_arguments)]
 
+extern crate alloc;
+
+use alloc::vec::Vec;
 use pallet_cosmos_types::events::CosmosEvent;
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
 use sp_runtime::traits::Block as BlockT;
-use sp_std::vec::Vec;
 
 #[derive(Clone, Decode, Encode, Debug, TypeInfo, Serialize, Deserialize)]
 pub struct GasInfo {

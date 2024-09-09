@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizion.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: Apache-2.0
@@ -22,5 +22,5 @@ use sp_core::H160;
 /// Extension trait to sp_core::ecdsa (alternative to frame_support::crypto::ECDSAExt)
 pub trait EcdsaExt {
 	/// Convert to cosmos address, if available.
-	fn to_cosm_address(&self) -> Option<H160>;
+	fn to_cosmos_address(&self) -> Option<H160>;
 }

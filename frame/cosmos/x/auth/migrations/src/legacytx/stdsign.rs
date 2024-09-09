@@ -16,17 +16,44 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use cosmos_sdk_proto::prost::alloc::string::String;
+use alloc::{
+	string::{String, ToString},
+	vec::Vec,
+};
+use cosmos_sdk_proto::cosmos::tx::v1beta1::Fee;
+use pallet_cosmos_types::coin::Coin;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sp_std::vec::Vec;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StdSignDoc {
 	pub account_number: String,
 	pub chain_id: String,
-	pub fee: Value,
+	pub fee: StdFee,
 	pub memo: String,
 	pub msgs: Vec<Value>,
 	pub sequence: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct StdFee {
+	pub amount: Vec<Coin>,
+	pub gas: String,
+}
+
+impl From<&Fee> for StdFee {
+	fn from(fee: &Fee) -> Self {
+		Self { amount: fee.amount.iter().map(Into::into).collect(), gas: fee.gas_limit.to_string() }
+	}
+}
+
+pub trait LegacyMsg {
+	const AMINO_NAME: &'static str;
+
+	fn get_sign_bytes(self) -> Value
+	where
+		Self: Sized + Serialize,
+	{
+		serde_json::json!({"type": Self::AMINO_NAME.to_string(), "value": serde_json::to_value(self).unwrap()})
+	}
 }

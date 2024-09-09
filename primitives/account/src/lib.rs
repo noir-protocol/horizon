@@ -24,7 +24,7 @@ use scale_info::TypeInfo;
 #[cfg(feature = "std")]
 use serde::{de, Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
-use sp_core::{ecdsa, H160};
+use sp_core::{crypto::UncheckedFrom, ecdsa, H160, H256};
 use sp_io::hashing::sha2_256;
 use sp_runtime::traits::IdentifyAccount;
 
@@ -71,19 +71,37 @@ impl std::fmt::Display for CosmosSigner {
 	}
 }
 
-impl sp_std::fmt::Debug for CosmosSigner {
-	fn fmt(&self, f: &mut sp_std::fmt::Formatter<'_>) -> sp_std::fmt::Result {
+impl core::fmt::Debug for CosmosSigner {
+	fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
 		write!(f, "{:?}", self.0)
 	}
 }
 
 impl EcdsaExt for CosmosSigner {
-	fn to_cosm_address(&self) -> Option<H160> {
+	fn to_cosmos_address(&self) -> Option<H160> {
+		// If the first byte is 0, the account is either a contract or interim account.
+		if *self.0 .0.first().unwrap() == 0 {
+			return None;
+		}
 		let mut hasher = ripemd::Ripemd160::new();
 		hasher.update(sha2_256(&self.0 .0));
 		let address = H160::from_slice(&hasher.finalize());
 
 		Some(address)
+	}
+}
+
+impl UncheckedFrom<H256> for CosmosSigner {
+	fn unchecked_from(t: H256) -> Self {
+		let mut buf = [0u8; 33];
+		buf[1..33].copy_from_slice(&t.0);
+		buf.into()
+	}
+}
+
+impl AsRef<[u8]> for CosmosSigner {
+	fn as_ref(&self) -> &[u8] {
+		self.0.as_ref()
 	}
 }
 

@@ -40,6 +40,7 @@ extern crate alloc;
 use alloc::string::ToString;
 
 pub use pallet::*;
+use sp_core::H256;
 pub mod crypto;
 pub mod dispatchable_call;
 pub mod ibc;
@@ -50,7 +51,6 @@ pub mod runtimes;
 pub mod types;
 pub mod utils;
 pub mod weights;
-pub use crate::ibc::NoRelayer;
 pub mod entrypoint;
 
 const SUBSTRATE_ECDSA_SIGNATURE_LEN: usize = 65;
@@ -71,6 +71,7 @@ use alloc::{
 	collections::{btree_map::Entry, BTreeMap},
 	format,
 	string::String,
+	vec::Vec,
 };
 use composable_support::abstractions::utils::increment::Increment;
 use cosmwasm_std::{
@@ -100,7 +101,6 @@ use frame_support::{
 	ReversibleStorageHasher, StorageHasher,
 };
 use sp_runtime::traits::SaturatedConversion;
-use sp_std::vec::Vec;
 use wasmi::AsContext;
 use wasmi_validation::PlainValidator;
 
@@ -111,7 +111,7 @@ pub mod pallet {
 		instrument::CostRules, pallet_hook::PalletHook, runtimes::vm::InitialStorageMutability,
 		types::*, weights::WeightInfo,
 	};
-	use alloc::{string::String, vec};
+	use alloc::{string::String, vec::Vec};
 	use composable_support::abstractions::{
 		nonce::Nonce,
 		utils::{increment::SafeIncrement, start_at::ZeroInit},
@@ -132,7 +132,6 @@ pub mod pallet {
 	use frame_system::{ensure_signed, pallet_prelude::OriginFor};
 	use sp_core::crypto::UncheckedFrom;
 	use sp_runtime::traits::{Convert, MaybeDisplay};
-	use sp_std::vec::Vec;
 
 	#[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
@@ -194,6 +193,7 @@ pub mod pallet {
 		QueryDeserialize,
 		ExecuteSerialize,
 		Xcm,
+		IncrementFailed,
 	}
 
 	#[pallet::config]
@@ -203,7 +203,7 @@ pub mod pallet {
 		/// Max number of frames a contract is able to push, a.k.a recursive calls.
 		const MAX_FRAMES: u8;
 
-		#[allow(missing_docs)]
+		#[pallet::event]
 		type RuntimeEvent: From<Event<Self>> + IsType<<Self as frame_system::Config>::RuntimeEvent>;
 
 		type AccountIdExtended: Parameter
@@ -322,11 +322,6 @@ pub mod pallet {
 		/// Weight implementation.
 		type WeightInfo: WeightInfo;
 
-		/// account which execute relayer calls IBC exported entry points
-		type IbcRelayerAccount: Get<AccountIdOf<Self>>;
-
-		type IbcRelayer: ibc_primitives::IbcHandler<AccountIdOf<Self>>;
-
 		/// A hook into the VM execution semantic, allowing the runtime to hook into a contract
 		/// execution.
 		type PalletHook: PalletHook<Self>;
@@ -379,13 +374,12 @@ pub mod pallet {
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config> {
-		pub contracts: sp_std::vec::Vec<(T::AccountIdExtended, ContractCodeOf<T>)>,
+		pub contracts: Vec<(T::AccountIdExtended, ContractCodeOf<T>)>,
 	}
 
-	#[cfg(feature = "std")]
 	impl<T: Config> Default for GenesisConfig<T> {
 		fn default() -> Self {
-			Self { contracts: vec![] }
+			Self { contracts: Default::default() }
 		}
 	}
 
@@ -393,7 +387,7 @@ pub mod pallet {
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
 			for (who, code) in self.contracts.clone() {
-				<Pallet<T>>::do_upload(&who, code).expect("contracts in genesis are valid")
+				<Pallet<T>>::do_upload(&who, code).expect("contracts in genesis are valid");
 			}
 		}
 	}
@@ -417,7 +411,9 @@ pub mod pallet {
 		pub fn upload(origin: OriginFor<T>, code: ContractCodeOf<T>) -> DispatchResult {
 			T::UploadWasmOrigin::ensure_origin(origin.clone())?;
 			let who = ensure_signed(origin)?;
-			Self::do_upload(&who, code)
+			Self::do_upload(&who, code)?;
+
+			Ok(())
 		}
 
 		/// Instantiate a previously uploaded code resulting in a new contract being generated.
@@ -464,7 +460,8 @@ pub mod pallet {
 				label,
 				funds,
 				message,
-			);
+			)
+			.map(|_| ());
 			Self::refund_gas(outcome, initial_gas, shared.gas.remaining())
 		}
 
@@ -648,7 +645,7 @@ impl<T: Config> Pallet<T> {
 	/// This state is shared across all VMs (all contracts loaded within a single call) and is
 	/// used to optimize some operations as well as track shared state (readonly storage while
 	/// doing a `query` etc...)
-	pub(crate) fn do_create_vm_shared(
+	pub fn do_create_vm_shared(
 		gas: u64,
 		storage_mutability: InitialStorageMutability,
 	) -> CosmwasmVMShared {
@@ -934,7 +931,10 @@ impl<T: Config> Pallet<T> {
 		}
 	}
 
-	pub(crate) fn do_upload(who: &AccountIdOf<T>, code: ContractCodeOf<T>) -> DispatchResult {
+	pub fn do_upload(
+		who: &AccountIdOf<T>,
+		code: ContractCodeOf<T>,
+	) -> Result<(H256, u64), Error<T>> {
 		let code_hash = sp_io::hashing::sha2_256(&code);
 		ensure!(!CodeHashToId::<T>::contains_key(code_hash), Error::<T>::CodeAlreadyExists);
 		let deposit = code.len().saturating_mul(T::CodeStorageByteDeposit::get() as _);
@@ -943,7 +943,7 @@ impl<T: Config> Pallet<T> {
 		let module = Self::do_load_module(&code)?;
 		let ibc_capable = Self::do_check_ibc_capability(&module);
 		let instrumented_code = Self::do_instrument_code(module)?;
-		let code_id = CurrentCodeId::<T>::increment()?;
+		let code_id = CurrentCodeId::<T>::increment().map_err(|_| Error::<T>::IncrementFailed)?;
 		CodeHashToId::<T>::insert(code_hash, code_id);
 		PristineCode::<T>::insert(code_id, code);
 		InstrumentedCode::<T>::insert(code_id, instrumented_code);
@@ -958,11 +958,11 @@ impl<T: Config> Pallet<T> {
 			},
 		);
 		Self::deposit_event(Event::<T>::Uploaded { code_hash, code_id });
-		Ok(())
+		Ok((H256::from(code_hash), code_id))
 	}
 
 	#[allow(clippy::too_many_arguments)]
-	fn do_instantiate(
+	pub fn do_instantiate(
 		shared: &mut CosmwasmVMShared,
 		who: AccountIdOf<T>,
 		code_identifier: CodeIdentifier,
@@ -971,7 +971,7 @@ impl<T: Config> Pallet<T> {
 		label: ContractLabelOf<T>,
 		funds: FundsOf<T>,
 		message: ContractMessageOf<T>,
-	) -> Result<(), CosmwasmVMError<T>> {
+	) -> Result<AccountIdOf<T>, CosmwasmVMError<T>> {
 		let code_id = match code_identifier {
 			CodeIdentifier::CodeId(code_id) => code_id,
 			CodeIdentifier::CodeHash(code_hash) =>
@@ -979,10 +979,9 @@ impl<T: Config> Pallet<T> {
 		};
 		setup_instantiate_call(who, code_id, &salt, admin, label)?
 			.top_level_call(shared, funds, message)
-			.map(|_| ())
 	}
 
-	fn do_execute(
+	pub fn do_execute(
 		shared: &mut CosmwasmVMShared,
 		who: AccountIdOf<T>,
 		contract: AccountIdOf<T>,
@@ -992,7 +991,7 @@ impl<T: Config> Pallet<T> {
 		setup_execute_call(who, contract)?.top_level_call(shared, funds, message)
 	}
 
-	fn do_migrate(
+	pub fn do_migrate(
 		shared: &mut CosmwasmVMShared,
 		who: AccountIdOf<T>,
 		contract: AccountIdOf<T>,
@@ -1012,7 +1011,7 @@ impl<T: Config> Pallet<T> {
 		)
 	}
 
-	fn do_update_admin(
+	pub fn do_update_admin(
 		shared: &mut CosmwasmVMShared,
 		who: AccountIdOf<T>,
 		contract: AccountIdOf<T>,

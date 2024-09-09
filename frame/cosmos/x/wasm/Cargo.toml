@@ -9,18 +9,38 @@ repository = "https://github.com/noirhq/horizon/"
 targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
-cosmos-sdk-proto = { workspace = true, features = ["cosmwasm"] }
+bech32 = { workspace = true, default-features = false }
+cosmos-sdk-proto = { workspace = true, default-features = false, features = [
+	"cosmwasm",
+] }
+core2 = { workspace = true, default-features = false, features = ["alloc"] }
+hex = { workspace = true, default-features = false }
+log = { workspace = true, default-features = false }
+libflate = { workspace = true, default-features = false }
 
-frame-support = { workspace = true }
-sp-std = { workspace = true }
+frame-support = { workspace = true, default-features = false }
+sp-runtime = { workspace = true, default-features = false }
 
-pallet-cosmos-types = { workspace = true }
+hp-crypto = { workspace = true, default-features = false }
+pallet-cosmos = { workspace = true, default-features = false }
+pallet-cosmos-types = { workspace = true, default-features = false }
+pallet-cosmos-x-wasm-types = { workspace = true, default-features = false }
+pallet-cosmwasm = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
 std = [
+	"bech32/std",
 	"cosmos-sdk-proto/std",
+	"core2/std",
+	"hex/std",
+	"log/std",
+	"libflate/std",
 	"frame-support/std",
-	"sp-std/std",
+	"sp-runtime/std",
+	"hp-crypto/std",
+	"pallet-cosmos/std",
 	"pallet-cosmos-types/std",
+	"pallet-cosmos-x-wasm-types/std",
+	"pallet-cosmwasm/std",
 ]

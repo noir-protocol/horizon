@@ -16,6 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-//! Horizon runtime compatibility adapters.
+use super::{SignModeHandlerError, SignerData};
+use alloc::vec::Vec;
+use cosmos_sdk_proto::cosmos::tx::v1beta1::{ModeInfo, Tx};
 
-pub mod cosm;
+pub trait SignModeHandler {
+	fn get_sign_bytes(
+		mode: &ModeInfo,
+		data: &SignerData,
+		tx: &Tx,
+	) -> Result<Vec<u8>, SignModeHandlerError>;
+}

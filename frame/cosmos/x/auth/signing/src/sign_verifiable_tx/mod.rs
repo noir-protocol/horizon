@@ -1,4 +1,4 @@
-// This file is part of Hrozion.
+// This file is part of Horizon.
 
 // Copyright (C) 2023 Haderech Pte. Ltd.
 // SPDX-License-Identifier: GPL-3.0-or-later
@@ -16,25 +16,33 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+pub mod traits;
+
+use crate::any_match;
+use alloc::{string::String, vec::Vec};
 use cosmos_sdk_proto::{
-	cosmos::{bank::v1beta1::MsgSend, tx::v1beta1::Tx},
-	cosmwasm::wasm::v1::{
-		MsgExecuteContract, MsgInstantiateContract2, MsgMigrateContract, MsgStoreCode,
-		MsgUpdateAdmin,
-	},
-	prost::{alloc::string::String, Message},
+	cosmos::{bank, tx::v1beta1::Tx},
+	cosmwasm::wasm,
 };
-use pallet_cosmos_x_auth_signing::{any_match, sign_verifiable_tx::SigVerifiableTxError};
-use pallet_cosmos_x_bank_types::msgs::msg_send;
+use pallet_cosmos_types::tx_msgs::Msg;
+use pallet_cosmos_x_bank_types::msgs::msg_send::MsgSend;
 use pallet_cosmos_x_wasm_types::tx::{
-	msg_execute_contract, msg_instantiate_contract2, msg_migrate_contract, msg_store_code,
-	msg_update_admin,
+	msg_execute_contract::MsgExecuteContract, msg_instantiate_contract2::MsgInstantiateContract2,
+	msg_migrate_contract::MsgMigrateContract, msg_store_code::MsgStoreCode,
+	msg_update_admin::MsgUpdateAdmin,
 };
-use sp_std::vec::Vec;
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub enum SigVerifiableTxError {
+	EmptyAuthInfo,
+	EmptyFee,
+	EmptySigners,
+	EmptyTxBody,
+	InvalidMsg,
+}
 
 pub struct SigVerifiableTx;
-
-impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVerifiableTx {
+impl traits::SigVerifiableTx for SigVerifiableTx {
 	fn get_signers(tx: &Tx) -> Result<Vec<String>, SigVerifiableTxError> {
 		let mut signers = Vec::<String>::new();
 
@@ -42,12 +50,12 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 		for msg in body.messages.iter() {
 			let msg_signers = any_match!(
 				msg, {
-					MsgSend => MsgSend::decode(&mut &*msg.value).as_ref().map(msg_send::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgStoreCode => MsgStoreCode::decode(&mut &*msg.value).as_ref().map(msg_store_code::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgInstantiateContract2 => MsgInstantiateContract2::decode(&mut &*msg.value).as_ref().map(msg_instantiate_contract2::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgExecuteContract => MsgExecuteContract::decode(&mut &*msg.value).as_ref().map(msg_execute_contract::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgMigrateContract => MsgMigrateContract::decode(&mut &*msg.value).as_ref().map(msg_migrate_contract::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
-					MsgUpdateAdmin => MsgUpdateAdmin::decode(&mut &*msg.value).as_ref().map(msg_update_admin::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					bank::v1beta1::MsgSend => MsgSend::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					wasm::v1::MsgStoreCode => MsgStoreCode::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					wasm::v1::MsgInstantiateContract2 => MsgInstantiateContract2::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					wasm::v1::MsgExecuteContract => MsgExecuteContract::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					wasm::v1::MsgMigrateContract => MsgMigrateContract::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
+					wasm::v1::MsgUpdateAdmin => MsgUpdateAdmin::try_from(msg).map(Msg::get_signers).map_err(|_| SigVerifiableTxError::InvalidMsg),
 				},
 				Err(SigVerifiableTxError::InvalidMsg)
 			)?;
@@ -80,13 +88,13 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 			.and_then(|auth_info| auth_info.fee.as_ref())
 			.ok_or(SigVerifiableTxError::EmptyFee)?;
 
-		let fee_payer = if fee.payer.is_empty() {
+		let fee_payer = if !fee.payer.is_empty() {
+			fee.payer.clone()
+		} else {
 			Self::get_signers(tx)?
 				.first()
 				.ok_or(SigVerifiableTxError::EmptySigners)?
 				.clone()
-		} else {
-			fee.payer.clone()
 		};
 
 		Ok(fee_payer)
@@ -97,15 +105,16 @@ impl pallet_cosmos_x_auth_signing::sign_verifiable_tx::SigVerifiableTx for SigVe
 		let fee = auth_info.fee.as_ref().ok_or(SigVerifiableTxError::EmptyFee)?;
 
 		let sequence = if !fee.payer.is_empty() {
+			// TODO: Verify that the last signer is the fee payer.
 			auth_info
 				.signer_infos
-				.first()
+				.last()
 				.ok_or(SigVerifiableTxError::EmptySigners)?
 				.sequence
 		} else {
 			auth_info
 				.signer_infos
-				.last()
+				.first()
 				.ok_or(SigVerifiableTxError::EmptySigners)?
 				.sequence
 		};

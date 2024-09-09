@@ -17,10 +17,14 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
+extern crate alloc;
+
 pub mod address;
 pub mod coin;
 pub mod errors;
 pub mod events;
 pub mod handler;
 pub mod msgservice;
+pub mod store;
 pub mod tx;
+pub mod tx_msgs;

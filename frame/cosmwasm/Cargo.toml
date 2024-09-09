@@ -17,7 +17,6 @@ scale-info = { default-features = false, version = "2.1.1", features = [
 hex = { version = "0.4", default-features = false, features = ["alloc"] }
 hex-literal = { workspace = true }
 ibc = { workspace = true, default-features = false }
-ibc-primitives = { workspace = true, default-features = false, optional = false }
 libsecp256k1 = { version = "0.7.0", default-features = false }
 log = { workspace = true, default-features = false }
 parity-wasm = { version = "0.45.0", default-features = false }
@@ -40,10 +39,8 @@ sp-arithmetic = { default-features = false, workspace = true }
 sp-core = { default-features = false, workspace = true }
 sp-io = { default-features = false, workspace = true }
 sp-runtime = { default-features = false, workspace = true }
-sp-std = { default-features = false, workspace = true }
 
 composable-support = { workspace = true, default-features = false }
-composable-traits = { workspace = true, default-features = false }
 cosmwasm-std = { workspace = true, default-features = false, features = [
 	"iterator",
 	"stargate",
@@ -65,7 +62,6 @@ std = [
 	"scale-info/std",
 	"hex/std",
 	"ibc/std",
-	"ibc-primitives/std",
 	"libsecp256k1/std",
 	"log/std",
 	"parity-wasm/std",
@@ -85,9 +81,7 @@ std = [
 	"sp-core/std",
 	"sp-io/std",
 	"sp-runtime/std",
-	"sp-std/std",
 	"composable-support/std",
-	"composable-traits/std",
 	"cosmwasm-std/std",
 	"cosmwasm-vm/std",
 	"cosmwasm-vm-wasmi/std",

@@ -16,27 +16,28 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use alloc::string::ToString;
+use core::marker::PhantomData;
 use cosmos_sdk_proto::{
 	cosmos::{
 		crypto::{multisig::LegacyAminoPubKey, secp256k1},
 		tx::v1beta1::{ModeInfo, SignerInfo, Tx},
 	},
-	prost::{alloc::string::ToString, Message},
+	prost::Message,
 	Any,
 };
 use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::{address::address_from_bech32, handler::AnteDecorator};
+use pallet_cosmos_types::{address::acc_address_from_bech32, handler::AnteDecorator};
 use pallet_cosmos_x_auth_signing::{
-	sign_mode_handler::{SignModeHandler, SignerData},
-	sign_verifiable_tx::SigVerifiableTx,
+	sign_mode_handler::{traits::SignModeHandler, SignerData},
+	sign_verifiable_tx::traits::SigVerifiableTx,
 };
 use ripemd::Digest;
 use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 };
-use sp_std::marker::PhantomData;
 
 pub const SECP256K1_TYPE_URL: &str = "/cosmos.crypto.secp256k1.PubKey";
 
@@ -73,9 +74,14 @@ where
 				.get(i)
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-			let signer_addr = address_from_bech32(signer)
+			let (_hrp, signer_addr) = acc_address_from_bech32(signer)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
+			if signer_addr.len() != 20 {
+				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+			}
+
+			let signer_addr = H160::from_slice(&signer_addr);
 			let (account, _) = pallet_cosmos::Pallet::<T>::account(&signer_addr);
 			if signer_info.sequence > account.sequence {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::Future));
@@ -129,10 +135,16 @@ where
 				hasher.update(sha2_256(&public_key.key));
 				let address = H160::from_slice(&hasher.finalize());
 
-				let signer_addr = address_from_bech32(&signer_data.address).map_err(|_| {
-					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-				})?;
+				let (_hrp, signer_addr) =
+					acc_address_from_bech32(&signer_data.address).map_err(|_| {
+						TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+					})?;
 
+				if signer_addr.len() != 20 {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+				}
+
+				let signer_addr = H160::from_slice(&signer_addr);
 				if signer_addr != address {
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 				}
@@ -151,7 +163,7 @@ where
 	}
 }
 
-pub struct ValidateSigCountDecorator<T>(sp_std::marker::PhantomData<T>);
+pub struct ValidateSigCountDecorator<T>(core::marker::PhantomData<T>);
 
 impl<T> AnteDecorator for ValidateSigCountDecorator<T>
 where
@@ -190,7 +202,7 @@ impl<T> ValidateSigCountDecorator<T> {
 	}
 }
 
-pub struct IncrementSequenceDecorator<T>(sp_std::marker::PhantomData<T>);
+pub struct IncrementSequenceDecorator<T>(core::marker::PhantomData<T>);
 
 impl<T> AnteDecorator for IncrementSequenceDecorator<T>
 where
@@ -200,10 +212,8 @@ where
 		let signers = T::SigVerifiableTx::get_signers(tx)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 		for signer in signers.iter() {
-			let signer_addr = address_from_bech32(signer)
-				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-			let account = T::AddressMapping::into_account_id(signer_addr);
-
+			let account = T::AddressMapping::from_bech32(signer)
+				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 			frame_system::pallet::Pallet::<T>::inc_account_nonce(account);
 		}
 

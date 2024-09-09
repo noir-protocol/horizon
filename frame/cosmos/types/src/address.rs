@@ -15,18 +15,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bech32::FromBase32;
-use sp_core::H160;
-use sp_std::vec::Vec;
+use alloc::{
+	string::{String, ToString},
+	vec::Vec,
+};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum AddressError {
-	Bech32Error(bech32::Error),
+	Bech32Error(bech32::DecodeError),
 }
 
-pub fn address_from_bech32(address: &str) -> Result<H160, AddressError> {
-	let (_prefix, data, _variant) = bech32::decode(address).map_err(AddressError::Bech32Error)?;
-	let address = Vec::<u8>::from_base32(&data).map_err(AddressError::Bech32Error)?;
+pub fn acc_address_from_bech32(address: &str) -> Result<(String, Vec<u8>), AddressError> {
+	bech32::decode(address)
+		.map(|(hrp, data)| (hrp.to_string(), data))
+		.map_err(AddressError::Bech32Error)
+}
 
-	Ok(H160::from_slice(&address))
+#[cfg(test)]
+mod tests {
+	use super::acc_address_from_bech32;
+
+	#[test]
+	fn acc_address_from_bech32_test() {
+		let address = "cosmos1qd69nuwj95gta4akjgyxtj9ujmz4w8edmqysqw";
+		let (hrp, address_raw) = acc_address_from_bech32(address).unwrap();
+		assert_eq!(hrp, "cosmos");
+
+		let address_raw = hex::encode(address_raw);
+		assert_eq!(address_raw, "037459f1d22d10bed7b6920865c8bc96c5571f2d");
+	}
 }

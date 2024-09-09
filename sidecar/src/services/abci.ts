@@ -11,6 +11,7 @@ import { ApiPromise } from "@pinot/api";
 import { ABCIQueryResponse } from "cosmjs-types/cosmos/base/tendermint/v1beta1/query.js";
 import { SimulateRequest, SimulateResponse } from "cosmjs-types/cosmos/tx/v1beta1/service.js";
 import { TxService } from "./tx.js";
+import { QuerySmartContractStateRequest, QuerySmartContractStateResponse } from 'cosmjs-types/cosmwasm/wasm/v1/query.js'
 
 export class AbciService implements ApiService {
   chainApi: ApiPromise;
@@ -24,6 +25,8 @@ export class AbciService implements ApiService {
   }
 
   async query(path: string, data: string): Promise<ABCIQueryResponse> {
+    console.debug(`query(${path}, ${data})`);
+
     if (path === "/cosmos.auth.v1beta1.Query/Account") {
       const address = QueryAccountRequest.decode(
         Buffer.from(data, "hex")
@@ -65,6 +68,7 @@ export class AbciService implements ApiService {
       // TODO: Check simulate tx fields
       const request = SimulateRequest.decode(Buffer.from(data, 'hex'));
       const response = SimulateResponse.encode(await this.txService.simulate(Buffer.from(request.txBytes).toString('base64'))).finish();
+      // TODO: Get actual height
       const height = (await this.chainApi.query.system.number()).toString();
 
       return {
@@ -76,6 +80,34 @@ export class AbciService implements ApiService {
         value: response,
         proofOps: undefined,
         height: Long.fromString(height),
+        codespace: "",
+      };
+    } else if (path === '/cosmwasm.wasm.v1.Query/SmartContractState') {
+      const { address, queryData } = QuerySmartContractStateRequest.decode(Uint8Array.from(Buffer.from(data, 'hex')));
+      const gas = 10000000000;
+      const msg = {
+        wasm: {
+          smart: {
+            contract_addr: address, msg: Buffer.from(queryData).toString('base64')
+          }
+        }
+      };
+
+      const height = await this.chainApi.query.system.number();
+      const blockHash = await this.chainApi.rpc.chain.getBlockHash(height.toString());
+
+      const response = await this.chainApi.rpc['cosmwasm']['query'](address, gas, `0x${Buffer.from(JSON.stringify(msg), 'utf8').toString('hex')}`, blockHash.toString());
+      const stateResponse = QuerySmartContractStateResponse.fromPartial({ data: Uint8Array.from(Buffer.from(response, 'hex')) });
+
+      return {
+        code: 0,
+        log: "",
+        info: "",
+        index: Long.ZERO,
+        key: undefined,
+        value: QuerySmartContractStateResponse.encode(stateResponse).finish(),
+        proofOps: undefined,
+        height: Long.fromString(height.toString()),
         codespace: "",
       };
     } else {

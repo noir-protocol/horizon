@@ -27,7 +27,7 @@
 #![allow(non_snake_case)]
 
 use frame_support::{traits::Get, weights::{Weight, constants::RocksDbWeight}};
-use sp_std::marker::PhantomData;
+use core::marker::PhantomData;
 
 /// Weight functions needed for cosmwasm.
 pub trait WeightInfo {

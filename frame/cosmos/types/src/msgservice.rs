@@ -15,20 +15,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::{errors::CosmosError, events::CosmosEvent};
+use crate::errors::CosmosError;
+use alloc::boxed::Box;
 use cosmos_sdk_proto::Any;
-use frame_support::weights::Weight;
-use sp_std::vec::Vec;
 
-pub struct MsgHandlerErrorInfo {
-	pub weight: Weight,
-	pub error: CosmosError,
+pub trait MsgHandler<Context> {
+	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError>;
 }
 
-pub trait MsgHandler {
-	fn handle(&self, msg: &Any) -> Result<(Weight, Vec<CosmosEvent>), MsgHandlerErrorInfo>;
-}
-
-pub trait MsgServiceRouter {
-	fn route(msg: &Any) -> Option<sp_std::boxed::Box<dyn MsgHandler>>;
+pub trait MsgServiceRouter<Context> {
+	fn route(msg: &Any) -> Option<Box<dyn MsgHandler<Context>>>;
 }

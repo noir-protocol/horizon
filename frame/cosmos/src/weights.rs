@@ -16,9 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+use core::marker::PhantomData;
 use frame_support::{dispatch::DispatchClass, weights::Weight};
 use sp_core::Get;
-use sp_std::marker::PhantomData;
 
 pub trait WeightInfo {
 	fn default_weight() -> Weight;

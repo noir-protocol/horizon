@@ -32,28 +32,28 @@ use std::{marker::PhantomData, sync::Arc};
 
 #[rpc(server)]
 #[async_trait]
-pub trait CosmApi {
-	#[method(name = "cosm_broadcastTx")]
+pub trait CosmosApi {
+	#[method(name = "cosmos_broadcastTx")]
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256>;
 
-	#[method(name = "cosm_simulate")]
+	#[method(name = "cosmos_simulate")]
 	async fn simulate(&self, tx_bytes: Bytes) -> RpcResult<SimulateResponse>;
 }
 
-pub struct Cosm<B: BlockT, C, P> {
+pub struct Cosmos<B: BlockT, C, P> {
 	pool: Arc<P>,
 	client: Arc<C>,
 	_marker: PhantomData<B>,
 }
 
-impl<B: BlockT, C, P> Cosm<B, C, P> {
+impl<B: BlockT, C, P> Cosmos<B, C, P> {
 	pub fn new(pool: Arc<P>, client: Arc<C>) -> Self {
 		Self { pool, client, _marker: Default::default() }
 	}
 }
 
 #[async_trait]
-impl<Block, C, P> CosmApiServer for Cosm<Block, C, P>
+impl<Block, C, P> CosmosApiServer for Cosmos<Block, C, P>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static,

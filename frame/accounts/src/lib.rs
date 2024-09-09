@@ -19,15 +19,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::comparison_chain, clippy::large_enum_variant)]
 
+extern crate alloc;
+
 pub mod weights;
 
 use crate::weights::WeightInfo;
+use alloc::vec::Vec;
 #[cfg(feature = "std")]
 use frame_support::traits::BuildGenesisConfig;
 use hp_crypto::EcdsaExt;
 pub use pallet::*;
 use sp_core::H160;
-use sp_std::vec::Vec;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -104,7 +106,7 @@ pub mod pallet {
 		T::AccountId: EcdsaExt,
 	{
 		pub fn connect_account(who: &T::AccountId) -> Result<(), DispatchError> {
-			let address = who.to_cosm_address().ok_or(Error::<T>::DeriveFailed)?;
+			let address = who.to_cosmos_address().ok_or(Error::<T>::DeriveFailed)?;
 			Connections::<T>::insert(address, who);
 			Self::deposit_event(Event::<T>::Connected { address, who: who.clone() });
 			Ok(())
