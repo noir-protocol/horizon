@@ -37,6 +37,10 @@ const rpc = {
           name: "query_request",
           type: "Bytes",
         },
+        {
+          name: "at",
+          type: "Option<BlockHash>",
+        },
       ],
       type: "Bytes",
     },
