@@ -62,7 +62,7 @@ schemars = { version = "1.0.0-alpha.5", default-features = false, features = [
 	"derive",
 ] }
 sha2 = { version = "0.10.3", default-features = false }
-serde = { workspace = true, default-features = false, features = ["derive"] }
+serde = { version = "1.0.210", default-features = false, features = ["derive"] }
 serde-json-wasm = { version = "1.0.1", default-features = false }
 static_assertions = "1.1.0"
 thiserror = { version = "1.0.50", package = "thiserror-core", default-features = false }
