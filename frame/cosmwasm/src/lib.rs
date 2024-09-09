@@ -51,7 +51,6 @@ pub mod runtimes;
 pub mod types;
 pub mod utils;
 pub mod weights;
-pub use crate::ibc::NoRelayer;
 pub mod entrypoint;
 
 const SUBSTRATE_ECDSA_SIGNATURE_LEN: usize = 65;

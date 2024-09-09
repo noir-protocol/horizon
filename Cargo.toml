@@ -21,7 +21,6 @@ members = [
 	"template/runtime",
 	"template/node",
 	"cosmwasm/std",
-	"composable/primitives",
 	"composable/vm",
 	"composable/vm-wasmi",
 	"composable/composable-support",
@@ -141,7 +140,6 @@ wasmi = { version = "0.30.0", default-features = false }
 wasmi-validation = { version = "0.5.0", default-features = false }
 
 # Composable
-ibc-primitives = { path = "composable/primitives", default-features = false }
 pallet-cosmwasm = { path = "frame/cosmwasm", default-features = false }
 cosmwasm-vm = { path = "composable/vm", default-features = false }
 cosmwasm-vm-wasmi = { path = "composable/vm-wasmi", default-features = false }
