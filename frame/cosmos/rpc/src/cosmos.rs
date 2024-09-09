@@ -17,12 +17,12 @@
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 use crate::internal_error;
+use cosmos_runtime_api::{CosmosRuntimeApi, SimulateError, SimulateResponse};
 use futures::future::TryFutureExt;
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
 };
-use pallet_cosmos_runtime_api::{CosmosRuntimeApi, SimulateError, SimulateResponse};
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -59,7 +59,7 @@ where
 	C: Send + Sync + 'static,
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + 'static,
-	C::Api: pallet_cosmos_runtime_api::CosmosRuntimeApi<Block>,
+	C::Api: cosmos_runtime_api::CosmosRuntimeApi<Block>,
 	P: TransactionPool<Block = Block> + 'static,
 {
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256> {

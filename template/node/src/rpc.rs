@@ -36,11 +36,11 @@ where
 	C::Api: pallet_transaction_payment_rpc::TransactionPaymentRuntimeApi<Block, Balance>,
 	C::Api: BlockBuilder<Block>,
 	P: TransactionPool<Block = Block> + 'static,
-	C::Api: pallet_cosmos_runtime_api::CosmosRuntimeApi<Block>,
+	C::Api: cosmos_runtime_api::CosmosRuntimeApi<Block>,
 	C::Api: cosmwasm_runtime_api::CosmwasmRuntimeApi<Block, Vec<u8>>,
 {
+	use cosmos_rpc::{Cosmos, CosmosApiServer};
 	use cosmwasm_rpc::{Cosmwasm, CosmwasmApiServer};
-	use pallet_cosmos_rpc::{Cosmos, CosmosApiServer};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	use substrate_frame_rpc_system::{System, SystemApiServer};
 

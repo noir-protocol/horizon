@@ -1,5 +1,5 @@
 [package]
-name = "pallet-cosmos-rpc"
+name = "cosmos-rpc"
 version = "0.1.0"
 edition = "2021"
 license = "Apache-2.0"
@@ -21,4 +21,4 @@ sp-core = { workspace = true, features = ["std"] }
 sp-runtime = { workspace = true, features = ["std"] }
 
 # Horizon
-pallet-cosmos-runtime-api = { workspace = true, features = ["std"] }
+cosmos-runtime-api = { workspace = true, features = ["std"] }

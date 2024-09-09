@@ -115,8 +115,8 @@ pallet-cosmos = { path = "frame/cosmos", default-features = false }
 pallet-cosmos-accounts = { path = "frame/accounts", default-features = false }
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
-pallet-cosmos-rpc = { path = "frame/cosmos/rpc" }
-pallet-cosmos-runtime-api = { path = "frame/cosmos/runtime-api", default-features = false }
+cosmos-rpc = { path = "frame/cosmos/rpc" }
+cosmos-runtime-api = { path = "frame/cosmos/runtime-api", default-features = false }
 pallet-cosmos-types = { path = "frame/cosmos/types", default-features = false }
 pallet-cosmos-x-auth = { path = "frame/cosmos/x/auth", default-features = false }
 pallet-cosmos-x-auth-migrations = { path = "frame/cosmos/x/auth/migrations", default-features = false }

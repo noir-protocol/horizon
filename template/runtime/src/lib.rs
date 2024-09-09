@@ -36,6 +36,7 @@ mod msgs;
 
 use alloc::{boxed::Box, string::String, vec::Vec};
 use core::marker::PhantomData;
+use cosmos_runtime_api::{GasInfo, SimulateError, SimulateResponse};
 use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use frame_support::{
 	construct_runtime, derive_impl,
@@ -62,7 +63,6 @@ use pallet_cosmos::{
 	},
 	AddressMapping,
 };
-use pallet_cosmos_runtime_api::{GasInfo, SimulateError, SimulateResponse};
 use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
 use pallet_cosmos_x_auth_signing::{
 	sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
@@ -655,7 +655,7 @@ impl Runtime {
 }
 
 impl_runtime_apis! {
-	impl pallet_cosmos_runtime_api::CosmosRuntimeApi<Block> for Runtime {
+	impl cosmos_runtime_api::CosmosRuntimeApi<Block> for Runtime {
 		fn convert_tx(tx_bytes: Vec<u8>) -> <Block as BlockT>::Extrinsic {
 			UncheckedExtrinsic::new_unsigned(
 				pallet_cosmos::Call::<Runtime>::transact { tx_bytes }.into(),
