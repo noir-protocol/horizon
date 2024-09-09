@@ -59,11 +59,11 @@ sp-wasm-interface = { workspace = true, features = ["std"] }
 substrate-frame-rpc-system = { workspace = true }
 
 # Horizon
-hc-rpc = { workspace = true }
 hp-account = { workspace = true, features = ["std"] }
 hp-io = { workspace = true, features = ["std"] }
-hp-rpc = { workspace = true, features = ["std"] }
 horizon-template-runtime = { workspace = true, features = ["std"] }
+pallet-cosmos-rpc = { workspace = true }
+pallet-cosmos-runtime-api = { workspace = true, features = ["std"] }
 pallet-cosmos-types = { workspace = true, features = ["std", "with-codec"] }
 pallet-cosmos-x-bank-types = { workspace = true, features = [
 	"std",

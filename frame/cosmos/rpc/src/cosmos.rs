@@ -18,11 +18,11 @@
 
 use crate::internal_error;
 use futures::future::TryFutureExt;
-use hp_rpc::{CosmosTxRuntimeApi, SimulateError, SimulateResponse};
 use jsonrpsee::{
 	core::{async_trait, RpcResult},
 	proc_macros::rpc,
 };
+use pallet_cosmos_runtime_api::{CosmosRuntimeApi, SimulateError, SimulateResponse};
 use sc_transaction_pool_api::TransactionPool;
 use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
@@ -59,7 +59,7 @@ where
 	C: Send + Sync + 'static,
 	C: ProvideRuntimeApi<Block>,
 	C: HeaderBackend<Block> + 'static,
-	C::Api: hp_rpc::CosmosTxRuntimeApi<Block>,
+	C::Api: pallet_cosmos_runtime_api::CosmosRuntimeApi<Block>,
 	P: TransactionPool<Block = Block> + 'static,
 {
 	async fn broadcast_tx(&self, tx_bytes: Bytes) -> RpcResult<H256> {

@@ -56,9 +56,9 @@ fp-self-contained = { workspace = true, default-features = false, features = [
 hp-account = { workspace = true, default-features = false }
 hp-crypto = { workspace = true, default-features = false }
 hp-io = { workspace = true, default-features = false }
-hp-rpc = { workspace = true, default-features = false }
 pallet-cosmos = { workspace = true, default-features = false }
 pallet-cosmos-accounts = { workspace = true, default-features = false }
+pallet-cosmos-runtime-api = { workspace = true, default-features = false }
 pallet-cosmos-types = { workspace = true, default-features = false, features = [
 	"with-codec",
 ] }
@@ -113,9 +113,9 @@ std = [
 	"hp-account/std",
 	"hp-crypto/std",
 	"hp-io/std",
-	"hp-rpc/std",
 	"pallet-cosmos/std",
 	"pallet-cosmos-accounts/std",
+	"pallet-cosmos-runtime-api/std",
 	"pallet-cosmos-types/std",
 	"pallet-cosmos-x-auth/std",
 	"pallet-cosmos-x-auth-migrations/std",

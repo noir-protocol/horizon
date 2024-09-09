@@ -1,7 +1,6 @@
 [workspace]
 resolver = "2"
 members = [
-	"client/rpc",
 	"frame/accounts",
 	"frame/cosmos",
 	"frame/cosmwasm",
@@ -17,7 +16,6 @@ members = [
 	"frame/cosmos/x/wasm/types",
 	"primitives/account",
 	"primitives/io",
-	"primitives/rpc",
 	"template/runtime",
 	"template/node",
 	"cosmwasm/std",
@@ -110,15 +108,15 @@ substrate-frame-rpc-system = { git = "https://github.com/paritytech/polkadot-sdk
 fp-self-contained = { git = "https://github.com/polkadot-evm/frontier", branch = "polkadot-v1.9.0", default-features = false }
 
 # Horizon
-hc-rpc = { path = "client/rpc" }
 hp-account = { path = "primitives/account", default-features = false }
 hp-crypto = { path = "primitives/crypto", default-features = false }
 hp-io = { path = "primitives/io", default-features = false }
-hp-rpc = { path = "primitives/rpc", default-features = false }
 pallet-cosmos = { path = "frame/cosmos", default-features = false }
 pallet-cosmos-accounts = { path = "frame/accounts", default-features = false }
 horizon-template-runtime = { path = "template/runtime", default-features = false }
 
+pallet-cosmos-rpc = { path = "frame/cosmos/rpc" }
+pallet-cosmos-runtime-api = { path = "frame/cosmos/runtime-api", default-features = false }
 pallet-cosmos-types = { path = "frame/cosmos/types", default-features = false }
 pallet-cosmos-x-auth = { path = "frame/cosmos/x/auth", default-features = false }
 pallet-cosmos-x-auth-migrations = { path = "frame/cosmos/x/auth/migrations", default-features = false }

@@ -46,7 +46,7 @@ pub enum SimulateError {
 }
 
 sp_api::decl_runtime_apis! {
-	pub trait CosmosTxRuntimeApi {
+	pub trait CosmosRuntimeApi {
 		fn convert_tx(tx_bytes: Vec<u8>) -> <Block as BlockT>::Extrinsic;
 
 		fn simulate(tx_bytes: Vec<u8>) -> Result<SimulateResponse, SimulateError>;

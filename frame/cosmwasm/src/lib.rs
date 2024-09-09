@@ -43,6 +43,7 @@ pub use pallet::*;
 use sp_core::H256;
 pub mod crypto;
 pub mod dispatchable_call;
+pub mod entrypoint;
 pub mod ibc;
 pub mod instrument;
 pub mod pallet_hook;
@@ -51,7 +52,6 @@ pub mod runtimes;
 pub mod types;
 pub mod utils;
 pub mod weights;
-pub mod entrypoint;
 
 const SUBSTRATE_ECDSA_SIGNATURE_LEN: usize = 65;
 use crate::{
