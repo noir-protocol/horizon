@@ -60,8 +60,8 @@ pub enum SignModeHandlerError {
 	EmptyModeInfo,
 	DecodeTxError,
 	InvalidMsg,
-	InvalidMode,
 	SerializeError,
+	UnsupportedMode,
 }
 
 pub struct SignModeHandler;
@@ -109,11 +109,12 @@ impl traits::SignModeHandler for SignModeHandler {
 						msgs,
 						sequence: data.sequence.to_string(),
 					};
-					serde_json::to_value(sign_doc).map_err(|_| SignModeHandlerError::SerializeError)?.to_string().as_bytes().to_vec()
+
+					serde_json::to_vec(&sign_doc).map_err(|_| SignModeHandlerError::SerializeError)?
 				},
-				_ => return Err(SignModeHandlerError::InvalidMode),
+				_ => return Err(SignModeHandlerError::UnsupportedMode),
 			},
-			_ => return Err(SignModeHandlerError::InvalidMode),
+			_ => return Err(SignModeHandlerError::UnsupportedMode),
 		};
 
 		Ok(sign_bytes)
