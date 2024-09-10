@@ -39,7 +39,7 @@ where
 	C::Api: cosmos_runtime_api::CosmosRuntimeApi<Block>,
 	C::Api: cosmwasm_runtime_api::CosmwasmRuntimeApi<Block, Vec<u8>>,
 {
-	use cosmos_rpc::{Cosmos, CosmosApiServer};
+	use cosmos_rpc::cosmos::{Cosmos, CosmosApiServer};
 	use cosmwasm_rpc::{Cosmwasm, CosmwasmApiServer};
 	use pallet_transaction_payment_rpc::{TransactionPayment, TransactionPaymentApiServer};
 	use substrate_frame_rpc_system::{System, SystemApiServer};
@@ -50,7 +50,7 @@ where
 	module.merge(System::new(client.clone(), pool.clone(), deny_unsafe).into_rpc())?;
 	module.merge(TransactionPayment::new(client.clone()).into_rpc())?;
 
-	module.merge(Cosmos::new(pool, client.clone()).into_rpc())?;
+	module.merge(Cosmos::new(client.clone(), pool).into_rpc())?;
 	module.merge(Cosmwasm::new(client).into_rpc())?;
 
 	// Extend this RPC with a custom API by using the following syntax.

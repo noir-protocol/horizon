@@ -46,8 +46,8 @@ pub struct Cosmos<C, P> {
 }
 
 impl<C, P> Cosmos<C, P> {
-	pub fn new(pool: Arc<P>, client: Arc<C>) -> Self {
-		Self { pool, client }
+	pub fn new(client: Arc<C>, pool: Arc<P>) -> Self {
+		Self { client, pool }
 	}
 }
 
@@ -69,16 +69,16 @@ where
 			.convert_tx(best_hash, tx_bytes.to_vec())
 			.map_err(internal_error)?;
 
-		let tx_hash = H256(sha2_256(&tx_bytes));
 		self.pool
 			.submit_one(best_hash, TransactionSource::Local, extrinsic)
-			.map_ok(move |_| tx_hash)
+			.map_ok(move |_| H256(sha2_256(&tx_bytes)))
 			.map_err(internal_error)
 			.await
 	}
 
 	async fn simulate(&self, tx_bytes: Bytes) -> RpcResult<SimulateResponse> {
 		let best_hash = self.client.info().best_hash;
+
 		self.client
 			.runtime_api()
 			.simulate(best_hash, tx_bytes.to_vec())

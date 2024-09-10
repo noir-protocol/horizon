@@ -16,12 +16,14 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-mod cosmos;
+pub mod cosmos;
 
-pub use cosmos::{Cosmos, CosmosApiServer};
-pub use jsonrpsee::{
-	core,
-	types::{error, ErrorObject, ErrorObjectOwned},
+use jsonrpsee::{
+	core::to_json_raw_value,
+	types::{
+		error::{INTERNAL_ERROR_CODE, INVALID_REQUEST_CODE},
+		ErrorObject, ErrorObjectOwned,
+	},
 };
 
 pub fn error<T: ToString>(code: i32, message: T, data: Option<&[u8]>) -> ErrorObjectOwned {
@@ -29,16 +31,16 @@ pub fn error<T: ToString>(code: i32, message: T, data: Option<&[u8]>) -> ErrorOb
 		code,
 		message.to_string(),
 		data.map(|bytes| {
-			core::to_json_raw_value(&format!("0x{}", hex::encode(bytes)))
+			to_json_raw_value(&format!("0x{}", hex::encode(bytes)))
 				.expect("Failed to serialize data")
 		}),
 	)
 }
 
 pub fn request_error<T: ToString>(message: T) -> ErrorObjectOwned {
-	error(error::INVALID_REQUEST_CODE, message, None)
+	error(INVALID_REQUEST_CODE, message, None)
 }
 
 pub fn internal_error<T: ToString>(message: T) -> ErrorObjectOwned {
-	error(error::INTERNAL_ERROR_CODE, message, None)
+	error(INTERNAL_ERROR_CODE, message, None)
 }
