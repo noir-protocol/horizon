@@ -27,9 +27,10 @@ use pallet_balances::WeightInfo as _;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	coin::amount_to_string,
+	context,
 	errors::{CosmosError, RootError},
 	events::{EventAttribute, EventManager, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
-	store::{self, GasMeter},
+	gas::GasMeter,
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
 use sp_runtime::{traits::Convert, SaturatedConversion};
@@ -45,7 +46,7 @@ impl<T> Default for MsgSendHandler<T> {
 impl<T, Context> pallet_cosmos_types::msgservice::MsgHandler<Context> for MsgSendHandler<T>
 where
 	T: pallet_cosmos::Config,
-	Context: store::Context,
+	Context: context::Context,
 {
 	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
 		let MsgSend { from_address, to_address, amount } =

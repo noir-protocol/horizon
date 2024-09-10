@@ -21,7 +21,6 @@ use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 
 pub type SequenceNumber = u64;
-pub type Gas = u64;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 #[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]

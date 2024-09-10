@@ -15,17 +15,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(not(feature = "std"), no_std)]
+use crate::{
+	events::EventManager,
+	gas::{Gas, GasMeter},
+};
 
-extern crate alloc;
+pub trait Context {
+	type GasMeter: GasMeter;
+	type EventManager: EventManager;
 
-pub mod address;
-pub mod coin;
-pub mod context;
-pub mod errors;
-pub mod events;
-pub mod gas;
-pub mod handler;
-pub mod msgservice;
-pub mod tx;
-pub mod tx_msgs;
+	fn new(limit: Gas) -> Self;
+	fn gas_meter(&mut self) -> &mut Self::GasMeter;
+	fn event_manager(&mut self) -> &mut Self::EventManager;
+}

@@ -46,7 +46,7 @@ impl From<RootError> for CosmosError {
 
 #[cfg(test)]
 mod tests {
-	use super::{CosmosError, RootError};
+	use super::*;
 	use crate::errors::ROOT_CODESPACE;
 
 	#[test]

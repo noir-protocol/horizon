@@ -21,14 +21,14 @@ use alloc::{
 };
 
 #[derive(Clone, PartialEq, Eq, Debug)]
-pub enum AddressError {
+pub enum Error {
 	DecodeError(bech32::DecodeError),
 }
 
-pub fn acc_address_from_bech32(address: &str) -> Result<(String, Vec<u8>), AddressError> {
+pub fn acc_address_from_bech32(address: &str) -> Result<(String, Vec<u8>), Error> {
 	bech32::decode(address)
 		.map(|(hrp, data)| (hrp.to_string(), data))
-		.map_err(AddressError::DecodeError)
+		.map_err(Error::DecodeError)
 }
 
 #[cfg(test)]

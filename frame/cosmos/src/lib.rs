@@ -52,12 +52,13 @@ use frame_support::{
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
 use pallet_cosmos_types::{
 	address::acc_address_from_bech32,
+	context::{self, Context as _},
 	errors::{CosmosError, RootError},
 	events,
 	events::{CosmosEvent, CosmosEvents, EventManager as _},
+	gas::{BasicGasMeter, Gas, GasMeter},
 	handler::AnteDecorator,
 	msgservice::MsgServiceRouter,
-	store::{self, BasicGasMeter, Context, Gas, GasMeter},
 	tx::Account,
 };
 use pallet_cosmos_x_auth_signing::{
@@ -257,7 +258,7 @@ pub mod pallet {
 			pub event_manager: EventManager,
 		}
 
-		impl store::Context for Context {
+		impl context::Context for Context {
 			type GasMeter = BasicGasMeter;
 			type EventManager = EventManager;
 
@@ -372,7 +373,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type AddressPrefix: Get<&'static str>;
 
-		type Context: store::Context;
+		type Context: context::Context;
 	}
 
 	#[pallet::genesis_config]

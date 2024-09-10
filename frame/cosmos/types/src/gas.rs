@@ -15,17 +15,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use crate::events::EventManager;
-
-pub trait Context {
-	type GasMeter: GasMeter;
-	type EventManager: EventManager;
-
-	fn new(limit: Gas) -> Self;
-	fn gas_meter(&mut self) -> &mut Self::GasMeter;
-	fn event_manager(&mut self) -> &mut Self::EventManager;
-}
-
 pub type Gas = u64;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
