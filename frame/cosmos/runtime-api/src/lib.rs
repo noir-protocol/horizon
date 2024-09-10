@@ -41,13 +41,15 @@ pub struct SimulateResponse {
 #[derive(Clone, Decode, Encode, Debug, Eq, PartialEq, TypeInfo)]
 pub enum SimulateError {
 	InvalidTx,
-	UnknownError,
+	InternalError(Vec<u8>),
 }
+
+pub type SimulateResult = Result<SimulateResponse, SimulateError>;
 
 sp_api::decl_runtime_apis! {
 	pub trait CosmosRuntimeApi {
 		fn convert_tx(tx_bytes: Vec<u8>) -> <Block as BlockT>::Extrinsic;
 
-		fn simulate(tx_bytes: Vec<u8>) -> Result<SimulateResponse, SimulateError>;
+		fn simulate(tx_bytes: Vec<u8>) -> SimulateResult;
 	}
 }

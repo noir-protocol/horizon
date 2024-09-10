@@ -34,9 +34,9 @@ mod assets;
 mod compat;
 mod msgs;
 
-use alloc::{boxed::Box, string::String, vec::Vec};
+use alloc::{boxed::Box, format, string::String, vec::Vec};
 use core::marker::PhantomData;
-use cosmos_runtime_api::{GasInfo, SimulateError, SimulateResponse};
+use cosmos_runtime_api::{GasInfo, SimulateError, SimulateResponse, SimulateResult};
 use cosmos_sdk_proto::{cosmos::tx::v1beta1::Tx, prost::Message};
 use frame_support::{
 	construct_runtime, derive_impl,
@@ -662,12 +662,13 @@ impl_runtime_apis! {
 			)
 		}
 
-		fn simulate(tx_bytes: Vec<u8>) -> Result<SimulateResponse, SimulateError> {
+		fn simulate(tx_bytes: Vec<u8>) -> SimulateResult {
 			let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| SimulateError::InvalidTx)?;
 
 			// TODO: Run ante handlers
 
-			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx.clone()).map_err(|_| SimulateError::UnknownError)?;
+			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx.clone())
+				.map_err(|e| SimulateError::InternalError(format!("Failed to simulate cosmos tx. error: {:?}", e).into()))?;
 
 			System::read_events_no_consensus()
 				.find_map(|record| {
@@ -676,7 +677,7 @@ impl_runtime_apis! {
 					} else {
 						None
 					}
-				}).ok_or(SimulateError::UnknownError)
+				}).ok_or(SimulateError::InternalError("Cosmos events does not exist".into()))
 		}
 	}
 

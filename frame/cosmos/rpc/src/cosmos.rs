@@ -16,7 +16,7 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use crate::internal_error;
+use crate::{internal_error, request_error};
 use cosmos_runtime_api::{CosmosRuntimeApi, SimulateError, SimulateResponse};
 use futures::future::TryFutureExt;
 use jsonrpsee::{
@@ -85,8 +85,8 @@ where
 			.simulate(best_hash, tx_bytes.to_vec())
 			.map_err(internal_error)?
 			.map_err(|e| match e {
-				SimulateError::InvalidTx => internal_error("invalid tx"),
-				SimulateError::UnknownError => internal_error("unknown error"),
+				SimulateError::InvalidTx => request_error("Invalid tx"),
+				SimulateError::InternalError(e) => internal_error(String::from_utf8_lossy(&e)),
 			})
 	}
 }

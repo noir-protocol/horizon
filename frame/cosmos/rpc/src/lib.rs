@@ -37,6 +37,10 @@ pub fn error<T: ToString>(code: i32, message: T, data: Option<&[u8]>) -> ErrorOb
 	)
 }
 
+pub fn request_error<T: ToString>(message: T) -> ErrorObjectOwned {
+	error(error::INVALID_REQUEST_CODE, message, None)
+}
+
 pub fn internal_error<T: ToString>(message: T) -> ErrorObjectOwned {
 	error(error::INTERNAL_ERROR_CODE, message, None)
 }
