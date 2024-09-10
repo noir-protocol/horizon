@@ -21,36 +21,32 @@ use pallet_cosmos_types::{coin::Coin, tx_msgs::Msg};
 use pallet_cosmos_x_auth_migrations::legacytx::stdsign::LegacyMsg;
 use serde::{Deserialize, Serialize};
 
-pub mod msg_send {
-	use super::*;
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct MsgSend {
+	pub amount: Vec<Coin>,
+	pub from_address: String,
+	pub to_address: String,
+}
 
-	#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-	pub struct MsgSend {
-		pub amount: Vec<Coin>,
-		pub from_address: String,
-		pub to_address: String,
+impl TryFrom<&Any> for MsgSend {
+	type Error = ();
+
+	fn try_from(any: &Any) -> Result<Self, Self::Error> {
+		let msg = bank::v1beta1::MsgSend::decode(&mut &*any.value).map_err(|_| ())?;
+		Ok(Self {
+			amount: msg.amount.iter().map(Into::into).collect(),
+			from_address: msg.from_address,
+			to_address: msg.to_address,
+		})
 	}
+}
 
-	impl TryFrom<&Any> for MsgSend {
-		type Error = ();
-
-		fn try_from(any: &Any) -> Result<Self, Self::Error> {
-			let msg = bank::v1beta1::MsgSend::decode(&mut &*any.value).map_err(|_| ())?;
-			Ok(Self {
-				amount: msg.amount.iter().map(Into::into).collect(),
-				from_address: msg.from_address,
-				to_address: msg.to_address,
-			})
-		}
+impl Msg for MsgSend {
+	fn get_signers(self) -> Vec<String> {
+		vec![self.from_address.clone()]
 	}
+}
 
-	impl Msg for MsgSend {
-		fn get_signers(self) -> Vec<String> {
-			vec![self.from_address.clone()]
-		}
-	}
-
-	impl LegacyMsg for MsgSend {
-		const AMINO_NAME: &'static str = "cosmos-sdk/MsgSend";
-	}
+impl LegacyMsg for MsgSend {
+	const AMINO_NAME: &'static str = "cosmos-sdk/MsgSend";
 }
