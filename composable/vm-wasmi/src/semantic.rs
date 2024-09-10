@@ -656,7 +656,7 @@ impl<'a> VMBase for SimpleWasmiVM<'a> {
 		let trimmed = tmp.into_iter().filter(|&x| x != 0x00).collect();
 		// decode UTF-8 bytes into string
 		let Ok(human) = String::from_utf8(trimmed) else {
-			return Ok(Err(SimpleVMError::InvalidAddress))
+			return Ok(Err(SimpleVMError::InvalidAddress));
 		};
 		Ok(BankAccount::try_from(Addr::unchecked(human)).map_err(|_| SimpleVMError::InvalidAddress))
 	}
@@ -900,161 +900,161 @@ fn create_simple_vm(
 	)
 }
 
-// #[test]
-// fn test_bare() {
-// 	let code = instrument_contract(include_bytes!("../../fixtures/cw20_base.wasm"));
-// 	let sender = BankAccount(100);
-// 	let address = BankAccount(10_000);
-// 	let funds = vec![];
-// 	let mut extension = SimpleWasmiVMExtension {
-// 		storage: BTreeMap::default(),
-// 		codes: BTreeMap::from([(0x1337, code)]),
-// 		contracts: BTreeMap::from([(
-// 			address,
-// 			CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
-// 		)]),
-// 		next_account_id: BankAccount(10_001),
-// 		transaction_depth: 0,
-// 		gas: Gas::new(100_000_000),
-// 		..Default::default()
-// 	};
-// 	let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
-// 	assert_matches!(
-// 		cosmwasm_call::<InstantiateCall<Empty>, OwnedWasmiVM<SimpleWasmiVM>>(
-// 			&mut vm,
-// 			r#"{
-//               "name": "Picasso",
-//               "symbol": "PICA",
-//               "decimals": 12,
-//               "initial_balances": [],
-//               "mint": null,
-//               "marketing": null
-//             }"#
-// 			.as_bytes(),
-// 		)
-// 		.unwrap(),
-// 		InstantiateResult(CosmwasmExecutionResult::Ok(_))
-// 	);
-// 	assert_eq!(
-// 		cosmwasm_call::<QueryCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 			&mut vm,
-// 			r#"{ "token_info": {} }"#.as_bytes(),
-// 		)
-// 		.unwrap(),
-// 		QueryResult(CosmwasmQueryResult::Ok(Binary::new(
-// 			r#"{"name":"Picasso","symbol":"PICA","decimals":12,"total_supply":"0"}"#
-// 				.as_bytes()
-// 				.to_vec()
-// 		)))
-// 	);
-// }
+#[test]
+fn test_bare() {
+	let code = instrument_contract(include_bytes!("../fixtures/cw20_base.wasm"));
+	let sender = BankAccount(100);
+	let address = BankAccount(10_000);
+	let funds = vec![];
+	let mut extension = SimpleWasmiVMExtension {
+		storage: BTreeMap::default(),
+		codes: BTreeMap::from([(0x1337, code)]),
+		contracts: BTreeMap::from([(
+			address,
+			CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
+		)]),
+		next_account_id: BankAccount(10_001),
+		transaction_depth: 0,
+		gas: Gas::new(100_000_000),
+		..Default::default()
+	};
+	let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
+	assert_matches!(
+		cosmwasm_call::<InstantiateCall<Empty>, OwnedWasmiVM<SimpleWasmiVM>>(
+			&mut vm,
+			r#"{
+              "name": "Picasso",
+              "symbol": "PICA",
+              "decimals": 12,
+              "initial_balances": [],
+              "mint": null,
+              "marketing": null
+            }"#
+			.as_bytes(),
+		)
+		.unwrap(),
+		InstantiateResult(CosmwasmExecutionResult::Ok(_))
+	);
+	assert_eq!(
+		cosmwasm_call::<QueryCall, OwnedWasmiVM<SimpleWasmiVM>>(
+			&mut vm,
+			r#"{ "token_info": {} }"#.as_bytes(),
+		)
+		.unwrap(),
+		QueryResult(CosmwasmQueryResult::Ok(Binary::new(
+			r#"{"name":"Picasso","symbol":"PICA","decimals":12,"total_supply":"0"}"#
+				.as_bytes()
+				.to_vec()
+		)))
+	);
+}
 
-// /// Tests behaviour of the runtime when malicious contract causes infinite
-// /// recursion.
-// ///
-// /// It’s possible for a contract to cause an infinite recursion within the
-// /// *host* stack.  This is because host functions call contract’s `allocate` and
-// /// `deallocate` functions to manage memory within contract’s address space.
-// /// Unconditionally calling host function inside of an `allocate` can easily
-// /// lead to host recusing indefinitely and eventually crashing.
-// ///
-// /// This test checks whether recursion depth limit is correctly implemented.
-// #[test]
-// fn test_recursion() {
-// 	let code = instrument_contract(include_bytes!("../../fixtures/recursion_test.wasm"));
-// 	let sender = BankAccount(100);
-// 	let address = BankAccount(10_000);
-// 	let funds = vec![];
-// 	let mut extension = SimpleWasmiVMExtension {
-// 		storage: BTreeMap::default(),
-// 		codes: BTreeMap::from([(0x1337, code)]),
-// 		contracts: BTreeMap::from([(
-// 			address,
-// 			CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
-// 		)]),
-// 		next_account_id: BankAccount(10_001),
-// 		gas: Gas::new(100_000_000),
-// 		..Default::default()
-// 	};
-// 	let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
-// 	assert_eq!(
-// 		cosmwasm_call::<InstantiateCall<Empty>, OwnedWasmiVM<SimpleWasmiVM>>(&mut vm, b"{}"),
-// 		Err(SimpleVMError::Interpreter)
-// 	);
-// }
+/// Tests behaviour of the runtime when malicious contract causes infinite
+/// recursion.
+///
+/// It’s possible for a contract to cause an infinite recursion within the
+/// *host* stack.  This is because host functions call contract’s `allocate` and
+/// `deallocate` functions to manage memory within contract’s address space.
+/// Unconditionally calling host function inside of an `allocate` can easily
+/// lead to host recusing indefinitely and eventually crashing.
+///
+/// This test checks whether recursion depth limit is correctly implemented.
+#[test]
+fn test_recursion() {
+	let code = instrument_contract(include_bytes!("../fixtures/recursion_test.wasm"));
+	let sender = BankAccount(100);
+	let address = BankAccount(10_000);
+	let funds = vec![];
+	let mut extension = SimpleWasmiVMExtension {
+		storage: BTreeMap::default(),
+		codes: BTreeMap::from([(0x1337, code)]),
+		contracts: BTreeMap::from([(
+			address,
+			CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
+		)]),
+		next_account_id: BankAccount(10_001),
+		gas: Gas::new(100_000_000),
+		..Default::default()
+	};
+	let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
+	assert_eq!(
+		cosmwasm_call::<InstantiateCall<Empty>, OwnedWasmiVM<SimpleWasmiVM>>(&mut vm, b"{}"),
+		Err(SimpleVMError::Interpreter)
+	);
+}
 
-// mod test_code_gen {
-// 	use cosmwasm_std::{ContractResult, Response};
+mod test_code_gen {
+	use cosmwasm_std::{ContractResult, Response};
 
-// 	use super::*;
-// 	#[test]
-// 	fn basic() {
-// 		let module: code_gen::WasmModule =
-// 			code_gen::ModuleDefinition::new(vec![], 10, None).unwrap().into();
-// 		let sender = BankAccount(100);
-// 		let address = BankAccount(10_000);
-// 		let funds = vec![];
-// 		let mut extension = SimpleWasmiVMExtension {
-// 			storage: BTreeMap::default(),
-// 			codes: BTreeMap::from([(0x1337, module.code)]),
-// 			contracts: BTreeMap::from([(
-// 				address,
-// 				CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
-// 			)]),
-// 			next_account_id: BankAccount(10_001),
-// 			transaction_depth: 0,
-// 			gas: Gas::new(100_000_000),
-// 			..Default::default()
-// 		};
-// 		let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
-// 		let result = cosmwasm_call::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 			&mut vm,
-// 			r#"{}"#.as_bytes(),
-// 		)
-// 		.unwrap();
-// 		assert_matches!(result, InstantiateResult(CosmwasmExecutionResult::Ok(_)));
-// 		let result =
-// 			cosmwasm_call::<ExecuteCall, OwnedWasmiVM<SimpleWasmiVM>>(&mut vm, r#"{}"#.as_bytes())
-// 				.unwrap();
-// 		assert_matches!(result, ExecuteResult(CosmwasmExecutionResult::Ok(_)));
-// 	}
+	use super::*;
+	#[test]
+	fn basic() {
+		let module: code_gen::WasmModule =
+			code_gen::ModuleDefinition::new(vec![], 10, None).unwrap().into();
+		let sender = BankAccount(100);
+		let address = BankAccount(10_000);
+		let funds = vec![];
+		let mut extension = SimpleWasmiVMExtension {
+			storage: BTreeMap::default(),
+			codes: BTreeMap::from([(0x1337, module.code)]),
+			contracts: BTreeMap::from([(
+				address,
+				CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
+			)]),
+			next_account_id: BankAccount(10_001),
+			transaction_depth: 0,
+			gas: Gas::new(100_000_000),
+			..Default::default()
+		};
+		let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
+		let result = cosmwasm_call::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
+			&mut vm,
+			r#"{}"#.as_bytes(),
+		)
+		.unwrap();
+		assert_matches!(result, InstantiateResult(CosmwasmExecutionResult::Ok(_)));
+		let result =
+			cosmwasm_call::<ExecuteCall, OwnedWasmiVM<SimpleWasmiVM>>(&mut vm, r#"{}"#.as_bytes())
+				.unwrap();
+		assert_matches!(result, ExecuteResult(CosmwasmExecutionResult::Ok(_)));
+	}
 
-// 	#[test]
-// 	fn instantiate_response() {
-// 		let response =
-// 			ContractResult::Ok(Response::<Empty>::new().add_attribute("Hello", "world!"));
-// 		let response_2 =
-// 			ContractResult::Ok(Response::<Empty>::new().add_attribute("Hello", "mars!"));
-// 		let module: code_gen::WasmModule =
-// 			code_gen::ModuleDefinition::with_instantiate_response(response.clone())
-// 				.unwrap()
-// 				.into();
+	#[test]
+	fn instantiate_response() {
+		let response =
+			ContractResult::Ok(Response::<Empty>::new().add_attribute("Hello", "world!"));
+		let response_2 =
+			ContractResult::Ok(Response::<Empty>::new().add_attribute("Hello", "mars!"));
+		let module: code_gen::WasmModule =
+			code_gen::ModuleDefinition::with_instantiate_response(response.clone())
+				.unwrap()
+				.into();
 
-// 		let sender = BankAccount(100);
-// 		let address = BankAccount(10_000);
-// 		let funds = vec![];
-// 		let mut extension = SimpleWasmiVMExtension {
-// 			storage: BTreeMap::default(),
-// 			codes: BTreeMap::from([(0x1337, module.code)]),
-// 			contracts: BTreeMap::from([(
-// 				address,
-// 				CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
-// 			)]),
-// 			next_account_id: BankAccount(10_001),
-// 			transaction_depth: 0,
-// 			gas: Gas::new(100_000_000),
-// 			..Default::default()
-// 		};
-// 		let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
-// 		let result = cosmwasm_call::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 			&mut vm,
-// 			r#"{}"#.as_bytes(),
-// 		)
-// 		.unwrap();
-// 		assert_eq!(result, InstantiateResult(response));
-// 		assert_ne!(result, InstantiateResult(response_2));
-// 	}
-// }
+		let sender = BankAccount(100);
+		let address = BankAccount(10_000);
+		let funds = vec![];
+		let mut extension = SimpleWasmiVMExtension {
+			storage: BTreeMap::default(),
+			codes: BTreeMap::from([(0x1337, module.code)]),
+			contracts: BTreeMap::from([(
+				address,
+				CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
+			)]),
+			next_account_id: BankAccount(10_001),
+			transaction_depth: 0,
+			gas: Gas::new(100_000_000),
+			..Default::default()
+		};
+		let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
+		let result = cosmwasm_call::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
+			&mut vm,
+			r#"{}"#.as_bytes(),
+		)
+		.unwrap();
+		assert_eq!(result, InstantiateResult(response));
+		assert_ne!(result, InstantiateResult(response_2));
+	}
+}
 
 pub fn digit_sum(input: &[u8]) -> usize {
 	input.iter().map(|v| *v as usize).sum()
@@ -1076,486 +1076,487 @@ fn riffle_shuffle_n(mut input: Vec<u8>, n: usize) -> Vec<u8> {
 	input
 }
 
-// #[test]
-// fn test_riffle_shuffle() {
-// 	let input = [0, 1, 2, 3, 4, 5, 6, 7];
-// 	let out1 = riffle_shuffle_n(input.to_vec(), 1);
-// 	let out2 = riffle_shuffle_n(input.to_vec(), 2);
-// 	let out3 = riffle_shuffle_n(input.to_vec(), 3);
-// 	assert_eq!(&[4, 0, 5, 1, 6, 2, 7, 3], out1.as_slice());
-// 	assert_eq!(&[6, 4, 2, 0, 7, 5, 3, 1], out2.as_slice());
-// 	assert_eq!(&[7, 6, 5, 4, 3, 2, 1, 0], out3.as_slice());
-// }
+#[test]
+fn test_riffle_shuffle() {
+	let input = [0, 1, 2, 3, 4, 5, 6, 7];
+	let out1 = riffle_shuffle_n(input.to_vec(), 1);
+	let out2 = riffle_shuffle_n(input.to_vec(), 2);
+	let out3 = riffle_shuffle_n(input.to_vec(), 3);
+	assert_eq!(&[4, 0, 5, 1, 6, 2, 7, 3], out1.as_slice());
+	assert_eq!(&[6, 4, 2, 0, 7, 5, 3, 1], out2.as_slice());
+	assert_eq!(&[7, 6, 5, 4, 3, 2, 1, 0], out3.as_slice());
+}
 
-// #[test]
-// fn test_riffle_shuffle_encode_decode() {
-// 	let input: Vec<u8> = (0..CANONICAL_LENGTH as u8).collect();
-// 	let output = riffle_shuffle_n(input.clone(), SHUFFLES_ENCODE + SHUFFLES_DECODE);
-// 	assert_eq!(input, output);
-// }
+#[test]
+fn test_riffle_shuffle_encode_decode() {
+	let input: Vec<u8> = (0..CANONICAL_LENGTH as u8).collect();
+	let output = riffle_shuffle_n(input.clone(), SHUFFLES_ENCODE + SHUFFLES_DECODE);
+	assert_eq!(input, output);
+}
 
-// #[test]
-// fn test_orchestration_base() {
-// 	let code = instrument_contract(include_bytes!("../../fixtures/cw20_base.wasm"));
-// 	let sender = BankAccount(100);
-// 	let address = BankAccount(10_000);
-// 	let funds = vec![];
-// 	let mut extension = SimpleWasmiVMExtension {
-// 		storage: BTreeMap::default(),
-// 		codes: BTreeMap::from([(0x1337, code)]),
-// 		contracts: BTreeMap::from([(
-// 			address,
-// 			CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
-// 		)]),
-// 		next_account_id: BankAccount(10_001),
-// 		transaction_depth: 0,
-// 		gas: Gas::new(100_000_000),
-// 		..Default::default()
-// 	};
-// 	let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
-// 	let _ = cosmwasm_system_entrypoint::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 		&mut vm,
-// 		format!(
-// 			r#"{{
-//                   "name": "Picasso",
-//                   "symbol": "PICA",
-//                   "decimals": 12,
-//                   "initial_balances": [],
-//                   "mint": {{
-//                     "minter": "{}",
-//                     "cap": null
-//                   }},
-//                   "marketing": null
-//                 }}"#,
-// 			sender.0
-// 		)
-// 		.as_bytes(),
-// 	)
-// 	.unwrap();
+#[test]
+fn test_orchestration_base() {
+	let code = instrument_contract(include_bytes!("../fixtures/cw20_base.wasm"));
+	let sender = BankAccount(100);
+	let address = BankAccount(10_000);
+	let funds = vec![];
+	let mut extension = SimpleWasmiVMExtension {
+		storage: BTreeMap::default(),
+		codes: BTreeMap::from([(0x1337, code)]),
+		contracts: BTreeMap::from([(
+			address,
+			CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
+		)]),
+		next_account_id: BankAccount(10_001),
+		transaction_depth: 0,
+		gas: Gas::new(100_000_000),
+		..Default::default()
+	};
+	let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
+	let _ = cosmwasm_system_entrypoint::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
+		&mut vm,
+		format!(
+			r#"{{
+                  "name": "Picasso",
+                  "symbol": "PICA",
+                  "decimals": 12,
+                  "initial_balances": [],
+                  "mint": {{
+                    "minter": "{}",
+                    "cap": null
+                  }},
+                  "marketing": null
+                }}"#,
+			sender.0
+		)
+		.as_bytes(),
+	)
+	.unwrap();
 
-// 	let (_, events) = cosmwasm_system_entrypoint::<ExecuteCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 		&mut vm,
-// 		r#"{
-//               "mint": {
-//                 "recipient": "10001",
-//                 "amount": "5555"
-//               }
-//             }"#
-// 		.as_bytes(),
-// 	)
-// 	.unwrap();
-// 	let attributes = vec![
-// 		Attribute { key: "action".into(), value: "mint".into() },
-// 		Attribute { key: "to".into(), value: "10001".into() },
-// 		Attribute { key: "amount".into(), value: "5555".into() },
-// 	];
+	let (_, events) = cosmwasm_system_entrypoint::<ExecuteCall, OwnedWasmiVM<SimpleWasmiVM>>(
+		&mut vm,
+		r#"{
+              "mint": {
+                "recipient": "10001",
+                "amount": "5555"
+              }
+            }"#
+		.as_bytes(),
+	)
+	.unwrap();
+	let attributes = vec![
+		Attribute { key: "action".into(), value: "mint".into() },
+		Attribute { key: "to".into(), value: "10001".into() },
+		Attribute { key: "amount".into(), value: "5555".into() },
+	];
 
-// 	for attr in attributes {
-// 		assert!(events.iter().any(|e| e.attributes.contains(&attr)));
-// 	}
-// }
+	for attr in attributes {
+		assert!(events.iter().any(|e| e.attributes.contains(&attr)));
+	}
+}
 
-// #[test]
-// fn test_orchestration_advanced() {
-// 	let code = instrument_contract(include_bytes!("../../fixtures/hackatom.wasm"));
-// 	let sender = BankAccount(100);
-// 	let address = BankAccount(10_000);
-// 	let funds = vec![];
-// 	let mut extension = SimpleWasmiVMExtension {
-// 		storage: BTreeMap::default(),
-// 		codes: BTreeMap::from([(0x1337, code)]),
-// 		contracts: BTreeMap::from([(
-// 			address,
-// 			CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
-// 		)]),
-// 		next_account_id: BankAccount(10_001),
-// 		transaction_depth: 0,
-// 		gas: Gas::new(100_000_000),
-// 		..Default::default()
-// 	};
-// 	let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
-// 	assert_eq!(
-// 		cosmwasm_call::<QueryCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 			&mut vm,
-// 			r#"{ "recurse": { "depth": 10, "work": 10 }}"#.as_bytes()
-// 		)
-// 		.unwrap(),
-// 		QueryResult(CosmwasmQueryResult::Ok(Binary::new(
-// 			r#"{"hashed":"K4xL+Gub1930CJU6hdpwf0t3KNk27f5efqy9+YA6iio="}"#.as_bytes().to_vec()
-// 		)))
-// 	);
-// }
+#[test]
+fn test_orchestration_advanced() {
+	let code = instrument_contract(include_bytes!("../fixtures/hackatom.wasm"));
+	let sender = BankAccount(100);
+	let address = BankAccount(10_000);
+	let funds = vec![];
+	let mut extension = SimpleWasmiVMExtension {
+		storage: BTreeMap::default(),
+		codes: BTreeMap::from([(0x1337, code)]),
+		contracts: BTreeMap::from([(
+			address,
+			CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
+		)]),
+		next_account_id: BankAccount(10_001),
+		transaction_depth: 0,
+		gas: Gas::new(100_000_000),
+		..Default::default()
+	};
+	let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
+	assert_eq!(
+		cosmwasm_call::<QueryCall, OwnedWasmiVM<SimpleWasmiVM>>(
+			&mut vm,
+			r#"{ "recurse": { "depth": 10, "work": 10 }}"#.as_bytes()
+		)
+		.unwrap(),
+		QueryResult(CosmwasmQueryResult::Ok(Binary::new(
+			r#"{"hashed":"K4xL+Gub1930CJU6hdpwf0t3KNk27f5efqy9+YA6iio="}"#.as_bytes().to_vec()
+		)))
+	);
+}
 
-// #[test]
-// fn test_hook() {
-// 	let code = instrument_contract(include_bytes!("../../fixtures/cw20_base.wasm"));
-// 	let sender = BankAccount(100);
-// 	let address = BankAccount(10_000);
-// 	let funds = vec![];
-// 	let mut extension = SimpleWasmiVMExtension {
-// 		storage: BTreeMap::default(),
-// 		codes: BTreeMap::from([(0x1337, code)]),
-// 		contracts: BTreeMap::from([(
-// 			address,
-// 			CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
-// 		)]),
-// 		next_account_id: BankAccount(10_001),
-// 		transaction_depth: 0,
-// 		gas: Gas::new(100_000_000),
-// 		..Default::default()
-// 	};
-// 	let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
-// 	let _ = cosmwasm_system_entrypoint_hook::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 		&mut vm,
-// 		format!(
-// 			r#"{{
-//                   "name": "Picasso",
-//                   "symbol": "PICA",
-//                   "decimals": 12,
-//                   "initial_balances": [],
-//                   "mint": {{
-//                     "minter": "{}",
-//                     "cap": null
-//                   }},
-//                   "marketing": null
-//                 }}"#,
-// 			sender.0
-// 		)
-// 		.as_bytes(),
-// 		|vm, msg| {
-// 			cosmwasm_call::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(vm, msg).map(Into::into)
-// 		},
-// 	)
-// 	.unwrap();
-// 	let r = cosmwasm_system_entrypoint_hook::<ExecuteCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 		&mut vm,
-// 		r#"{
-//               "mint": {
-//                 "recipient": "10001",
-//                 "amount": "5555"
-//               }
-//             }"#
-// 		.as_bytes(),
-// 		|_, _| Ok(ContractResult::Err("Bro".into())),
-// 	);
-// 	assert_eq!(
-// 		r,
-// 		Err(SimpleVMError::VMError(WasmiVMError::SystemError(
-// 			SystemError::ContractExecutionFailure("Bro".into())
-// 		)))
-// 	);
-// }
+#[test]
+fn test_hook() {
+	let code = instrument_contract(include_bytes!("../fixtures/cw20_base.wasm"));
+	let sender = BankAccount(100);
+	let address = BankAccount(10_000);
+	let funds = vec![];
+	let mut extension = SimpleWasmiVMExtension {
+		storage: BTreeMap::default(),
+		codes: BTreeMap::from([(0x1337, code)]),
+		contracts: BTreeMap::from([(
+			address,
+			CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
+		)]),
+		next_account_id: BankAccount(10_001),
+		transaction_depth: 0,
+		gas: Gas::new(100_000_000),
+		..Default::default()
+	};
+	let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
+	let _ = cosmwasm_system_entrypoint_hook::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
+		&mut vm,
+		format!(
+			r#"{{
+                  "name": "Picasso",
+                  "symbol": "PICA",
+                  "decimals": 12,
+                  "initial_balances": [],
+                  "mint": {{
+                    "minter": "{}",
+                    "cap": null
+                  }},
+                  "marketing": null
+                }}"#,
+			sender.0
+		)
+		.as_bytes(),
+		|vm, msg| {
+			cosmwasm_call::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(vm, msg).map(Into::into)
+		},
+	)
+	.unwrap();
+	let r = cosmwasm_system_entrypoint_hook::<ExecuteCall, OwnedWasmiVM<SimpleWasmiVM>>(
+		&mut vm,
+		r#"{
+              "mint": {
+                "recipient": "10001",
+                "amount": "5555"
+              }
+            }"#
+		.as_bytes(),
+		|_, _| Ok(ContractResult::Err("Bro".into())),
+	);
+	assert_eq!(
+		r,
+		Err(SimpleVMError::VMError(WasmiVMError::SystemError(
+			SystemError::ContractExecutionFailure("Bro".into())
+		)))
+	);
+}
 
-// #[test]
-// fn test_reply() {
-// 	let code = instrument_contract(include_bytes!("../../fixtures/reflect.wasm"));
-// 	let code_hackatom = instrument_contract(include_bytes!("../../fixtures/hackatom.wasm"));
-// 	let sender = BankAccount(100);
-// 	let address = BankAccount(10_000);
-// 	let hackatom_address = BankAccount(10_001);
-// 	let funds = vec![];
-// 	let mut extension = SimpleWasmiVMExtension {
-// 		storage: BTreeMap::default(),
-// 		codes: BTreeMap::from([(0x1337, code), (0x1338, code_hackatom)]),
-// 		contracts: BTreeMap::from([
-// 			(address, CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() }),
-// 			(
-// 				hackatom_address,
-// 				CosmwasmContractMeta { code_id: 0x1338, admin: None, label: String::new() },
-// 			),
-// 		]),
-// 		next_account_id: BankAccount(10_002),
-// 		transaction_depth: 0,
-// 		gas: Gas::new(100_000_000),
-// 		..Default::default()
-// 	};
-// 	{
-// 		let mut vm =
-// 			create_simple_vm(address, hackatom_address, funds.clone(), &mut extension).unwrap();
-// 		let (_, events) = cosmwasm_system_entrypoint::<InstantiateCall, _>(
-// 			&mut vm,
-// 			r#"{"verifier": "10000", "beneficiary": "10000"}"#.as_bytes(),
-// 		)
-// 		.unwrap();
+#[test]
+fn test_reply() {
+	let code = instrument_contract(include_bytes!("../fixtures/reflect.wasm"));
+	let code_hackatom = instrument_contract(include_bytes!("../fixtures/hackatom.wasm"));
+	let sender = BankAccount(100);
+	let address = BankAccount(10_000);
+	let hackatom_address = BankAccount(10_001);
+	let funds = vec![];
+	let mut extension = SimpleWasmiVMExtension {
+		storage: BTreeMap::default(),
+		codes: BTreeMap::from([(0x1337, code), (0x1338, code_hackatom)]),
+		contracts: BTreeMap::from([
+			(address, CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() }),
+			(
+				hackatom_address,
+				CosmwasmContractMeta { code_id: 0x1338, admin: None, label: String::new() },
+			),
+		]),
+		next_account_id: BankAccount(10_002),
+		transaction_depth: 0,
+		gas: Gas::new(100_000_000),
+		..Default::default()
+	};
+	{
+		let mut vm =
+			create_simple_vm(address, hackatom_address, funds.clone(), &mut extension).unwrap();
+		let (_, events) = cosmwasm_system_entrypoint::<InstantiateCall, _>(
+			&mut vm,
+			r#"{"verifier": "10000", "beneficiary": "10000"}"#.as_bytes(),
+		)
+		.unwrap();
 
-// 		assert!(events.iter().any(|e| e
-// 			.attributes
-// 			.contains(&Attribute { key: "Let the".into(), value: "hacking begin".into() })));
-// 	}
-// 	log::debug!("{:?}", extension.storage);
-// 	{
-// 		let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
-// 		let _ = cosmwasm_system_entrypoint::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 			&mut vm,
-// 			r#"{}"#.as_bytes(),
-// 		)
-// 		.unwrap();
+		assert!(events.iter().any(|e| e
+			.attributes
+			.contains(&Attribute { key: "Let the".into(), value: "hacking begin".into() })));
+	}
+	log::debug!("{:?}", extension.storage);
+	{
+		let mut vm = create_simple_vm(sender, address, funds, &mut extension).unwrap();
+		let _ = cosmwasm_system_entrypoint::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
+			&mut vm,
+			r#"{}"#.as_bytes(),
+		)
+		.unwrap();
 
-// 		let (_, events) = cosmwasm_system_entrypoint::<ExecuteCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 			&mut vm,
-// 			r#"{
-//                   "reflect_sub_msg": {
-//                     "msgs": [{
-//                       "id": 10,
-//                       "msg": {
-//                         "wasm": {
-//                           "execute": {
-//                             "contract_addr": "10001",
-//                             "msg": "eyAicmVsZWFzZSI6IHt9IH0=",
-//                             "funds": []
-//                           }
-//                         }
-//                       },
-//                       "gas_limit": null,
-//                       "reply_on": "always"
-//                     }]
-//                   }
-//                 }"#
-// 			.as_bytes(),
-// 		)
-// 		.unwrap();
+		let (_, events) = cosmwasm_system_entrypoint::<ExecuteCall, OwnedWasmiVM<SimpleWasmiVM>>(
+			&mut vm,
+			r#"{
+                  "reflect_sub_msg": {
+                    "msgs": [{
+                      "id": 10,
+                      "msg": {
+                        "wasm": {
+                          "execute": {
+                            "contract_addr": "10001",
+                            "msg": "eyAicmVsZWFzZSI6IHt9IH0=",
+                            "funds": []
+                          }
+                        }
+                      },
+                      "gas_limit": null,
+                      "reply_on": "always"
+                    }]
+                  }
+                }"#
+			.as_bytes(),
+		)
+		.unwrap();
 
-// 		let attributes = vec![
-// 			Attribute { key: "action".into(), value: "release".into() },
-// 			Attribute { key: "destination".into(), value: "10000".into() },
-// 			Attribute { key: "action".into(), value: "reflect_subcall".into() },
-// 		];
+		let attributes = vec![
+			Attribute { key: "action".into(), value: "release".into() },
+			Attribute { key: "destination".into(), value: "10000".into() },
+			Attribute { key: "action".into(), value: "reflect_subcall".into() },
+		];
 
-// 		for attr in attributes {
-// 			assert!(events.iter().any(|e| e.attributes.contains(&attr)));
-// 		}
-// 	}
-// }
+		for attr in attributes {
+			assert!(events.iter().any(|e| e.attributes.contains(&attr)));
+		}
+	}
+}
 
-// #[cfg(feature = "stargate")]
-// mod cw20_ics20 {
-// 	use super::{
-// 		create_vm, instrument_contract, BankAccount, Gas, OwnedWasmiVM, SimpleIBCPacket,
-// 		SimpleIBCState, SimpleWasmiVM, SimpleWasmiVMExtension,
-// 	};
+#[cfg(feature = "stargate")]
+mod cw20_ics20 {
+	use super::{
+		create_vm, instrument_contract, BankAccount, Gas, OwnedWasmiVM, SimpleIBCPacket,
+		SimpleIBCState, SimpleWasmiVM, SimpleWasmiVMExtension,
+	};
 
-// 	use super::{assert_matches, format, vec};
-// 	use alloc::{collections::BTreeMap, string::String, vec::Vec};
-// 	use cosmwasm_std::{
-// 		Addr, Binary, BlockInfo, Coin, ContractInfo, ContractResult, Env, IbcChannel,
-// 		IbcChannelConnectMsg, IbcChannelOpenMsg, IbcEndpoint, IbcOrder, IbcPacket,
-// 		IbcPacketReceiveMsg, MessageInfo, Timestamp, Uint128,
-// 	};
-// 	use cosmwasm_vm::{
-// 		executor::{
-// 			cosmwasm_call_serialize,
-// 			ibc::{
-// 				IbcChannelConnectCall, IbcChannelOpenCall, IbcChannelOpenResult,
-// 				IbcPacketReceiveCall,
-// 			},
-// 			ExecuteCall, InstantiateCall,
-// 		},
-// 		system::{
-// 			cosmwasm_system_entrypoint, cosmwasm_system_entrypoint_serialize, CosmwasmContractMeta,
-// 		},
-// 	};
-// 	use cw20_ics20::ibc::{Ics20Ack, Ics20Packet};
+	use super::{assert_matches, format, vec};
+	use alloc::{collections::BTreeMap, string::String, vec::Vec};
+	use cosmwasm_std::{
+		Addr, Binary, BlockInfo, Coin, ContractInfo, ContractResult, Env, IbcChannel,
+		IbcChannelConnectMsg, IbcChannelOpenMsg, IbcEndpoint, IbcOrder, IbcPacket,
+		IbcPacketReceiveMsg, MessageInfo, Timestamp, Uint128,
+	};
+	use cosmwasm_vm::{
+		executor::{
+			cosmwasm_call_serialize,
+			ibc::{
+				IbcChannelConnectCall, IbcChannelOpenCall, IbcChannelOpenResult,
+				IbcPacketReceiveCall,
+			},
+			ExecuteCall, InstantiateCall,
+		},
+		system::{
+			cosmwasm_system_entrypoint, cosmwasm_system_entrypoint_serialize, CosmwasmContractMeta,
+		},
+	};
+	use cw20_ics20::ibc::{Ics20Ack, Ics20Packet};
 
-// 	const DEFAULT_TIMEOUT: u64 = 3600;
-// 	const CONTRACT_PORT: &str = "ibc:wasm1234567890abcdef";
-// 	const REMOTE_PORT: &str = "transfer";
-// 	const CONNECTION_ID: &str = "connection-2";
-// 	const ICS20_VERSION: &str = "ics20-1";
+	const DEFAULT_TIMEOUT: u64 = 3600;
+	const CONTRACT_PORT: &str = "ibc:wasm1234567890abcdef";
+	const REMOTE_PORT: &str = "transfer";
+	const CONNECTION_ID: &str = "connection-2";
+	const ICS20_VERSION: &str = "ics20-1";
 
-// 	fn funded(funds: Vec<Coin>, info: MessageInfo) -> MessageInfo {
-// 		MessageInfo { sender: info.sender, funds }
-// 	}
+	fn funded(funds: Vec<Coin>, info: MessageInfo) -> MessageInfo {
+		MessageInfo { sender: info.sender, funds }
+	}
 
-// 	fn create_channel(channel_id: &str) -> IbcChannel {
-// 		IbcChannel::new(
-// 			IbcEndpoint { port_id: CONTRACT_PORT.into(), channel_id: channel_id.into() },
-// 			IbcEndpoint { port_id: REMOTE_PORT.into(), channel_id: channel_id.into() },
-// 			IbcOrder::Unordered,
-// 			ICS20_VERSION,
-// 			CONNECTION_ID,
-// 		)
-// 	}
+	fn create_channel(channel_id: &str) -> IbcChannel {
+		IbcChannel::new(
+			IbcEndpoint { port_id: CONTRACT_PORT.into(), channel_id: channel_id.into() },
+			IbcEndpoint { port_id: REMOTE_PORT.into(), channel_id: channel_id.into() },
+			IbcOrder::Unordered,
+			ICS20_VERSION,
+			CONNECTION_ID,
+		)
+	}
 
-// 	fn reverse_channel(channel: IbcChannel) -> IbcChannel {
-// 		IbcChannel::new(
-// 			channel.counterparty_endpoint,
-// 			channel.endpoint,
-// 			channel.order,
-// 			channel.version,
-// 			channel.connection_id,
-// 		)
-// 	}
+	fn reverse_channel(channel: IbcChannel) -> IbcChannel {
+		IbcChannel::new(
+			channel.counterparty_endpoint,
+			channel.endpoint,
+			channel.order,
+			channel.version,
+			channel.connection_id,
+		)
+	}
 
-// 	fn reverse_packet(
-// 		channel: IbcChannel,
-// 		Ics20Packet { amount, denom, receiver, sender }: Ics20Packet,
-// 	) -> Ics20Packet {
-// 		let reversed_channel = reverse_channel(channel);
-// 		Ics20Packet {
-// 			amount,
-// 			denom: format!(
-// 				"{}/{}/{}",
-// 				reversed_channel.endpoint.port_id, reversed_channel.endpoint.channel_id, denom
-// 			),
-// 			receiver: sender,
-// 			sender: receiver,
-// 		}
-// 	}
+	fn reverse_packet(
+		channel: IbcChannel,
+		Ics20Packet { amount, denom, receiver, sender, memo }: Ics20Packet,
+	) -> Ics20Packet {
+		let reversed_channel = reverse_channel(channel);
+		Ics20Packet {
+			amount,
+			denom: format!(
+				"{}/{}/{}",
+				reversed_channel.endpoint.port_id, reversed_channel.endpoint.channel_id, denom
+			),
+			receiver: sender,
+			sender: receiver,
+			memo,
+		}
+	}
 
-// 	#[test]
-// 	#[allow(clippy::too_many_lines)]
-// 	fn test_ics20_ibc_orchestration() {
-// 		// State setup
-// 		let code = instrument_contract(include_bytes!("../../fixtures/cw20_ics20.wasm"));
-// 		let sender = BankAccount(100);
-// 		let contract = BankAccount(10_000);
-// 		let funds = vec![];
-// 		let env = Env {
-// 			block: BlockInfo {
-// 				height: 0xDEAD_C0DE,
-// 				time: Timestamp::from_seconds(10000),
-// 				chain_id: "abstract-test".into(),
-// 			},
-// 			transaction: None,
-// 			contract: ContractInfo { address: contract.into() },
-// 		};
-// 		let info = MessageInfo { sender: sender.into(), funds };
-// 		let mut extension = SimpleWasmiVMExtension {
-// 			storage: BTreeMap::default(),
-// 			codes: BTreeMap::from([(0x1337, code)]),
-// 			contracts: BTreeMap::from([(
-// 				contract,
-// 				CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
-// 			)]),
-// 			next_account_id: BankAccount(10_001),
-// 			transaction_depth: 0,
-// 			gas: Gas::new(100_000_000),
-// 			..Default::default()
-// 		};
+	#[test]
+	#[allow(clippy::too_many_lines)]
+	fn test_ics20_ibc_orchestration() {
+		// State setup
+		let code = instrument_contract(include_bytes!("../fixtures/cw20_ics20.wasm"));
+		let sender = BankAccount(100);
+		let contract = BankAccount(10_000);
+		let funds = vec![];
+		let env = Env {
+			block: BlockInfo {
+				height: 0xDEAD_C0DE,
+				time: Timestamp::from_seconds(10000),
+				chain_id: "abstract-test".into(),
+			},
+			transaction: None,
+			contract: ContractInfo { address: contract.into() },
+		};
+		let info = MessageInfo { sender: sender.into(), funds };
+		let mut extension = SimpleWasmiVMExtension {
+			storage: BTreeMap::default(),
+			codes: BTreeMap::from([(0x1337, code)]),
+			contracts: BTreeMap::from([(
+				contract,
+				CosmwasmContractMeta { code_id: 0x1337, admin: None, label: String::new() },
+			)]),
+			next_account_id: BankAccount(10_001),
+			transaction_depth: 0,
+			gas: Gas::new(100_000_000),
+			..Default::default()
+		};
 
-// 		// IBC channel opening
-// 		let channel_name = "PicassoXTerra";
-// 		let channel = create_channel(channel_name);
+		// IBC channel opening
+		let channel_name = "PicassoXTerra";
+		let channel = create_channel(channel_name);
 
-// 		{
-// 			let mut vm = create_vm(&mut extension, env.clone(), info.clone()).unwrap();
+		{
+			let mut vm = create_vm(&mut extension, env.clone(), info.clone()).unwrap();
 
-// 			// Contract instantiation
-// 			assert_matches!(
-// 				cosmwasm_system_entrypoint::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 					&mut vm,
-// 					format!(
-// 						r#"{{
-//                       "default_gas_limit": null,
-//                       "default_timeout": {},
-//                       "gov_contract": "{}",
-//                       "allowlist": []
-//                     }}"#,
-// 						DEFAULT_TIMEOUT, sender.0
-// 					)
-// 					.as_bytes(),
-// 				),
-// 				Ok(_)
-// 			);
+			// Contract instantiation
+			assert_matches!(
+				cosmwasm_system_entrypoint::<InstantiateCall, OwnedWasmiVM<SimpleWasmiVM>>(
+					&mut vm,
+					format!(
+						r#"{{
+                      "default_gas_limit": null,
+                      "default_timeout": {},
+                      "gov_contract": "{}",
+                      "allowlist": []
+                    }}"#,
+						DEFAULT_TIMEOUT, sender.0
+					)
+					.as_bytes(),
+				),
+				Ok(_)
+			);
 
-// 			assert_matches!(
-// 				cosmwasm_call_serialize::<IbcChannelOpenCall, OwnedWasmiVM<SimpleWasmiVM>, _>(
-// 					&mut vm,
-// 					&IbcChannelOpenMsg::OpenInit { channel: channel.clone() }
-// 				)
-// 				.unwrap(),
-// 				IbcChannelOpenResult(ContractResult::Ok(None))
-// 			);
-// 			assert_matches!(
-// 				cosmwasm_system_entrypoint_serialize::<
-// 					IbcChannelConnectCall,
-// 					OwnedWasmiVM<SimpleWasmiVM>,
-// 					_,
-// 				>(
-// 					&mut vm,
-// 					&IbcChannelConnectMsg::OpenAck {
-// 						channel: channel.clone(),
-// 						counterparty_version: ICS20_VERSION.into(),
-// 					},
-// 				),
-// 				Ok(_)
-// 			);
-// 		}
+			assert_matches!(
+				cosmwasm_call_serialize::<IbcChannelOpenCall, OwnedWasmiVM<SimpleWasmiVM>, _>(
+					&mut vm,
+					&IbcChannelOpenMsg::OpenInit { channel: channel.clone() }
+				)
+				.unwrap(),
+				IbcChannelOpenResult(ContractResult::Ok(None))
+			);
+			assert_matches!(
+				cosmwasm_system_entrypoint_serialize::<
+					IbcChannelConnectCall,
+					OwnedWasmiVM<SimpleWasmiVM>,
+					_,
+				>(
+					&mut vm,
+					&IbcChannelConnectMsg::OpenAck {
+						channel: channel.clone(),
+						counterparty_version: ICS20_VERSION.into(),
+					},
+				),
+				Ok(_)
+			);
+		}
 
-// 		{
-// 			// Actual cross-chain execution
-// 			let mut vm = create_vm(
-// 				&mut extension,
-// 				env.clone(),
-// 				funded(
-// 					vec![Coin { denom: "PICA".into(), amount: Uint128::new(1000) }],
-// 					info.clone(),
-// 				),
-// 			)
-// 			.unwrap();
-// 			assert_matches!(
-// 				cosmwasm_system_entrypoint::<ExecuteCall, OwnedWasmiVM<SimpleWasmiVM>>(
-// 					&mut vm,
-// 					format!(
-// 						r#"{{
-//                       "transfer": {{
-//                         "channel": "{channel_name}",
-//                         "remote_address": "0",
-//                         "timeout": null
-//                       }}
-//                     }}"#
-// 					)
-// 					.as_bytes(),
-// 				),
-// 				Ok(_)
-// 			);
-// 		}
+		{
+			// Actual cross-chain execution
+			let mut vm = create_vm(
+				&mut extension,
+				env.clone(),
+				funded(
+					vec![Coin { denom: "PICA".into(), amount: Uint128::new(1000) }],
+					info.clone(),
+				),
+			)
+			.unwrap();
+			assert_matches!(
+				cosmwasm_system_entrypoint::<ExecuteCall, OwnedWasmiVM<SimpleWasmiVM>>(
+					&mut vm,
+					format!(
+						r#"{{
+                      "transfer": {{
+                        "channel": "{channel_name}",
+                        "remote_address": "0",
+                        "timeout": null
+                      }}
+                    }}"#
+					)
+					.as_bytes(),
+				),
+				Ok(_)
+			);
+		}
 
-// 		// cw20-ics20 is symmetric, we should be able to forward sent packets
-// 		// back to the contract by reverting the channel/packets
-// 		let (_next_seq, packets_to_dispatch) = extension.ibc.iter().fold(
-// 			(0u64, Vec::with_capacity(extension.ibc.values().map(|x| x.packets_sent.len()).sum())),
-// 			|(next_seq, mut packets_to_dispatch), (_, SimpleIBCState { packets_sent })| {
-// 				packets_sent.iter().enumerate().for_each(
-// 					|(i, SimpleIBCPacket { data, timeout, .. })| {
-// 						let packet = serde_json::from_slice::<Ics20Packet>(data.as_ref()).unwrap();
-// 						packets_to_dispatch.push(IbcPacket::new(
-// 							Binary::from(
-// 								serde_json::to_vec(&reverse_packet(channel.clone(), packet))
-// 									.unwrap(),
-// 							),
-// 							channel.counterparty_endpoint.clone(),
-// 							channel.endpoint.clone(),
-// 							next_seq + i as u64,
-// 							timeout.clone(),
-// 						));
-// 					},
-// 				);
-// 				(next_seq + packets_sent.len() as u64, packets_to_dispatch)
-// 			},
-// 		);
+		// cw20-ics20 is symmetric, we should be able to forward sent packets
+		// back to the contract by reverting the channel/packets
+		let (_next_seq, packets_to_dispatch) = extension.ibc.iter().fold(
+			(0u64, Vec::with_capacity(extension.ibc.values().map(|x| x.packets_sent.len()).sum())),
+			|(next_seq, mut packets_to_dispatch), (_, SimpleIBCState { packets_sent })| {
+				packets_sent.iter().enumerate().for_each(
+					|(i, SimpleIBCPacket { data, timeout, .. })| {
+						let packet = serde_json::from_slice::<Ics20Packet>(data.as_ref()).unwrap();
+						packets_to_dispatch.push(IbcPacket::new(
+							Binary::from(
+								serde_json::to_vec(&reverse_packet(channel.clone(), packet))
+									.unwrap(),
+							),
+							channel.counterparty_endpoint.clone(),
+							channel.endpoint.clone(),
+							next_seq + i as u64,
+							timeout.clone(),
+						));
+					},
+				);
+				(next_seq + packets_sent.len() as u64, packets_to_dispatch)
+			},
+		);
 
-// 		let mut vm = create_vm(&mut extension, env, info).unwrap();
-// 		let make_receive_msg = |packet| IbcPacketReceiveMsg::new(packet, Addr::unchecked("1337"));
-// 		for packet in packets_to_dispatch {
-// 			let (acknowledgment, _events) = cosmwasm_system_entrypoint_serialize::<
-// 				IbcPacketReceiveCall,
-// 				OwnedWasmiVM<SimpleWasmiVM>,
-// 				_,
-// 			>(&mut vm, &make_receive_msg(packet))
-// 			.unwrap();
-// 			let acknowledgment =
-// 				serde_json::from_slice::<Ics20Ack>(acknowledgment.unwrap().as_ref()).unwrap();
-// 			/*
-// 			See `ack_success` in cw20-ics20 ibs.rs
+		let mut vm = create_vm(&mut extension, env, info).unwrap();
+		let make_receive_msg = |packet| IbcPacketReceiveMsg::new(packet, Addr::unchecked("1337"));
+		for packet in packets_to_dispatch {
+			let (acknowledgment, _events) = cosmwasm_system_entrypoint_serialize::<
+				IbcPacketReceiveCall,
+				OwnedWasmiVM<SimpleWasmiVM>,
+				_,
+			>(&mut vm, &make_receive_msg(packet))
+			.unwrap();
+			let acknowledgment =
+				serde_json::from_slice::<Ics20Ack>(acknowledgment.unwrap().as_ref()).unwrap();
+			/*
+			See `ack_success` in cw20-ics20 ibs.rs
 
-// 			// create a serialized success message
-// 			fn ack_success() -> Binary {
-// 			  let res = Ics20Ack::Result(b"1".into());
-// 			  to_Binary::new(&res).unwrap()
-// 			}
-// 			*/
-// 			assert_eq!(acknowledgment, Ics20Ack::Result(b"1".into()));
-// 		}
-// 	}
-// }
+			// create a serialized success message
+			fn ack_success() -> Binary {
+			  let res = Ics20Ack::Result(b"1".into());
+			  to_Binary::new(&res).unwrap()
+			}
+			*/
+			assert_eq!(acknowledgment, Ics20Ack::Result(b"1".into()));
+		}
+	}
+}

@@ -33,6 +33,7 @@
 	trivial_numeric_casts,
 	unused_extern_crates
 )]
+#![allow(clippy::type_complexity)]
 #![doc = include_str!("../README.md")]
 
 extern crate alloc;

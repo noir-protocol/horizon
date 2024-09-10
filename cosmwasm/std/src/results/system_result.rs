@@ -2,7 +2,7 @@ use core::fmt;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::{prelude::*, SystemError};
+use crate::SystemError;
 
 /// This is the outer result type returned by a querier to the contract.
 ///
