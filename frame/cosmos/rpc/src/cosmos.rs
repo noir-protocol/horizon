@@ -28,7 +28,7 @@ use sp_api::ProvideRuntimeApi;
 use sp_blockchain::HeaderBackend;
 use sp_core::{sha2_256, Bytes, H256};
 use sp_runtime::{traits::Block as BlockT, transaction_validity::TransactionSource};
-use std::{marker::PhantomData, sync::Arc};
+use std::sync::Arc;
 
 #[rpc(server)]
 #[async_trait]
@@ -40,20 +40,19 @@ pub trait CosmosApi {
 	async fn simulate(&self, tx_bytes: Bytes) -> RpcResult<SimulateResponse>;
 }
 
-pub struct Cosmos<B: BlockT, C, P> {
-	pool: Arc<P>,
+pub struct Cosmos<C, P> {
 	client: Arc<C>,
-	_marker: PhantomData<B>,
+	pool: Arc<P>,
 }
 
-impl<B: BlockT, C, P> Cosmos<B, C, P> {
+impl<C, P> Cosmos<C, P> {
 	pub fn new(pool: Arc<P>, client: Arc<C>) -> Self {
-		Self { pool, client, _marker: Default::default() }
+		Self { pool, client }
 	}
 }
 
 #[async_trait]
-impl<Block, C, P> CosmosApiServer for Cosmos<Block, C, P>
+impl<Block, C, P> CosmosApiServer for Cosmos<C, P>
 where
 	Block: BlockT,
 	C: Send + Sync + 'static,
