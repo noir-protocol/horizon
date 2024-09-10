@@ -59,9 +59,7 @@ hp-io = { workspace = true, default-features = false }
 pallet-cosmos = { workspace = true, default-features = false }
 pallet-cosmos-accounts = { workspace = true, default-features = false }
 cosmos-runtime-api = { workspace = true, default-features = false }
-pallet-cosmos-types = { workspace = true, default-features = false, features = [
-	"with-codec",
-] }
+pallet-cosmos-types = { workspace = true, default-features = false }
 pallet-cosmos-x-auth = { workspace = true, default-features = false }
 pallet-cosmos-x-auth-migrations = { workspace = true, default-features = false }
 pallet-cosmos-x-auth-signing = { workspace = true, default-features = false }

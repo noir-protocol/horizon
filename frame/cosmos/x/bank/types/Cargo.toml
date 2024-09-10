@@ -17,9 +17,7 @@ scale-info = { workspace = true, default-features = false, optional = true }
 serde = { workspace = true, default-features = false }
 serde_json = { workspace = true, default-features = false }
 
-pallet-cosmos-types = { workspace = true, default-features = false, features = [
-	"with-codec",
-] }
+pallet-cosmos-types = { workspace = true, default-features = false }
 pallet-cosmos-x-auth-migrations = { workspace = true, default-features = false }
 
 [features]

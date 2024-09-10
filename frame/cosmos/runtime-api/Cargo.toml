@@ -16,10 +16,7 @@ scale-info = { workspace = true, default-features = false }
 sp-api = { workspace = true, default-features = false }
 sp-runtime = { workspace = true, default-features = false }
 
-pallet-cosmos-types = { workspace = true, features = [
-	"with-codec",
-	"with-serde",
-], default-features = false }
+pallet-cosmos-types = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]

@@ -18,5 +18,6 @@
 use alloc::{string::String, vec::Vec};
 
 pub trait Msg {
+	// GetSigners returns the addrs of signers that must sign.
 	fn get_signers(self) -> Vec<String>;
 }

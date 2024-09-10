@@ -15,13 +15,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(not(feature = "std"))]
 use alloc::vec::Vec;
-#[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
-#[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
-#[cfg(feature = "with-serde")]
 use serde::{Deserialize, Serialize};
 
 pub const EVENT_TYPE_TX: &str = "tx";
@@ -34,18 +30,14 @@ pub const EVENT_TYPE_MESSAGE: &str = "message";
 pub const ATTRIBUTE_KEY_SENDER: &str = "sender";
 pub const ATTRIBUTE_KEY_AMOUNT: &str = "amount";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TypeInfo, Serialize, Deserialize)]
 pub struct CosmosEvent {
-	#[cfg_attr(feature = "with-serde", serde(rename = "type"))]
+	#[serde(rename = "type")]
 	pub r#type: Vec<u8>,
 	pub attributes: Vec<EventAttribute>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
-#[cfg_attr(feature = "with-serde", derive(Serialize, Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TypeInfo, Serialize, Deserialize)]
 pub struct EventAttribute {
 	pub key: Vec<u8>,
 	pub value: Vec<u8>,

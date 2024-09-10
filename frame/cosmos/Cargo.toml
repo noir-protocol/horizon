@@ -26,9 +26,7 @@ sp-runtime = { workspace = true, default-features = false }
 
 # Horizon
 hp-io = { workspace = true, default-features = false }
-pallet-cosmos-types = { workspace = true, default-features = false, features = [
-	"with-codec",
-] }
+pallet-cosmos-types = { workspace = true, default-features = false }
 pallet-cosmos-x-auth-signing = { workspace = true, default-features = false }
 
 [dev-dependencies]

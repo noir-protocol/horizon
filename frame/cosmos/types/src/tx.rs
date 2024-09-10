@@ -15,15 +15,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(feature = "with-codec")]
 use parity_scale_codec::{Decode, Encode};
-#[cfg(feature = "with-codec")]
 use scale_info::TypeInfo;
 
 pub type SequenceNumber = u64;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-#[cfg_attr(feature = "with-codec", derive(Encode, Decode, TypeInfo))]
+#[derive(Clone, Debug, PartialEq, Eq, Encode, Decode, TypeInfo)]
 pub struct Account {
 	pub sequence: SequenceNumber,
 	pub amount: u128,
