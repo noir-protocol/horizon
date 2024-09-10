@@ -24,6 +24,7 @@ use pallet_cosmos_types::{events::CosmosEvent, gas::Gas};
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
 use serde::{Deserialize, Serialize};
+use sp_api::decl_runtime_apis;
 use sp_runtime::traits::Block as BlockT;
 
 #[derive(Clone, Decode, Encode, Debug, TypeInfo, Serialize, Deserialize)]
@@ -46,7 +47,7 @@ pub enum SimulateError {
 
 pub type SimulateResult = Result<SimulateResponse, SimulateError>;
 
-sp_api::decl_runtime_apis! {
+decl_runtime_apis! {
 	pub trait CosmosRuntimeApi {
 		fn convert_tx(tx_bytes: Vec<u8>) -> <Block as BlockT>::Extrinsic;
 		fn simulate(tx_bytes: Vec<u8>) -> SimulateResult;
