@@ -18,7 +18,6 @@
 
 pub mod traits;
 
-use crate::any_match;
 use alloc::{
 	string::{String, ToString},
 	vec::Vec,
@@ -35,6 +34,7 @@ use cosmos_sdk_proto::{
 	traits::Message,
 	Any,
 };
+use pallet_cosmos_types::any_match;
 use pallet_cosmos_x_auth_migrations::legacytx::stdsign::{LegacyMsg, StdSignDoc};
 use pallet_cosmos_x_bank_types::msgs::msg_send::MsgSend;
 use pallet_cosmos_x_wasm_types::tx::{

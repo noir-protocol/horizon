@@ -18,13 +18,12 @@
 
 pub mod traits;
 
-use crate::any_match;
 use alloc::{string::String, vec::Vec};
 use cosmos_sdk_proto::{
 	cosmos::{bank, tx::v1beta1::Tx},
 	cosmwasm::wasm,
 };
-use pallet_cosmos_types::tx_msgs::Msg;
+use pallet_cosmos_types::{any_match, tx_msgs::Msg};
 use pallet_cosmos_x_bank_types::msgs::msg_send::MsgSend;
 use pallet_cosmos_x_wasm_types::tx::{
 	msg_execute_contract::MsgExecuteContract, msg_instantiate_contract2::MsgInstantiateContract2,

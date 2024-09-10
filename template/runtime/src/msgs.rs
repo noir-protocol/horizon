@@ -27,8 +27,7 @@ use cosmos_sdk_proto::{
 	Any,
 };
 use hp_crypto::EcdsaExt;
-use pallet_cosmos_types::{context, msgservice::MsgHandler};
-use pallet_cosmos_x_auth_signing::any_match;
+use pallet_cosmos_types::{any_match, context, msgservice::MsgHandler};
 use pallet_cosmos_x_bank::msgs::MsgSendHandler;
 use pallet_cosmos_x_wasm::msgs::{
 	MsgExecuteContractHandler, MsgInstantiateContract2Handler, MsgMigrateContractHandler,

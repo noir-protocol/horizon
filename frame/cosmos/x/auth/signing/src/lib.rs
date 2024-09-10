@@ -21,6 +21,5 @@
 
 extern crate alloc;
 
-pub mod macros;
 pub mod sign_mode_handler;
 pub mod sign_verifiable_tx;

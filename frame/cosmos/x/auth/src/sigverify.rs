@@ -28,9 +28,8 @@ use cosmos_sdk_proto::{
 };
 use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::{address::acc_address_from_bech32, handler::AnteDecorator};
+use pallet_cosmos_types::{address::acc_address_from_bech32, any_match, handler::AnteDecorator};
 use pallet_cosmos_x_auth_signing::{
-	any_match,
 	sign_mode_handler::{traits::SignModeHandler, SignerData},
 	sign_verifiable_tx::traits::SigVerifiableTx,
 };
