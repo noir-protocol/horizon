@@ -32,7 +32,8 @@ impl TryFrom<&Any> for MsgSend {
 	type Error = ();
 
 	fn try_from(any: &Any) -> Result<Self, Self::Error> {
-		let msg =  cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend::decode(&mut &*any.value).map_err(|_| ())?;
+		let msg = cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend::decode(&mut &*any.value)
+			.map_err(|_| ())?;
 		Ok(Self {
 			amount: msg.amount.iter().map(Into::into).collect(),
 			from_address: msg.from_address,
