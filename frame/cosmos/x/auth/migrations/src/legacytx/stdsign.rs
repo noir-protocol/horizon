@@ -54,6 +54,6 @@ pub trait LegacyMsg {
 	where
 		Self: Sized + Serialize,
 	{
-		serde_json::json!({"type": Self::AMINO_NAME.to_string(), "value": serde_json::to_value(self).unwrap()})
+		serde_json::json!({ "type": Self::AMINO_NAME.to_string(), "value": serde_json::to_value(self).unwrap() })
 	}
 }

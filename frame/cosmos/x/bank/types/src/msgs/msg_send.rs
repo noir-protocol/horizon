@@ -16,7 +16,7 @@
 // limitations under the License.
 
 use alloc::{string::String, vec, vec::Vec};
-use cosmos_sdk_proto::{cosmos::bank, prost::Message, Any};
+use cosmos_sdk_proto::{prost::Message, Any};
 use pallet_cosmos_types::{coin::Coin, tx_msgs::Msg};
 use pallet_cosmos_x_auth_migrations::legacytx::stdsign::LegacyMsg;
 use serde::{Deserialize, Serialize};
@@ -32,7 +32,7 @@ impl TryFrom<&Any> for MsgSend {
 	type Error = ();
 
 	fn try_from(any: &Any) -> Result<Self, Self::Error> {
-		let msg = bank::v1beta1::MsgSend::decode(&mut &*any.value).map_err(|_| ())?;
+		let msg =  cosmos_sdk_proto::cosmos::bank::v1beta1::MsgSend::decode(&mut &*any.value).map_err(|_| ())?;
 		Ok(Self {
 			amount: msg.amount.iter().map(Into::into).collect(),
 			from_address: msg.from_address,
