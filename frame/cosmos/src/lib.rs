@@ -44,7 +44,7 @@ use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchResultWithPostInfo, InvalidTransaction, Pays},
 	traits::{
-		tokens::{fungible::Inspect, fungibles, AssetId, Balance, Fortitude, Preservation},
+		tokens::{fungible::Inspect, fungibles, AssetId, Balance},
 		Currency, Get,
 	},
 	weights::Weight,
@@ -59,7 +59,6 @@ use pallet_cosmos_types::{
 	gas::{BasicGasMeter, Gas, GasMeter},
 	handler::AnteDecorator,
 	msgservice::MsgServiceRouter,
-	tx::Account,
 };
 use pallet_cosmos_x_auth_signing::{
 	sign_mode_handler::traits::SignModeHandler, sign_verifiable_tx::traits::SigVerifiableTx,
@@ -68,11 +67,11 @@ use parity_scale_codec::{Decode, Encode, MaxEncodedLen};
 use scale_info::TypeInfo;
 use sp_core::H160;
 use sp_runtime::{
-	traits::{Convert, DispatchInfoOf, Dispatchable, UniqueSaturatedInto},
+	traits::{Convert, DispatchInfoOf, Dispatchable},
 	transaction_validity::{
 		TransactionValidity, TransactionValidityError, ValidTransactionBuilder,
 	},
-	RuntimeDebug,
+	RuntimeDebug, SaturatedConversion,
 };
 
 #[derive(Clone, Eq, PartialEq, RuntimeDebug, Encode, Decode, MaxEncodedLen, TypeInfo)]
@@ -449,10 +448,9 @@ impl<T: Config> Pallet<T> {
 	/// This function must be called during the pre-dispatch phase
 	/// (just before applying the extrinsic).
 	pub fn validate_transaction_in_block(
-		origin: H160,
+		_origin: H160,
 		tx_bytes: &[u8],
 	) -> Result<(), TransactionValidityError> {
-		let (_who, _) = Self::account(&origin);
 		let tx = Tx::decode(&mut &*tx_bytes)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
@@ -463,7 +461,6 @@ impl<T: Config> Pallet<T> {
 
 	// Controls that must be performed by the pool.
 	fn validate_transaction_in_pool(origin: H160, tx_bytes: &[u8]) -> TransactionValidity {
-		let (who, _) = Self::account(&origin);
 		let tx = Tx::decode(&mut &*tx_bytes)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
@@ -477,7 +474,7 @@ impl<T: Config> Pallet<T> {
 
 		// In the context of the pool, a transaction with
 		// too high a nonce is still considered valid
-		if transaction_nonce > who.sequence {
+		if transaction_nonce > Self::sequence_of(&origin) {
 			if let Some(prev_nonce) = transaction_nonce.checked_sub(1) {
 				builder = builder.and_requires((origin, prev_nonce))
 			}
@@ -551,25 +548,8 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	/// Get the base account info.
-	pub fn account(address: &H160) -> (Account, Weight) {
+	pub fn sequence_of(address: &H160) -> u64 {
 		let account_id = T::AddressMapping::from_address_raw(*address);
-
-		let nonce = frame_system::Pallet::<T>::account_nonce(&account_id);
-		// keepalive `true` takes into account ExistentialDeposit as part of what's considered
-		// liquid balance.
-		let balance = T::NativeAsset::reducible_balance(
-			&account_id,
-			Preservation::Preserve,
-			Fortitude::Polite,
-		);
-
-		(
-			Account {
-				sequence: UniqueSaturatedInto::<u64>::unique_saturated_into(nonce),
-				amount: UniqueSaturatedInto::<u128>::unique_saturated_into(balance),
-			},
-			T::DbWeight::get().reads(2),
-		)
+		frame_system::Pallet::<T>::account_nonce(&account_id).saturated_into()
 	}
 }

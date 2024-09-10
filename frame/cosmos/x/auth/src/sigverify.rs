@@ -80,10 +80,10 @@ where
 			}
 
 			let signer_addr = H160::from_slice(&signer_addr);
-			let (account, _) = pallet_cosmos::Pallet::<T>::account(&signer_addr);
-			if signer_info.sequence > account.sequence {
+			let sequence = pallet_cosmos::Pallet::<T>::sequence_of(&signer_addr);
+			if signer_info.sequence > sequence {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::Future));
-			} else if signer_info.sequence < account.sequence {
+			} else if signer_info.sequence < sequence {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
 			}
 
@@ -96,7 +96,7 @@ where
 				address: signer.clone(),
 				chain_id,
 				account_number: 0,
-				sequence: account.sequence,
+				sequence: signer_info.sequence,
 				pub_key: public_key.clone(),
 			};
 
