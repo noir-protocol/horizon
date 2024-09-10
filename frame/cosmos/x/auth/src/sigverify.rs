@@ -30,6 +30,7 @@ use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{address::acc_address_from_bech32, handler::AnteDecorator};
 use pallet_cosmos_x_auth_signing::{
+	any_match,
 	sign_mode_handler::{traits::SignModeHandler, SignerData},
 	sign_verifiable_tx::traits::SigVerifiableTx,
 };
@@ -38,8 +39,6 @@ use sp_core::{sha2_256, Get, H160};
 use sp_runtime::transaction_validity::{
 	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
 };
-
-pub const SECP256K1_TYPE_URL: &str = "/cosmos.crypto.secp256k1.PubKey";
 
 pub struct SigVerificationDecorator<T>(PhantomData<T>);
 
@@ -125,41 +124,43 @@ where
 		signature: &[u8],
 		tx: &Tx,
 	) -> Result<(), TransactionValidityError> {
-		match public_key.type_url.as_str() {
-			SECP256K1_TYPE_URL => {
-				let public_key =
-					secp256k1::PubKey::decode(&mut &*public_key.value).map_err(|_| {
-						TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-					})?;
-				let mut hasher = ripemd::Ripemd160::new();
-				hasher.update(sha2_256(&public_key.key));
-				let address = H160::from_slice(&hasher.finalize());
+		any_match!(
+			public_key, {
+				secp256k1::PubKey => {
+					let public_key =
+						secp256k1::PubKey::decode(&mut &*public_key.value).map_err(|_| {
+							TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+						})?;
+					let mut hasher = ripemd::Ripemd160::new();
+					hasher.update(sha2_256(&public_key.key));
+					let address = H160::from_slice(&hasher.finalize());
 
-				let (_hrp, signer_addr) =
-					acc_address_from_bech32(&signer_data.address).map_err(|_| {
-						TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-					})?;
+					let (_hrp, signer_addr) =
+						acc_address_from_bech32(&signer_data.address).map_err(|_| {
+							TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+						})?;
 
-				if signer_addr.len() != 20 {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+					if signer_addr.len() != 20 {
+						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+					}
+
+					let signer_addr = H160::from_slice(&signer_addr);
+					if signer_addr != address {
+						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+					}
+
+					let sign_bytes = T::SignModeHandler::get_sign_bytes(sign_mode, signer_data, tx)
+						.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+
+					if !secp256k1_ecdsa_verify(signature, &sha2_256(&sign_bytes), &public_key.key) {
+						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+					}
+
+					Ok(())
 				}
-
-				let signer_addr = H160::from_slice(&signer_addr);
-				if signer_addr != address {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
-				}
-
-				let sign_bytes = T::SignModeHandler::get_sign_bytes(sign_mode, signer_data, tx)
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
-
-				if !secp256k1_ecdsa_verify(signature, &sha2_256(&sign_bytes), &public_key.key) {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
-				}
-
-				Ok(())
 			},
-			_ => Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
-		}
+			Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
+		)
 	}
 }
 

@@ -63,9 +63,8 @@ use pallet_cosmos::{
 	},
 	AddressMapping,
 };
-use pallet_cosmos_x_auth::sigverify::SECP256K1_TYPE_URL;
 use pallet_cosmos_x_auth_signing::{
-	sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
+	any_match, sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
 };
 use pallet_cosmwasm::instrument::CostRules;
 use pallet_grandpa::{
@@ -616,19 +615,21 @@ impl Runtime {
 					.public_key
 					.as_ref()
 					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
-				let who = match public_key.type_url.as_str() {
-					SECP256K1_TYPE_URL => {
-						let public_key = secp256k1::PubKey::decode(&mut &*public_key.value)
-							.map_err(|_| {
-								TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-							})?;
-						let mut pk = [0u8; 33];
-						pk.copy_from_slice(&public_key.key);
-						CosmosSigner(Public(pk))
+				let who = any_match!(
+					public_key, {
+						secp256k1::PubKey => {
+							let public_key = secp256k1::PubKey::decode(&mut &*public_key.value)
+								.map_err(|_| {
+									TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+								})?;
+							let mut pk = [0u8; 33];
+							pk.copy_from_slice(&public_key.key);
+
+							Ok(CosmosSigner(Public(pk)))
+						}
 					},
-					_ =>
-						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner)),
-				};
+					Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))
+				)?;
 
 				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
 					&interim_account,
