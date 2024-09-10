@@ -22,8 +22,6 @@ use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
 
 pub trait SigVerifiableTx {
 	fn get_signers(tx: &Tx) -> Result<Vec<String>, SigVerifiableTxError>;
-
 	fn fee_payer(tx: &Tx) -> Result<String, SigVerifiableTxError>;
-
 	fn sequence(tx: &Tx) -> Result<u64, SigVerifiableTxError>;
 }
