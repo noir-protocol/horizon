@@ -22,18 +22,18 @@ use alloc::{
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub enum AddressError {
-	Bech32Error(bech32::DecodeError),
+	DecodeError(bech32::DecodeError),
 }
 
 pub fn acc_address_from_bech32(address: &str) -> Result<(String, Vec<u8>), AddressError> {
 	bech32::decode(address)
 		.map(|(hrp, data)| (hrp.to_string(), data))
-		.map_err(AddressError::Bech32Error)
+		.map_err(AddressError::DecodeError)
 }
 
 #[cfg(test)]
 mod tests {
-	use super::acc_address_from_bech32;
+	use super::*;
 
 	#[test]
 	fn acc_address_from_bech32_test() {
