@@ -10,12 +10,7 @@ targets = ["x86_64-unknown-linux-gnu"]
 
 [dependencies]
 cosmos-sdk-proto = { workspace = true, default-features = false }
-parity-scale-codec = { workspace = true, default-features = false, features = [
-	"derive",
-], optional = true }
-scale-info = { workspace = true, default-features = false, optional = true }
 serde = { workspace = true, default-features = false }
-serde_json = { workspace = true, default-features = false }
 
 pallet-cosmos-types = { workspace = true, default-features = false }
 pallet-cosmos-x-auth-migrations = { workspace = true, default-features = false }
@@ -24,11 +19,7 @@ pallet-cosmos-x-auth-migrations = { workspace = true, default-features = false }
 default = ["std"]
 std = [
 	"cosmos-sdk-proto/std",
-	"parity-scale-codec/std",
-	"scale-info/std",
 	"serde/std",
-	"serde_json/std",
 	"pallet-cosmos-types/std",
 	"pallet-cosmos-x-auth-migrations/std",
 ]
-with-codec = ["parity-scale-codec", "scale-info"]

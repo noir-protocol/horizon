@@ -65,10 +65,7 @@ horizon-template-runtime = { workspace = true, features = ["std"] }
 cosmos-rpc = { workspace = true }
 cosmos-runtime-api = { workspace = true, features = ["std"] }
 pallet-cosmos-types = { workspace = true, features = ["std"] }
-pallet-cosmos-x-bank-types = { workspace = true, features = [
-	"std",
-	"with-codec",
-] }
+pallet-cosmos-x-bank-types = { workspace = true, features = ["std"] }
 
 cosmwasm-rpc = { workspace = true }
 cosmwasm-runtime-api = { workspace = true, features = ["std"] }

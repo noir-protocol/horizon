@@ -21,7 +21,7 @@ sp-runtime = { workspace = true, default-features = false }
 hp-io = { workspace = true, default-features = false }
 pallet-cosmos = { workspace = true, default-features = false }
 pallet-cosmos-types = { workspace = true, default-features = false }
-pallet-cosmos-x-bank-types = { workspace = true, default-features = false, features = ["with-codec"] }
+pallet-cosmos-x-bank-types = { workspace = true, default-features = false }
 
 [features]
 default = ["std"]
