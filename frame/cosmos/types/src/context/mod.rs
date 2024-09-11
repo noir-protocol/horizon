@@ -15,16 +15,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod traits;
+
 use crate::{
-	events::EventManager,
-	gas::{Gas, GasMeter},
+	events::{traits::EventManager as _, EventManager},
+	gas::{traits::GasMeter, BasicGasMeter, Gas},
 };
 
-pub trait Context {
-	type GasMeter: GasMeter;
-	type EventManager: EventManager;
+pub struct Context {
+	pub gas_meter: BasicGasMeter,
+	pub event_manager: EventManager,
+}
 
-	fn new(limit: Gas) -> Self;
-	fn gas_meter(&mut self) -> &mut Self::GasMeter;
-	fn event_manager(&mut self) -> &mut Self::EventManager;
+impl traits::Context for Context {
+	type GasMeter = BasicGasMeter;
+	type EventManager = EventManager;
+
+	fn new(limit: Gas) -> Self {
+		Self { gas_meter: Self::GasMeter::new(limit), event_manager: Self::EventManager::new() }
+	}
+
+	fn gas_meter(&mut self) -> &mut Self::GasMeter {
+		&mut self.gas_meter
+	}
+
+	fn event_manager(&mut self) -> &mut Self::EventManager {
+		&mut self.event_manager
+	}
 }

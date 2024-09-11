@@ -29,8 +29,7 @@ use pallet_cosmos_types::{
 	coin::amount_to_string,
 	context,
 	errors::{CosmosError, RootError},
-	events::{EventAttribute, EventManager, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
-	gas::GasMeter,
+	events::{traits::EventManager, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER}, gas::traits::GasMeter,
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
 use sp_runtime::{traits::Convert, SaturatedConversion};
@@ -46,7 +45,7 @@ impl<T> Default for MsgSendHandler<T> {
 impl<T, Context> pallet_cosmos_types::msgservice::MsgHandler<Context> for MsgSendHandler<T>
 where
 	T: pallet_cosmos::Config,
-	Context: context::Context,
+	Context: context::traits::Context,
 {
 	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
 		let MsgSend { from_address, to_address, amount } =

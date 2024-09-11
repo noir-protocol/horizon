@@ -39,7 +39,7 @@ impl<T, Context> pallet_cosmos_types::msgservice::MsgServiceRouter<Context> for 
 where
 	T: frame_system::Config + pallet_cosmos::Config + pallet_cosmwasm::Config,
 	T::AccountId: EcdsaExt,
-	Context: context::Context,
+	Context: context::traits::Context,
 {
 	fn route(msg: &Any) -> Option<Box<dyn MsgHandler<Context>>> {
 		any_match!(

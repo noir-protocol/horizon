@@ -34,8 +34,8 @@ use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
 	context,
 	errors::{CosmosError, RootError},
-	events::{CosmosEvent, EventAttribute, EventManager},
-	gas::GasMeter,
+	events::{traits::EventManager, CosmosEvent, EventAttribute},
+	gas::traits::GasMeter,
 	msgservice::MsgHandler,
 };
 use pallet_cosmos_x_wasm_types::{
@@ -65,7 +65,7 @@ impl<T> Default for MsgStoreCodeHandler<T> {
 impl<T, Context> MsgHandler<Context> for MsgStoreCodeHandler<T>
 where
 	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
-	Context: context::Context,
+	Context: context::traits::Context,
 {
 	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
 		// TODO: Apply actual weights
@@ -116,7 +116,7 @@ impl<T, Context> MsgHandler<Context> for MsgInstantiateContract2Handler<T>
 where
 	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
 	T::AccountId: EcdsaExt,
-	Context: context::Context,
+	Context: context::traits::Context,
 {
 	// TODO: Consume gas
 	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
@@ -193,7 +193,7 @@ impl<T, Context> MsgHandler<Context> for MsgExecuteContractHandler<T>
 where
 	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
 	T::AccountId: EcdsaExt,
-	Context: context::Context,
+	Context: context::traits::Context,
 {
 	// TODO: Consume gas
 	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
@@ -250,7 +250,7 @@ impl<T> Default for MsgMigrateContractHandler<T> {
 impl<T, Context> MsgHandler<Context> for MsgMigrateContractHandler<T>
 where
 	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
-	Context: context::Context,
+	Context: context::traits::Context,
 {
 	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
 		let MsgMigrateContract { sender, contract, code_id, msg } =
@@ -309,7 +309,7 @@ impl<T> Default for MsgUpdateAdminHandler<T> {
 impl<T, Context> MsgHandler<Context> for MsgUpdateAdminHandler<T>
 where
 	T: pallet_cosmos::Config + pallet_cosmwasm::Config,
-	Context: context::Context,
+	Context: context::traits::Context,
 {
 	fn handle(&self, msg: &Any, ctx: &mut Context) -> Result<(), CosmosError> {
 		let MsgUpdateAdmin { sender, new_admin, contract } =

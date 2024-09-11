@@ -15,6 +15,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub mod traits;
+
 use alloc::vec::Vec;
 use parity_scale_codec::{Decode, Encode};
 use scale_info::TypeInfo;
@@ -45,9 +47,25 @@ pub struct EventAttribute {
 
 pub type CosmosEvents = Vec<CosmosEvent>;
 
-pub trait EventManager {
-	fn new() -> Self;
-	fn events(&self) -> CosmosEvents;
-	fn emit_event(&mut self, event: CosmosEvent);
-	fn emit_events(&mut self, events: CosmosEvents);
+#[derive(Clone, Debug, Default)]
+pub struct EventManager {
+	events: CosmosEvents,
+}
+
+impl traits::EventManager for EventManager {
+	fn new() -> Self {
+		Self::default()
+	}
+
+	fn events(&self) -> CosmosEvents {
+		self.events.clone()
+	}
+
+	fn emit_event(&mut self, event: CosmosEvent) {
+		self.events.push(event);
+	}
+
+	fn emit_events(&mut self, events: CosmosEvents) {
+		self.events.extend(events);
+	}
 }

@@ -50,13 +50,14 @@ use frame_support::{
 	weights::Weight,
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
+use pallet_cosmos_types::events::traits::EventManager;
 use pallet_cosmos_types::{
 	address::acc_address_from_bech32,
-	context::{self, Context as _},
+	context,
+	context::traits::Context,
 	errors::{CosmosError, RootError},
-	events,
-	events::{CosmosEvent, CosmosEvents, EventManager as _},
-	gas::{BasicGasMeter, Gas, GasMeter},
+	events::CosmosEvent,
+	gas::{traits::GasMeter, Gas},
 	handler::AnteDecorator,
 	msgservice::MsgServiceRouter,
 };
@@ -102,21 +103,18 @@ where
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx_bytes } = self {
 			let check = || {
-				let tx = Tx::decode(&mut &tx_bytes[..])
+				let (_hrp, address) = Tx::decode(&mut &tx_bytes[..])
+					.map(|tx| T::SigVerifiableTx::fee_payer(&tx))
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?
+					.map(|fee_payer| acc_address_from_bech32(&fee_payer))
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
-				let fee_payer = T::SigVerifiableTx::fee_payer(&tx).map_err(|_| {
-					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-				})?;
 
-				let (_hrp, address_raw) = acc_address_from_bech32(&fee_payer).map_err(|_| {
-					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-				})?;
-
-				if address_raw.len() != 20 {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+				if address.len() != 20 {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 				}
 
-				Ok(H160::from_slice(&address_raw))
+				Ok(H160::from_slice(&address))
 			};
 
 			Some(check())
@@ -168,6 +166,7 @@ pub trait AddressMapping<A> {
 #[frame_support::pallet]
 pub mod pallet {
 	use super::*;
+	use crate::context::traits::Context;
 	use frame_support::{
 		pallet_prelude::*,
 		traits::{fungibles::metadata::Inspect as _, Contains},
@@ -229,54 +228,6 @@ pub mod pallet {
 			pub const AddressPrefix: &'static str = "cosmos";
 		}
 
-		#[derive(Clone, Debug, Default)]
-		pub struct EventManager {
-			events: CosmosEvents,
-		}
-
-		impl events::EventManager for EventManager {
-			fn new() -> Self {
-				Self::default()
-			}
-
-			fn events(&self) -> CosmosEvents {
-				self.events.clone()
-			}
-
-			fn emit_event(&mut self, event: events::CosmosEvent) {
-				self.events.push(event);
-			}
-
-			fn emit_events(&mut self, events: CosmosEvents) {
-				self.events.extend(events);
-			}
-		}
-
-		pub struct Context {
-			pub gas_meter: BasicGasMeter,
-			pub event_manager: EventManager,
-		}
-
-		impl context::Context for Context {
-			type GasMeter = BasicGasMeter;
-			type EventManager = EventManager;
-
-			fn new(limit: Gas) -> Self {
-				Self {
-					gas_meter: Self::GasMeter::new(limit),
-					event_manager: Self::EventManager::new(),
-				}
-			}
-
-			fn gas_meter(&mut self) -> &mut Self::GasMeter {
-				&mut self.gas_meter
-			}
-
-			fn event_manager(&mut self) -> &mut Self::EventManager {
-				&mut self.event_manager
-			}
-		}
-
 		#[frame_support::register_default_impl(TestDefaultConfig)]
 		impl DefaultConfig for TestDefaultConfig {
 			#[inject_runtime_type]
@@ -292,7 +243,7 @@ pub mod pallet {
 			type TxSigLimit = TxSigLimit;
 			type MaxDenomLimit = MaxDenomLimit;
 			type AddressPrefix = AddressPrefix;
-			type Context = Context;
+			type Context = pallet_cosmos_types::context::Context;
 		}
 	}
 
@@ -372,7 +323,7 @@ pub mod pallet {
 		#[pallet::constant]
 		type AddressPrefix: Get<&'static str>;
 
-		type Context: context::Context;
+		type Context: Context;
 	}
 
 	#[pallet::genesis_config]

@@ -58,12 +58,12 @@ use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use pallet_cosmos::{
 	config_preludes::{
-		AddressPrefix, ChainId, Context, MaxDenomLimit, MaxMemoCharacters, MsgFilter, NativeDenom,
+		AddressPrefix, ChainId, MaxDenomLimit, MaxMemoCharacters, MsgFilter, NativeDenom,
 		TxSigLimit, WeightToGas,
 	},
 	AddressMapping,
 };
-use pallet_cosmos_types::any_match;
+use pallet_cosmos_types::{any_match, context::Context};
 use pallet_cosmos_x_auth_signing::{
 	sign_mode_handler::SignModeHandler, sign_verifiable_tx::SigVerifiableTx,
 };
@@ -577,10 +577,11 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		info: Self::SignedInfo,
 	) -> Option<sp_runtime::DispatchResultWithInfo<PostDispatchInfoOf<Self>>> {
 		match self {
-			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) =>
+			call @ RuntimeCall::Cosmos(pallet_cosmos::Call::transact { .. }) => {
 				Some(call.dispatch(RuntimeOrigin::from(
 					pallet_cosmos::RawOrigin::CosmosTransaction(info.to_cosmos_address().unwrap()),
-				))),
+				)))
+			},
 			_ => None,
 		}
 	}
