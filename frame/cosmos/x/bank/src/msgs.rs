@@ -26,12 +26,15 @@ use pallet_assets::WeightInfo as _;
 use pallet_balances::WeightInfo as _;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
+	address::acc_address_from_bech32,
 	coin::amount_to_string,
 	context,
 	errors::{CosmosError, RootError},
-	events::{traits::EventManager, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER}, gas::traits::GasMeter,
+	events::{traits::EventManager, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
+	gas::traits::GasMeter,
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
+use sp_core::H160;
 use sp_runtime::{traits::Convert, SaturatedConversion};
 
 pub struct MsgSendHandler<T>(PhantomData<T>);
@@ -51,10 +54,19 @@ where
 		let MsgSend { from_address, to_address, amount } =
 			MsgSend::decode(&mut &*msg.value).map_err(|_| RootError::UnpackAnyError)?;
 
-		let from_account =
-			T::AddressMapping::from_bech32(&from_address).ok_or(RootError::InvalidAddress)?;
-		let to_account =
-			T::AddressMapping::from_bech32(&to_address).ok_or(RootError::InvalidAddress)?;
+		let (_hrp, from_address_raw) =
+			acc_address_from_bech32(&from_address).map_err(|_| RootError::InvalidAddress)?;
+		let (_hrp, to_address_raw) =
+			acc_address_from_bech32(&to_address).map_err(|_| RootError::InvalidAddress)?;
+
+		if from_address_raw.len() != 20 {
+			return Err(RootError::InvalidAddress.into());
+		}
+		if to_address_raw.len() != 20 {
+			return Err(RootError::InvalidAddress.into());
+		}
+		let from_account = T::AddressMapping::into_account_id(H160::from_slice(&from_address_raw));
+		let to_account = T::AddressMapping::into_account_id(H160::from_slice(&to_address_raw));
 
 		ctx.gas_meter()
 			.consume_gas(T::DbWeight::get().reads(2).ref_time(), "")

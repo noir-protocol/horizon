@@ -22,7 +22,6 @@ use core::marker::PhantomData;
 use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use pallet_cosmos::AddressMapping;
-use pallet_cosmos_types::address::acc_address_from_bech32;
 use sp_core::{ecdsa, Hasher, H160, H256};
 
 /// Hashed address mapping.
@@ -34,7 +33,7 @@ where
 	T::AccountId: From<CosmosSigner> + EcdsaExt,
 	H: Hasher<Out = H256>,
 {
-	fn from_address_raw(address: H160) -> T::AccountId {
+	fn into_account_id(address: H160) -> T::AccountId {
 		if let Some(x) = pallet_cosmos_accounts::Connections::<T>::get(address) {
 			return x;
 		}
@@ -47,14 +46,5 @@ where
 		interim[1..33].copy_from_slice(&hash.0[..]);
 
 		CosmosSigner(ecdsa::Public(interim)).into()
-	}
-
-	fn from_bech32(address: &str) -> Option<T::AccountId> {
-		let (_hrp, address_raw) = acc_address_from_bech32(address).ok()?;
-		if address_raw.len() != 20 {
-			return None;
-		}
-
-		Some(Self::from_address_raw(H160::from_slice(&address_raw)))
 	}
 }

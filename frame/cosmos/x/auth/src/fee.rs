@@ -29,6 +29,7 @@ use frame_support::{
 };
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
+	address::acc_address_from_bech32,
 	coin::amount_to_string,
 	events::{
 		CosmosEvent, EventAttribute, ATTRIBUTE_KEY_FEE, ATTRIBUTE_KEY_FEE_PAYER, EVENT_TYPE_TX,
@@ -36,7 +37,7 @@ use pallet_cosmos_types::{
 	handler::AnteDecorator,
 };
 use pallet_cosmos_x_auth_signing::sign_verifiable_tx::traits::SigVerifiableTx;
-use sp_core::Get;
+use sp_core::{Get, H160};
 use sp_runtime::{
 	traits::{Convert, Zero},
 	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
@@ -90,8 +91,12 @@ where
 			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
 		}
 
-		let deduct_fees_from = T::AddressMapping::from_bech32(&fee_payer)
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let (_hrp, address_raw) = acc_address_from_bech32(&fee_payer)
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+		if address_raw.len() != 20 {
+			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+		}
+		let deduct_fees_from = T::AddressMapping::into_account_id(H160::from_slice(&address_raw));
 
 		// TODO: Check fee is zero
 		if !fee.amount.is_empty() {

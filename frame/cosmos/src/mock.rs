@@ -138,7 +138,7 @@ where
 	T::AccountId: From<CosmosSigner> + EcdsaExt,
 	H: Hasher<Out = H256>,
 {
-	fn from_address_raw(address: H160) -> T::AccountId {
+	fn into_account_id(address: H160) -> T::AccountId {
 		if let Some(x) = pallet_cosmos_accounts::Connections::<T>::get(address) {
 			return x;
 		}
@@ -151,15 +151,6 @@ where
 		interim[1..33].copy_from_slice(&hash.0[..]);
 
 		CosmosSigner(ecdsa::Public(interim)).into()
-	}
-
-	fn from_bech32(address: &str) -> Option<T::AccountId> {
-		let (_hrp, address_raw) = acc_address_from_bech32(address).ok()?;
-		if address_raw.len() != 20 {
-			return None;
-		}
-
-		Some(Self::from_address_raw(H160::from_slice(&address_raw)))
 	}
 }
 
@@ -239,11 +230,11 @@ impl<T> Convert<Vec<u8>, Result<AccountId, ()>> for AccountToAddr<T>
 where
 	T: pallet_cosmos::Config<AccountId = CosmosSigner>,
 {
-	fn convert(address_raw: Vec<u8>) -> Result<AccountId, ()> {
+	fn convert(address: Vec<u8>) -> Result<AccountId, ()> {
 		// Cosmos address length is 20, contract address is 32.
-		let account = match address_raw.len() {
-			20 => T::AddressMapping::from_address_raw(H160::from_slice(&address_raw)),
-			32 => AccountId::unchecked_from(H256::from_slice(&address_raw)),
+		let account = match address.len() {
+			20 => T::AddressMapping::into_account_id(H160::from_slice(&address)),
+			32 => AccountId::unchecked_from(H256::from_slice(&address)),
 			_ => return Err(()),
 		};
 
@@ -314,7 +305,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 		match self {
 			RuntimeCall::Cosmos(call) => match call.check_self_contained()? {
 				Ok(address) => Some(Ok(
-					<Test as pallet_cosmos::Config>::AddressMapping::from_address_raw(address),
+					<Test as pallet_cosmos::Config>::AddressMapping::into_account_id(address),
 				)),
 				Err(e) => Some(Err(e)),
 			},

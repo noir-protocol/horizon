@@ -32,6 +32,7 @@ use hp_crypto::EcdsaExt;
 use libflate::gzip::Decoder;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{
+	address::acc_address_from_bech32,
 	context,
 	errors::{CosmosError, RootError},
 	events::{traits::EventManager, CosmosEvent, EventAttribute},
@@ -52,6 +53,7 @@ use pallet_cosmwasm::{
 		CodeIdentifier, ContractCodeOf, ContractLabelOf, ContractMessageOf, ContractSaltOf, FundsOf,
 	},
 };
+use sp_core::H160;
 use sp_runtime::{traits::Convert, SaturatedConversion};
 
 pub struct MsgStoreCodeHandler<T>(PhantomData<T>);
@@ -72,7 +74,12 @@ where
 		let MsgStoreCode { sender, wasm_byte_code, instantiate_permission: _ } =
 			MsgStoreCode::decode(&mut &*msg.value).map_err(|_| RootError::TxDecodeError)?;
 
-		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let (_hrp, address_raw) =
+			acc_address_from_bech32(&sender).map_err(|_| RootError::InvalidAddress)?;
+		if address_raw.len() != 20 {
+			return Err(RootError::InvalidAddress.into());
+		}
+		let who = T::AddressMapping::into_account_id(H160::from_slice(&address_raw));
 		let mut decoder = Decoder::new(&wasm_byte_code[..]).map_err(|_| WasmError::CreateFailed)?;
 		let mut decoded_code = Vec::new();
 		decoder.read_to_end(&mut decoded_code).map_err(|_| WasmError::CreateFailed)?;
@@ -128,7 +135,12 @@ where
 		if sender.is_empty() {
 			return Err(WasmError::Empty.into());
 		}
-		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let (_hrp, address_raw) =
+			acc_address_from_bech32(&sender).map_err(|_| RootError::InvalidAddress)?;
+		if address_raw.len() != 20 {
+			return Err(RootError::InvalidAddress.into());
+		}
+		let who = T::AddressMapping::into_account_id(H160::from_slice(&address_raw));
 		let gas = ctx.gas_meter().gas_remaining();
 		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
 			gas,
@@ -203,7 +215,12 @@ where
 		if sender.is_empty() {
 			return Err(WasmError::Empty.into());
 		}
-		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let (_hrp, address_raw) =
+			acc_address_from_bech32(&sender).map_err(|_| RootError::InvalidAddress)?;
+		if address_raw.len() != 20 {
+			return Err(RootError::InvalidAddress.into());
+		}
+		let who = T::AddressMapping::into_account_id(H160::from_slice(&address_raw));
 		let gas = ctx.gas_meter().gas_remaining();
 		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
 			gas,
@@ -259,7 +276,12 @@ where
 		if sender.is_empty() {
 			return Err(WasmError::Empty.into());
 		}
-		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let (_hrp, address_raw) =
+			acc_address_from_bech32(&sender).map_err(|_| RootError::InvalidAddress)?;
+		if address_raw.len() != 20 {
+			return Err(RootError::InvalidAddress.into());
+		}
+		let who = T::AddressMapping::into_account_id(H160::from_slice(&address_raw));
 		let gas = ctx.gas_meter().gas_remaining();
 		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
 			gas,
@@ -318,7 +340,12 @@ where
 		if sender.is_empty() {
 			return Err(WasmError::Empty.into());
 		}
-		let who = T::AddressMapping::from_bech32(&sender).ok_or(RootError::TxDecodeError)?;
+		let (_hrp, address_raw) =
+			acc_address_from_bech32(&sender).map_err(|_| RootError::InvalidAddress)?;
+		if address_raw.len() != 20 {
+			return Err(RootError::InvalidAddress.into());
+		}
+		let who = T::AddressMapping::into_account_id(H160::from_slice(&address_raw));
 		let gas = ctx.gas_meter().gas_remaining();
 		let mut shared = pallet_cosmwasm::Pallet::<T>::do_create_vm_shared(
 			gas,

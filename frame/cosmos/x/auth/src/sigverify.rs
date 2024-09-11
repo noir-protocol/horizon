@@ -72,15 +72,15 @@ where
 				.get(i)
 				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-			let (_hrp, signer_addr) = acc_address_from_bech32(signer)
+			let (_hrp, signer_addr_raw) = acc_address_from_bech32(signer)
 				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
 
-			if signer_addr.len() != 20 {
+			if signer_addr_raw.len() != 20 {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 			}
 
-			let signer_addr = H160::from_slice(&signer_addr);
-			let sequence = pallet_cosmos::Pallet::<T>::sequence_of(&signer_addr);
+			let sequence =
+				pallet_cosmos::Pallet::<T>::sequence_of(&H160::from_slice(&signer_addr_raw));
 			if signer_info.sequence > sequence {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::Future));
 			} else if signer_info.sequence < sequence {
@@ -134,17 +134,16 @@ where
 					hasher.update(sha2_256(&public_key.key));
 					let address = H160::from_slice(&hasher.finalize());
 
-					let (_hrp, signer_addr) =
+					let (_hrp, signer_addr_raw) =
 						acc_address_from_bech32(&signer_data.address).map_err(|_| {
 							TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
 						})?;
 
-					if signer_addr.len() != 20 {
+					if signer_addr_raw.len() != 20 {
 						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 					}
 
-					let signer_addr = H160::from_slice(&signer_addr);
-					if signer_addr != address {
+					if  H160::from_slice(&signer_addr_raw) != address {
 						return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 					}
 
@@ -210,10 +209,15 @@ where
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		let signers = T::SigVerifiableTx::get_signers(tx)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 		for signer in signers.iter() {
-			let account = T::AddressMapping::from_bech32(signer)
-				.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+			let (_hrp, address_raw) = acc_address_from_bech32(signer)
+				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+			if address_raw.len() != 20 {
+				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+			}
+
+			let account = T::AddressMapping::into_account_id(H160::from_slice(&address_raw));
 			frame_system::pallet::Pallet::<T>::inc_account_nonce(account);
 		}
 

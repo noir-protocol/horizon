@@ -50,13 +50,12 @@ use frame_support::{
 	weights::Weight,
 };
 use frame_system::{pallet_prelude::OriginFor, CheckWeight};
-use pallet_cosmos_types::events::traits::EventManager;
 use pallet_cosmos_types::{
 	address::acc_address_from_bech32,
 	context,
 	context::traits::Context,
 	errors::{CosmosError, RootError},
-	events::CosmosEvent,
+	events::{traits::EventManager, CosmosEvent},
 	gas::{traits::GasMeter, Gas},
 	handler::AnteDecorator,
 	msgservice::MsgServiceRouter,
@@ -103,18 +102,20 @@ where
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx_bytes } = self {
 			let check = || {
-				let (_hrp, address) = Tx::decode(&mut &tx_bytes[..])
+				let (_hrp, address_raw) = Tx::decode(&mut &tx_bytes[..])
 					.map(|tx| T::SigVerifiableTx::fee_payer(&tx))
 					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?
 					.map(|fee_payer| acc_address_from_bech32(&fee_payer))
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?
+					.map_err(|_| {
+						TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+					})?;
 
-				if address.len() != 20 {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
+				if address_raw.len() != 20 {
+					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 				}
 
-				Ok(H160::from_slice(&address))
+				Ok(H160::from_slice(&address_raw))
 			};
 
 			Some(check())
@@ -159,8 +160,7 @@ where
 }
 
 pub trait AddressMapping<A> {
-	fn from_address_raw(address: H160) -> A;
-	fn from_bech32(address: &str) -> Option<A>;
+	fn into_account_id(address: H160) -> A;
 }
 
 #[frame_support::pallet]
@@ -500,7 +500,7 @@ impl<T: Config> Pallet<T> {
 	}
 
 	pub fn sequence_of(address: &H160) -> u64 {
-		let account_id = T::AddressMapping::from_address_raw(*address);
+		let account_id = T::AddressMapping::into_account_id(*address);
 		frame_system::Pallet::<T>::account_nonce(&account_id).saturated_into()
 	}
 }

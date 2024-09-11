@@ -60,11 +60,11 @@ impl<T> Convert<Vec<u8>, Result<AccountId, ()>> for AccountToAddr<T>
 where
 	T: pallet_cosmos::Config<AccountId = CosmosSigner>,
 {
-	fn convert(address_raw: Vec<u8>) -> Result<AccountId, ()> {
+	fn convert(address: Vec<u8>) -> Result<AccountId, ()> {
 		// Cosmos address length is 20, contract address is 32.
-		let account = match address_raw.len() {
-			20 => T::AddressMapping::from_address_raw(H160::from_slice(&address_raw)),
-			32 => AccountId::unchecked_from(H256::from_slice(&address_raw)),
+		let account = match address.len() {
+			20 => T::AddressMapping::into_account_id(H160::from_slice(&address)),
+			32 => AccountId::unchecked_from(H256::from_slice(&address)),
 			_ => return Err(()),
 		};
 
