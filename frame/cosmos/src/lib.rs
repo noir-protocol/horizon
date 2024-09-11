@@ -44,7 +44,7 @@ use frame_support::{
 	dispatch::{DispatchErrorWithPostInfo, DispatchInfo, PostDispatchInfo},
 	pallet_prelude::{DispatchResultWithPostInfo, InvalidTransaction, Pays},
 	traits::{
-		tokens::{fungible::Inspect, fungibles, AssetId, Balance},
+		tokens::{fungibles, AssetId, Balance},
 		Currency, Get,
 	},
 	weights::Weight,
@@ -264,7 +264,7 @@ pub mod pallet {
 		type AddressMapping: AddressMapping<Self::AccountId>;
 		/// Native asset type.
 		#[pallet::no_default]
-		type NativeAsset: Currency<Self::AccountId> + Inspect<Self::AccountId>;
+		type NativeAsset: Currency<Self::AccountId>;
 		/// Type of an account balance.
 		type Balance: Balance + Into<u128>;
 		/// Type of a tradable asset id.
