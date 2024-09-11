@@ -272,8 +272,7 @@ pub mod pallet {
 		type AssetId: AssetId + Ord + MaybeSerializeDeserialize;
 		/// Interface from which we are going to execute assets operations.
 		#[pallet::no_default]
-		type Assets: fungibles::Inspect<Self::AccountId, Balance = Self::Balance, AssetId = Self::AssetId>
-			+ fungibles::metadata::Inspect<
+		type Assets: fungibles::metadata::Inspect<
 				Self::AccountId,
 				Balance = Self::Balance,
 				AssetId = Self::AssetId,
