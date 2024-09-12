@@ -50,7 +50,7 @@ fn pallet_cosmos_msg_send_test() {
 		};
 		let dispatch_info = extrinsic.get_dispatch_info();
 
-		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(call.pre_dispatch_self_contained(&dispatch_info, 0).unwrap());
 		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
 
 		let msg = tx.body.as_ref().unwrap().messages.first().unwrap();
@@ -87,7 +87,7 @@ fn pallet_cosmos_msg_store_code_test() {
 		};
 		let dispatch_info = extrinsic.get_dispatch_info();
 
-		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(call.pre_dispatch_self_contained(&dispatch_info, 0).unwrap());
 		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
 
 		let (_gas_wanted, _gas_used, events) = System::events()
@@ -147,7 +147,7 @@ fn pallet_cosmos_msg_instantiate_contract2_test() {
 		};
 		let dispatch_info = extrinsic.get_dispatch_info();
 
-		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(call.pre_dispatch_self_contained(&dispatch_info, 0).unwrap());
 		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
 
 		System::set_block_number(2);
@@ -165,7 +165,7 @@ fn pallet_cosmos_msg_instantiate_contract2_test() {
 		};
 		let dispatch_info = extrinsic.get_dispatch_info();
 
-		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(call.pre_dispatch_self_contained(&dispatch_info, 0).unwrap());
 		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
 	});
 }
@@ -190,7 +190,7 @@ fn pallet_cosmos_msg_execute_contract_test() {
 		};
 		let dispatch_info = extrinsic.get_dispatch_info();
 
-		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(call.pre_dispatch_self_contained(&dispatch_info, 0).unwrap());
 		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
 
 		System::set_block_number(2);
@@ -208,7 +208,7 @@ fn pallet_cosmos_msg_execute_contract_test() {
 		};
 		let dispatch_info = extrinsic.get_dispatch_info();
 
-		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(call.pre_dispatch_self_contained(&dispatch_info, 0).unwrap());
 		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
 
 		System::set_block_number(3);
@@ -226,7 +226,7 @@ fn pallet_cosmos_msg_execute_contract_test() {
 		};
 		let dispatch_info = extrinsic.get_dispatch_info();
 
-		assert_ok!(call.pre_dispatch_self_contained(&source, &dispatch_info, 0).unwrap());
+		assert_ok!(call.pre_dispatch_self_contained(&dispatch_info, 0).unwrap());
 		assert_ok!(extrinsic.function.apply_self_contained(alice).unwrap());
 	});
 }

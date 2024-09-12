@@ -328,16 +328,11 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 
 	fn pre_dispatch_self_contained(
 		&self,
-		info: &Self::SignedInfo,
 		dispatch_info: &DispatchInfoOf<RuntimeCall>,
 		len: usize,
 	) -> Option<Result<(), TransactionValidityError>> {
 		match self {
-			RuntimeCall::Cosmos(call) => call.pre_dispatch_self_contained(
-				&info.to_cosmos_address().unwrap(),
-				dispatch_info,
-				len,
-			),
+			RuntimeCall::Cosmos(call) => call.pre_dispatch_self_contained(dispatch_info, len),
 			_ => None,
 		}
 	}

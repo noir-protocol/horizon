@@ -125,7 +125,6 @@ where
 
 	pub fn pre_dispatch_self_contained(
 		&self,
-		origin: &H160,
 		dispatch_info: &DispatchInfoOf<T::RuntimeCall>,
 		len: usize,
 	) -> Option<Result<(), TransactionValidityError>> {
@@ -134,7 +133,7 @@ where
 				return Some(Err(e));
 			}
 
-			Some(Pallet::<T>::validate_transaction_in_block(*origin, tx_bytes))
+			Some(Pallet::<T>::validate_transaction_in_block(tx_bytes))
 		} else {
 			None
 		}
@@ -396,10 +395,7 @@ impl<T: Config> Pallet<T> {
 	///
 	/// This function must be called during the pre-dispatch phase
 	/// (just before applying the extrinsic).
-	pub fn validate_transaction_in_block(
-		_origin: H160,
-		tx_bytes: &[u8],
-	) -> Result<(), TransactionValidityError> {
+	pub fn validate_transaction_in_block(tx_bytes: &[u8]) -> Result<(), TransactionValidityError> {
 		let tx = Tx::decode(&mut &*tx_bytes)
 			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
 
