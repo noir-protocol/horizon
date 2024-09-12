@@ -672,7 +672,7 @@ impl_runtime_apis! {
 
 			// TODO: Run ante handlers
 
-			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(H160::default(), tx.clone())
+			pallet_cosmos::Pallet::<Runtime>::apply_validated_transaction(tx)
 				.map_err(|e| SimulateError::InternalError(format!("Failed to simulate cosmos tx. error: {:?}", e).into()))?;
 
 			System::read_events_no_consensus()
