@@ -102,14 +102,13 @@ where
 	pub fn check_self_contained(&self) -> Option<Result<H160, TransactionValidityError>> {
 		if let Call::transact { tx_bytes } = self {
 			let check = || {
-				let (_hrp, address_raw) = Tx::decode(&mut &tx_bytes[..])
-					.map(|tx| T::SigVerifiableTx::fee_payer(&tx))
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?
-					.map(|fee_payer| acc_address_from_bech32(&fee_payer))
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?
-					.map_err(|_| {
-						TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-					})?;
+				let tx = Tx::decode(&mut &tx_bytes[..])
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+				let fee_payer = T::SigVerifiableTx::fee_payer(&tx)
+					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+				let (_hrp, address_raw) = acc_address_from_bech32(&fee_payer).map_err(|_| {
+					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
+				})?;
 
 				if address_raw.len() != 20 {
 					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
