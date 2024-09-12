@@ -80,7 +80,7 @@ where
 			}
 
 			let sequence =
-				pallet_cosmos::Pallet::<T>::sequence_of(&H160::from_slice(&signer_addr_raw));
+				pallet_cosmos::Pallet::<T>::sequence(&H160::from_slice(&signer_addr_raw));
 			if signer_info.sequence > sequence {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::Future));
 			} else if signer_info.sequence < sequence {

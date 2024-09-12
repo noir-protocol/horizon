@@ -424,7 +424,7 @@ impl<T: Config> Pallet<T> {
 
 		// In the context of the pool, a transaction with
 		// too high a nonce is still considered valid
-		if transaction_nonce > Self::sequence_of(&origin) {
+		if transaction_nonce > Self::sequence(&origin) {
 			if let Some(prev_nonce) = transaction_nonce.checked_sub(1) {
 				builder = builder.and_requires((origin, prev_nonce))
 			}
@@ -498,7 +498,7 @@ impl<T: Config> Pallet<T> {
 		})
 	}
 
-	pub fn sequence_of(address: &H160) -> u64 {
+	pub fn sequence(address: &H160) -> u64 {
 		let account_id = T::AddressMapping::into_account_id(*address);
 		frame_system::Pallet::<T>::account_nonce(&account_id).saturated_into()
 	}
