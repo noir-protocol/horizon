@@ -422,9 +422,12 @@ impl<T: Config> Pallet<T> {
 		let mut builder =
 			ValidTransactionBuilder::default().and_provides((origin, transaction_nonce));
 
+		let who = T::AddressMapping::into_account_id(origin);
+		let sequence = frame_system::Pallet::<T>::account_nonce(&who).saturated_into();
+
 		// In the context of the pool, a transaction with
 		// too high a nonce is still considered valid
-		if transaction_nonce > Self::sequence(&origin) {
+		if transaction_nonce > sequence {
 			if let Some(prev_nonce) = transaction_nonce.checked_sub(1) {
 				builder = builder.and_requires((origin, prev_nonce))
 			}
@@ -496,10 +499,5 @@ impl<T: Config> Pallet<T> {
 			actual_weight: Some(Weight::from_parts(ctx.gas_meter().consumed_gas(), 0)),
 			pays_fee: Pays::Yes,
 		})
-	}
-
-	pub fn sequence(address: &H160) -> u64 {
-		let account_id = T::AddressMapping::into_account_id(*address);
-		frame_system::Pallet::<T>::account_nonce(&account_id).saturated_into()
 	}
 }

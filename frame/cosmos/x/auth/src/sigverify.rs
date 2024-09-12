@@ -35,8 +35,11 @@ use pallet_cosmos_x_auth_signing::{
 };
 use ripemd::Digest;
 use sp_core::{sha2_256, Get, H160};
-use sp_runtime::transaction_validity::{
-	InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
+use sp_runtime::{
+	transaction_validity::{
+		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
+	},
+	SaturatedConversion,
 };
 
 pub struct SigVerificationDecorator<T>(PhantomData<T>);
@@ -79,8 +82,9 @@ where
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
 			}
 
-			let sequence =
-				pallet_cosmos::Pallet::<T>::sequence(&H160::from_slice(&signer_addr_raw));
+			let who = T::AddressMapping::into_account_id(H160::from_slice(&signer_addr_raw));
+			let sequence = frame_system::Pallet::<T>::account_nonce(&who).saturated_into();
+
 			if signer_info.sequence > sequence {
 				return Err(TransactionValidityError::Invalid(InvalidTransaction::Future));
 			} else if signer_info.sequence < sequence {
