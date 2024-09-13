@@ -21,9 +21,7 @@ use cosmos_sdk_proto::cosmos::tx::v1beta1::Tx;
 use pallet_cosmos_types::handler::AnteDecorator;
 use sp_runtime::{
 	traits::Get,
-	transaction_validity::{
-		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
-	},
+	transaction_validity::{InvalidTransaction, TransactionValidity, ValidTransaction},
 	SaturatedConversion,
 };
 
@@ -35,15 +33,12 @@ where
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
 		if tx.signatures.is_empty() {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadProof));
+			return Err(InvalidTransaction::BadProof.into());
 		}
-		let auth_info = tx
-			.auth_info
-			.as_ref()
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+		let auth_info = tx.auth_info.as_ref().ok_or(InvalidTransaction::BadSigner)?;
 
 		if auth_info.signer_infos.len() != tx.signatures.len() {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+			return Err(InvalidTransaction::BadSigner.into());
 		}
 
 		Ok(ValidTransaction::default())
@@ -57,16 +52,13 @@ where
 	T: frame_system::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		let body = tx
-			.body
-			.as_ref()
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let body = tx.body.as_ref().ok_or(InvalidTransaction::Call)?;
 
 		if body.timeout_height > 0 &&
 			frame_system::Pallet::<T>::block_number().saturated_into::<u64>() >
 				body.timeout_height
 		{
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Stale));
+			return Err(InvalidTransaction::Stale.into());
 		}
 
 		Ok(ValidTransaction::default())
@@ -80,13 +72,10 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn ante_handle(tx: &Tx, _simulate: bool) -> TransactionValidity {
-		let body = tx
-			.body
-			.as_ref()
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let body = tx.body.as_ref().ok_or(InvalidTransaction::Call)?;
 
 		if body.memo.len().saturated_into::<u64>() > T::MaxMemoCharacters::get() {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
+			return Err(InvalidTransaction::Call.into());
 		}
 
 		Ok(ValidTransaction::default())

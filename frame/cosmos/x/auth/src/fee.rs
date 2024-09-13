@@ -40,7 +40,7 @@ use pallet_cosmos_x_auth_signing::sign_verifiable_tx::traits::SigVerifiableTx;
 use sp_core::{Get, H160};
 use sp_runtime::{
 	traits::{Convert, Zero},
-	transaction_validity::{TransactionValidity, TransactionValidityError, ValidTransaction},
+	transaction_validity::{TransactionValidity, ValidTransaction},
 	SaturatedConversion,
 };
 
@@ -55,13 +55,13 @@ where
 			.auth_info
 			.as_ref()
 			.and_then(|auth_info| auth_info.fee.as_ref())
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+			.ok_or(InvalidTransaction::Call)?;
 
 		if !simulate &&
 			!frame_system::Pallet::<T>::block_number().is_zero() &&
 			fee.gas_limit.is_zero()
 		{
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
+			return Err(InvalidTransaction::Call.into());
 		}
 
 		// TODO: Implements txFeeChecker
@@ -77,24 +77,23 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn check_deduct_fee(tx: &Tx) -> TransactionValidity {
-		let fee_payer = T::SigVerifiableTx::fee_payer(tx)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let fee_payer = T::SigVerifiableTx::fee_payer(tx).map_err(|_| InvalidTransaction::Call)?;
 
 		let fee = tx
 			.auth_info
 			.as_ref()
 			.and_then(|auth_info| auth_info.fee.as_ref())
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+			.ok_or(InvalidTransaction::Call)?;
 
 		// TODO: Fee granter not supported
 		if !fee.granter.is_empty() {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::Call));
+			return Err(InvalidTransaction::Call.into());
 		}
 
-		let (_hrp, address_raw) = acc_address_from_bech32(&fee_payer)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+		let (_hrp, address_raw) =
+			acc_address_from_bech32(&fee_payer).map_err(|_| InvalidTransaction::BadSigner)?;
 		if address_raw.len() != 20 {
-			return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+			return Err(InvalidTransaction::BadSigner.into());
 		}
 		let deduct_fees_from = T::AddressMapping::into_account_id(H160::from_slice(&address_raw));
 
@@ -121,10 +120,7 @@ where
 
 	fn deduct_fees(acc: &T::AccountId, fee: &Fee) -> TransactionValidity {
 		for amt in fee.amount.iter() {
-			let amount = amt
-				.amount
-				.parse::<u128>()
-				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+			let amount = amt.amount.parse::<u128>().map_err(|_| InvalidTransaction::Call)?;
 
 			if amt.denom == T::NativeDenom::get() {
 				let _imbalance = T::NativeAsset::withdraw(
@@ -133,12 +129,12 @@ where
 					WithdrawReasons::TRANSACTION_PAYMENT,
 					ExistenceRequirement::KeepAlive,
 				)
-				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+				.map_err(|_| InvalidTransaction::Payment)?;
 
 			// TODO: Resolve imbalance
 			} else {
 				let asset_id = T::AssetToDenom::convert(amt.denom.clone())
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+					.map_err(|_| InvalidTransaction::Call)?;
 
 				let _imbalance = T::Assets::withdraw(
 					asset_id,
@@ -148,7 +144,7 @@ where
 					Preservation::Preserve,
 					Fortitude::Polite,
 				)
-				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Payment))?;
+				.map_err(|_| InvalidTransaction::Payment)?;
 
 				// TODO: Resolve imbalance
 			}

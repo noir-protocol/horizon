@@ -540,9 +540,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 			RuntimeCall::Cosmos(call) => {
 				if let pallet_cosmos::Call::transact { tx_bytes } = call {
 					if Runtime::migrate_cosm_account(tx_bytes).is_err() {
-						return Some(Err(TransactionValidityError::Invalid(
-							InvalidTransaction::BadSigner,
-						)));
+						return Some(Err(InvalidTransaction::BadSigner.into()));
 					}
 				}
 
@@ -562,9 +560,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 			RuntimeCall::Cosmos(call) => {
 				if let pallet_cosmos::Call::transact { tx_bytes } = call {
 					if Runtime::migrate_cosm_account(tx_bytes).is_err() {
-						return Some(Err(TransactionValidityError::Invalid(
-							InvalidTransaction::BadSigner,
-						)));
+						return Some(Err(InvalidTransaction::BadSigner.into()));
 					}
 				}
 
@@ -594,51 +590,38 @@ impl Runtime {
 		use fungible::{Inspect, Mutate};
 		use pallet_cosmos_x_auth_signing::sign_verifiable_tx::traits::SigVerifiableTx;
 
-		let tx = Tx::decode(&mut &*tx_bytes)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+		let tx = Tx::decode(&mut &*tx_bytes).map_err(|_| InvalidTransaction::Call)?;
 		let signers = <Runtime as pallet_cosmos::Config>::SigVerifiableTx::get_signers(&tx)
-			.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+			.map_err(|_| InvalidTransaction::Call)?;
 
-		let signer_infos = tx
-			.auth_info
-			.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?
-			.signer_infos;
+		let signer_infos = tx.auth_info.ok_or(InvalidTransaction::Call)?.signer_infos;
 
 		for (i, signer_info) in signer_infos.iter().enumerate() {
 			if signer_info.sequence == 0 {
-				let signer = signers
-					.get(i)
-					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::BadSigner))?;
+				let signer = signers.get(i).ok_or(InvalidTransaction::BadSigner)?;
 
-				let (_hrp, address_raw) = acc_address_from_bech32(signer).map_err(|_| {
-					TransactionValidityError::Invalid(InvalidTransaction::BadSigner)
-				})?;
+				let (_hrp, address_raw) =
+					acc_address_from_bech32(signer).map_err(|_| InvalidTransaction::BadSigner)?;
 				if address_raw.len() != 20 {
-					return Err(TransactionValidityError::Invalid(InvalidTransaction::BadSigner));
+					return Err(InvalidTransaction::BadSigner.into());
 				}
 				let interim_account =
 					<Runtime as pallet_cosmos::Config>::AddressMapping::into_account_id(
 						H160::from_slice(&address_raw),
 					);
 
-				let public_key = signer_info
-					.public_key
-					.as_ref()
-					.ok_or(TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+				let public_key = signer_info.public_key.as_ref().ok_or(InvalidTransaction::Call)?;
 				let who = any_match!(
 					public_key, {
 						secp256k1::PubKey => {
-							let public_key = secp256k1::PubKey::decode(&mut &*public_key.value)
-								.map_err(|_| {
-									TransactionValidityError::Invalid(InvalidTransaction::Call)
-								})?;
+							let public_key = secp256k1::PubKey::decode(&mut &*public_key.value).map_err(|_| InvalidTransaction::Call)?;
 							let mut pk = [0u8; 33];
 							pk.copy_from_slice(&public_key.key);
 
 							Ok(CosmosSigner(Public(pk)))
 						}
 					},
-					Err(TransactionValidityError::Invalid(InvalidTransaction::Call))
+					Err(InvalidTransaction::Call)
 				)?;
 
 				let balance = pallet_balances::Pallet::<Runtime>::reducible_balance(
@@ -652,12 +635,12 @@ impl Runtime {
 					balance,
 					Preservation::Expendable,
 				)
-				.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+				.map_err(|_| InvalidTransaction::Call)?;
 
 				// TODO: Add asset transfer for migration
 
 				pallet_cosmos_accounts::Pallet::<Runtime>::connect_account(&who)
-					.map_err(|_| TransactionValidityError::Invalid(InvalidTransaction::Call))?;
+					.map_err(|_| InvalidTransaction::Call)?;
 			}
 		}
 
