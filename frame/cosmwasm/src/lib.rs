@@ -97,7 +97,7 @@ use frame_support::{
 	traits::{
 		fungibles::{Inspect as FungiblesInspect, Mutate as FungiblesMutate},
 		tokens::Preservation,
-		Get, ReservableCurrency, UnixTime,
+		Currency, ExistenceRequirement, Get, ReservableCurrency, UnixTime,
 	},
 	ReversibleStorageHasher, StorageHasher,
 };
@@ -126,7 +126,7 @@ pub mod pallet {
 		traits::{
 			fungibles::{Inspect as FungiblesInspect, Mutate as FungiblesMutate},
 			tokens::{AssetId, Balance},
-			BuildGenesisConfig, Get, ReservableCurrency, UnixTime,
+			BuildGenesisConfig, Currency, Get, ReservableCurrency, UnixTime,
 		},
 		transactional, PalletId, Twox64Concat,
 	};
@@ -308,7 +308,8 @@ pub mod pallet {
 			+ Convert<String, Result<AssetIdOf<Self>, ()>>;
 
 		/// Interface used to pay when uploading code.
-		type NativeAsset: ReservableCurrency<AccountIdOf<Self>, Balance = BalanceOf<Self>>;
+		type NativeAsset: ReservableCurrency<AccountIdOf<Self>, Balance = BalanceOf<Self>>
+			+ Currency<AccountIdOf<Self>>;
 
 		/// Interface from which we are going to execute assets operations.
 		type Assets: FungiblesInspect<
@@ -331,6 +332,10 @@ pub mod pallet {
 		type UploadWasmOrigin: EnsureOrigin<Self::RuntimeOrigin>;
 
 		type ExecuteWasmOrigin: EnsureOrigin<Self::RuntimeOrigin>;
+
+		type NativeDenom: Get<&'static str>;
+
+		type NativeAssetId: Get<Self::AssetId>;
 	}
 
 	#[pallet::pallet]
@@ -1274,12 +1279,20 @@ impl<T: Config> Pallet<T> {
 	/// Retrieve an account balance.
 	pub(crate) fn do_balance(account: &AccountIdOf<T>, denom: String) -> Result<u128, Error<T>> {
 		let asset = Self::cosmwasm_asset_to_native_asset(denom)?;
-		Ok(T::Assets::balance(asset, account).into())
+		if asset == T::NativeAssetId::get() {
+			Ok(T::NativeAsset::free_balance(account).into())
+		} else {
+			Ok(T::Assets::balance(asset, account).into())
+		}
 	}
 
 	pub(crate) fn do_supply(denom: String) -> Result<u128, Error<T>> {
-		let asset = Self::cosmwasm_asset_to_native_asset(denom)?;
-		Ok(T::Assets::total_issuance(asset).into())
+		if denom == T::NativeDenom::get() {
+			Ok(T::NativeAsset::total_issuance().into())
+		} else {
+			let asset = Self::cosmwasm_asset_to_native_asset(denom)?;
+			Ok(T::Assets::total_issuance(asset).into())
+		}
 	}
 
 	/// Execute a transfer of funds between two accounts.
@@ -1290,10 +1303,16 @@ impl<T: Config> Pallet<T> {
 		preservation: Preservation,
 	) -> Result<(), Error<T>> {
 		for Coin { denom, amount } in funds {
-			let asset = Self::cosmwasm_asset_to_native_asset(denom.clone())?;
 			let amount = amount.u128().saturated_into();
-			T::Assets::transfer(asset, from, to, amount, preservation)
-				.map_err(|_| Error::<T>::TransferFailed)?;
+
+			if denom == T::NativeDenom::get() {
+				T::NativeAsset::transfer(from, to, amount, ExistenceRequirement::KeepAlive)
+					.map_err(|_| Error::<T>::TransferFailed)?;
+			} else {
+				let asset = Self::cosmwasm_asset_to_native_asset(denom.clone())?;
+				T::Assets::transfer(asset, from, to, amount, preservation)
+					.map_err(|_| Error::<T>::TransferFailed)?;
+			}
 		}
 		Ok(())
 	}

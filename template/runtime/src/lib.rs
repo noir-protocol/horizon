@@ -444,6 +444,10 @@ impl pallet_cosmwasm::Config for Runtime {
 	type UploadWasmOrigin = frame_system::EnsureSigned<Self::AccountId>;
 
 	type ExecuteWasmOrigin = frame_system::EnsureSigned<Self::AccountId>;
+
+	type NativeDenom = NativeDenom;
+
+	type NativeAssetId = NativeAssetId;
 }
 
 impl pallet_sudo::Config for Runtime {

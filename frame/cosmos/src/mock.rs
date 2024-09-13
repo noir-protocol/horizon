@@ -19,6 +19,7 @@
 use super::*;
 use alloc::{boxed::Box, string::String, vec::Vec};
 use bech32::{Bech32, Hrp};
+use config_preludes::{NativeAssetId, NativeDenom};
 use core::marker::PhantomData;
 use cosmos_sdk_proto::{
 	cosmos::bank::v1beta1::MsgSend,
@@ -114,7 +115,7 @@ impl<T, Context> pallet_cosmos_types::msgservice::MsgServiceRouter<Context> for 
 where
 	T: frame_system::Config + pallet_cosmos::Config + pallet_cosmwasm::Config,
 	T::AccountId: EcdsaExt,
-	Context: context::Context,
+	Context: context::traits::Context,
 {
 	fn route(msg: &Any) -> Option<Box<dyn MsgHandler<Context>>> {
 		any_match!(
@@ -282,6 +283,10 @@ impl pallet_cosmwasm::Config for Test {
 	type UploadWasmOrigin = frame_system::EnsureSigned<Self::AccountId>;
 
 	type ExecuteWasmOrigin = frame_system::EnsureSigned<Self::AccountId>;
+
+	type NativeAssetId = NativeAssetId;
+	
+	type NativeDenom = NativeDenom;
 }
 
 impl pallet_cosmos_accounts::Config for Test {
@@ -328,6 +333,7 @@ impl fp_self_contained::SelfContainedCall for RuntimeCall {
 
 	fn pre_dispatch_self_contained(
 		&self,
+		_info: &Self::SignedInfo,
 		dispatch_info: &DispatchInfoOf<RuntimeCall>,
 		len: usize,
 	) -> Option<Result<(), TransactionValidityError>> {

@@ -28,9 +28,7 @@ where
 {
 	fn created(id: &T::AssetId, _owner: &T::AccountId) -> Result<(), ()> {
 		let symbol = <T as pallet_cosmos::Config>::Assets::symbol(id.clone());
-		if symbol.is_empty() {
-			return Err(());
-		}
+		ensure!(!symbol.is_empty(), ());
 
 		let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(symbol).map_err(|_| ())?;
 
@@ -61,8 +59,8 @@ where
 		if denom == T::NativeDenom::get() {
 			Ok(T::NativeAssetId::get())
 		} else {
-			let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(denom.as_bytes().to_vec())
-				.map_err(|_| ())?;
+			let denom: BoundedVec<u8, T::MaxDenomLimit> =
+				denom.as_bytes().to_vec().try_into().map_err(|_| ())?;
 			pallet_cosmos::DenomAssetRouter::<T>::get(denom).ok_or(())
 		}
 	}
