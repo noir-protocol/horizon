@@ -222,6 +222,7 @@ pub mod pallet {
 			pub const TxSigLimit: u64 = 7;
 			pub const MaxDenomLimit: u32 = 128;
 			pub const AddressPrefix: &'static str = "cosmos";
+			pub const NativeAssetId: u32 = u32::MAX;
 		}
 
 		#[frame_support::register_default_impl(TestDefaultConfig)]
@@ -240,6 +241,7 @@ pub mod pallet {
 			type MaxDenomLimit = MaxDenomLimit;
 			type AddressPrefix = AddressPrefix;
 			type Context = pallet_cosmos_types::context::Context;
+			type NativeAssetId = NativeAssetId;
 		}
 	}
 
@@ -319,6 +321,8 @@ pub mod pallet {
 		type AddressPrefix: Get<&'static str>;
 
 		type Context: Context;
+
+		type NativeAssetId: Get<Self::AssetId>;
 	}
 
 	#[pallet::genesis_config]
@@ -330,13 +334,20 @@ pub mod pallet {
 	#[pallet::genesis_build]
 	impl<T: Config> BuildGenesisConfig for GenesisConfig<T> {
 		fn build(&self) {
+			let native_denom: BoundedVec<u8, T::MaxDenomLimit> =
+				T::NativeDenom::get().as_bytes().to_vec().try_into().unwrap();
+			DenomAssetRouter::<T>::insert(native_denom.clone(), T::NativeAssetId::get());
+			AssetDenomRouter::<T>::insert(T::NativeAssetId::get(), native_denom);
+
 			for (symbol, asset_id) in &self.assets {
 				let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(symbol.clone())
 					.expect("Invalid denom");
 				assert!(DenomAssetRouter::<T>::get(denom.clone()).is_none());
+				assert!(AssetDenomRouter::<T>::get(asset_id.clone()).is_none());
 				assert!(*symbol == T::Assets::symbol(asset_id.clone()));
 
-				DenomAssetRouter::<T>::insert(denom, asset_id);
+				DenomAssetRouter::<T>::insert(denom.clone(), asset_id.clone());
+				AssetDenomRouter::<T>::insert(asset_id, denom);
 			}
 		}
 	}

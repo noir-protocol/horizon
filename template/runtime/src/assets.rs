@@ -16,8 +16,9 @@
 // You should have received a copy of the GNU General Public License
 // along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-use alloc::string::String;
+use alloc::string::{String, ToString};
 use frame_support::{ensure, traits::fungibles::metadata::Inspect};
+use sp_core::Get;
 use sp_runtime::{traits::Convert, BoundedVec};
 
 pub struct AssetsCallback<T>(core::marker::PhantomData<T>);
@@ -43,7 +44,7 @@ where
 	}
 
 	fn destroyed(id: &T::AssetId) -> Result<(), ()> {
-		if let Some(denom) = pallet_cosmos::AssetDenomRouter::<T>::take(id.clone()) {
+		if let Some(denom) = pallet_cosmos::AssetDenomRouter::<T>::take(id) {
 			pallet_cosmos::DenomAssetRouter::<T>::remove(denom);
 		}
 
@@ -57,9 +58,13 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn convert(denom: String) -> Result<T::AssetId, ()> {
-		let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(denom.as_bytes().to_vec())
-			.map_err(|_| ())?;
-		pallet_cosmos::DenomAssetRouter::<T>::get(denom).ok_or(())
+		if denom == T::NativeDenom::get() {
+			Ok(T::NativeAssetId::get())
+		} else {
+			let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(denom.as_bytes().to_vec())
+				.map_err(|_| ())?;
+			pallet_cosmos::DenomAssetRouter::<T>::get(denom).ok_or(())
+		}
 	}
 }
 
@@ -68,8 +73,12 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn convert(asset_id: T::AssetId) -> String {
-		// TODO: Handle option
-		let denom = pallet_cosmos::AssetDenomRouter::<T>::get(asset_id).unwrap().to_vec();
-		String::from_utf8(denom).unwrap()
+		if asset_id == T::NativeAssetId::get() {
+			T::NativeDenom::get().to_string()
+		} else {
+			// TODO: Handle option
+			let denom = pallet_cosmos::AssetDenomRouter::<T>::get(asset_id).unwrap().to_vec();
+			String::from_utf8(denom).unwrap()
+		}
 	}
 }

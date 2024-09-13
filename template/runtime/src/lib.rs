@@ -58,8 +58,8 @@ use hp_account::CosmosSigner;
 use hp_crypto::EcdsaExt;
 use pallet_cosmos::{
 	config_preludes::{
-		AddressPrefix, ChainId, MaxDenomLimit, MaxMemoCharacters, MsgFilter, NativeDenom,
-		TxSigLimit, WeightToGas,
+		AddressPrefix, ChainId, MaxDenomLimit, MaxMemoCharacters, MsgFilter, NativeAssetId,
+		NativeDenom, TxSigLimit, WeightToGas,
 	},
 	AddressMapping,
 };
@@ -377,6 +377,8 @@ impl pallet_cosmos::Config for Runtime {
 	type AddressPrefix = AddressPrefix;
 
 	type Context = Context;
+
+	type NativeAssetId = NativeAssetId;
 }
 
 impl pallet_cosmos_accounts::Config for Runtime {
