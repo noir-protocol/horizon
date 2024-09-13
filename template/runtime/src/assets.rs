@@ -27,7 +27,7 @@ where
 	T: pallet_cosmos::Config,
 {
 	fn created(id: &T::AssetId, _owner: &T::AccountId) -> Result<(), ()> {
-		let symbol = <T as pallet_cosmos::Config>::Assets::symbol(id.clone());
+		let symbol = T::Assets::symbol(id.clone());
 		ensure!(!symbol.is_empty(), ());
 
 		let denom = BoundedVec::<u8, T::MaxDenomLimit>::try_from(symbol).map_err(|_| ())?;

@@ -285,7 +285,7 @@ impl pallet_cosmwasm::Config for Test {
 	type ExecuteWasmOrigin = frame_system::EnsureSigned<Self::AccountId>;
 
 	type NativeAssetId = NativeAssetId;
-	
+
 	type NativeDenom = NativeDenom;
 }
 
