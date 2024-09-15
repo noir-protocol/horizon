@@ -26,7 +26,6 @@ use cosmos_sdk_proto::{
 	prost::Message,
 	Any,
 };
-use hp_io::cosmos::secp256k1_ecdsa_verify;
 use pallet_cosmos::AddressMapping;
 use pallet_cosmos_types::{address::acc_address_from_bech32, any_match, handler::AnteDecorator};
 use pallet_cosmos_x_auth_signing::{
@@ -34,7 +33,7 @@ use pallet_cosmos_x_auth_signing::{
 	sign_verifiable_tx::traits::SigVerifiableTx,
 };
 use ripemd::Digest;
-use sp_core::{sha2_256, Get, H160};
+use sp_core::{ecdsa, sha2_256, ByteArray, Get, H160};
 use sp_runtime::{
 	transaction_validity::{
 		InvalidTransaction, TransactionValidity, TransactionValidityError, ValidTransaction,
@@ -129,11 +128,9 @@ where
 						acc_address_from_bech32(&signer_data.address).map_err(|_| {
 							InvalidTransaction::BadSigner
 						})?;
-
 					if signer_addr_raw.len() != 20 {
 						return Err(InvalidTransaction::BadSigner.into());
 					}
-
 					if  H160::from_slice(&signer_addr_raw) != address {
 						return Err(InvalidTransaction::BadSigner.into());
 					}
@@ -141,7 +138,7 @@ where
 					let sign_bytes = T::SignModeHandler::get_sign_bytes(sign_mode, signer_data, tx)
 						.map_err(|_| InvalidTransaction::Call)?;
 
-					if !secp256k1_ecdsa_verify(signature, &sha2_256(&sign_bytes), &public_key.key) {
+					if !ecdsa_verify(signature, &sign_bytes, &public_key.key) {
 						return Err(InvalidTransaction::BadProof.into());
 					}
 
@@ -150,6 +147,51 @@ where
 			},
 			Err(InvalidTransaction::BadSigner.into())
 		)
+	}
+}
+
+pub fn ecdsa_verify(signature: &[u8], message: &[u8], public_key: &[u8]) -> bool {
+	let pub_key = match ecdsa::Public::from_slice(public_key) {
+		Ok(pub_key) => pub_key,
+		Err(_) => return false,
+	};
+	let msg = sha2_256(message);
+
+	if signature.len() == 64 {
+		for rec_id in 0..=3 {
+			let mut rec_sig = [0u8; 65];
+			rec_sig[0..signature.len()].copy_from_slice(signature);
+			rec_sig[64] = rec_id;
+			let sig = ecdsa::Signature(rec_sig);
+
+			if sp_io::crypto::ecdsa_verify_prehashed(&sig, &msg, &pub_key) {
+				return true;
+			}
+		}
+		false
+	} else if signature.len() == 65 {
+		match ecdsa::Signature::try_from(signature) {
+			Ok(sig) => sp_io::crypto::ecdsa_verify_prehashed(&sig, &msg, &pub_key),
+			Err(_) => false,
+		}
+	} else {
+		false
+	}
+}
+
+#[cfg(test)]
+pub mod tests {
+	use super::*;
+
+	#[test]
+	fn ecdsa_verify_test() {
+		let sig = hex::decode("f7e0d198c62821cc5817c8e935f523308301e29819f5d882f3249b9e173a614f38000ddbff446c0abfa7c7d019dbb17072b28933fc8187c973fbf03d0459f76e").unwrap();
+		let message = hex::decode("0a93010a90010a1c2f636f736d6f732e62616e6b2e763162657461312e4d736753656e6412700a2d636f736d6f7331716436396e75776a393567746134616b6a677978746a39756a6d7a34773865646d7179737177122d636f736d6f7331676d6a32657861673033747467616670726b6463337438383067726d61396e776566636432771a100a057561746f6d12073130303030303012710a4e0a460a1f2f636f736d6f732e63727970746f2e736563703235366b312e5075624b657912230a21020a1091341fe5664bfa1782d5e04779689068c916b04cb365ec3153755684d9a112040a020801121f0a150a057561746f6d120c3838363838303030303030301080c0f1c59495141a1174686574612d746573746e65742d30303120ad8a2e").unwrap();
+		let public_key =
+			hex::decode("020a1091341fe5664bfa1782d5e04779689068c916b04cb365ec3153755684d9a1")
+				.unwrap();
+
+		assert!(ecdsa_verify(&sig, &message, &public_key));
 	}
 }
 
