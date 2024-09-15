@@ -30,7 +30,10 @@ use pallet_cosmos_types::{
 	coin::amount_to_string,
 	context,
 	errors::{CosmosError, RootError},
-	events::{traits::EventManager, EventAttribute, ATTRIBUTE_KEY_AMOUNT, ATTRIBUTE_KEY_SENDER},
+	events::{
+		traits::EventManager, CosmosEvent, EventAttribute, ATTRIBUTE_KEY_AMOUNT,
+		ATTRIBUTE_KEY_SENDER,
+	},
 	gas::traits::GasMeter,
 };
 use pallet_cosmos_x_bank_types::events::{ATTRIBUTE_KEY_RECIPIENT, EVENT_TYPE_TRANSFER};
@@ -114,7 +117,7 @@ where
 			}
 		}
 
-		let msg_event = pallet_cosmos_types::events::CosmosEvent {
+		let msg_event = CosmosEvent {
 			r#type: EVENT_TYPE_TRANSFER.into(),
 			attributes: vec![
 				EventAttribute { key: ATTRIBUTE_KEY_SENDER.into(), value: from_address.into() },
