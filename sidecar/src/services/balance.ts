@@ -37,7 +37,7 @@ export class BalanceService implements ApiService {
 
     const nativeBalance = { denom, amount };
 
-    let assets = [];
+    const assets = [];
     const metadata = await this.chainApi.query.assets.metadata.entries();
     for (const [{ args: [assetId] }, value] of metadata) {
       const asset = await this.chainApi.query.assets.account(assetId.toString(), origin)
